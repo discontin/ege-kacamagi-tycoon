@@ -1,0 +1,6 @@
+node_modules/
+.asset-cache/
+dist/
+.vite/
+*.log
+.pnpm-store/

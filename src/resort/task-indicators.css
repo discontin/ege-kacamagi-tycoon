@@ -1,0 +1,10 @@
+.task-indicator{position:absolute;transform:translate(-50%,-50%);width:46px;height:46px;padding:8px;display:grid;place-items:center;border:3px solid #fff;border-radius:50%;color:#fff;background:linear-gradient(150deg,#58ceef,#2198d9);box-shadow:0 3px 0 #177bb8,0 5px 10px #28688d38;pointer-events:auto;z-index:4;touch-action:manipulation;transition:background .15s,box-shadow .15s}
+.task-indicator svg{width:27px;height:27px;filter:drop-shadow(0 1px 0 #1685bc66);pointer-events:none}
+.task-indicator:hover,.task-indicator:focus-visible{background:linear-gradient(150deg,#7bdcf8,#30aeea);box-shadow:0 3px 0 #177bb8,0 0 0 4px #ffffff66}
+.task-indicator.working{background:linear-gradient(150deg,#6aceab,#319b80);box-shadow:0 3px 0 #277e6b,0 5px 10px #28688d38}
+.task-indicator.waiting{background:linear-gradient(150deg,#75badb,#5c91bc)}
+.task-indicator-progress{position:absolute;inset:-7px;border-radius:50%;background:conic-gradient(#b5ef83 var(--task-progress),#ffffff55 0);mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 0);pointer-events:none}
+.task-indicator-progress[hidden]{display:none}
+.task-indicator-caption{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:6px;padding:3px 6px;background:#fff9eb;color:#246c79;font-size:10px;font-weight:800;letter-spacing:.4px;box-shadow:0 2px 4px #28688d22;pointer-events:none}
+@media(max-width:620px){.task-indicator{width:42px;height:42px;padding:7px}.task-indicator svg{width:25px;height:25px}}
+@media(prefers-reduced-motion:reduce){.task-indicator{transition:none}}

@@ -1,0 +1,74 @@
+import { BAR_CASH, BAR_WORK, POOL_CLEAN, poolDirtyRack, poolTowelRack, wantsDrink } from './PoolServices';
+import { STAFF_AREAS } from './StaffHiring';
+import type { Area, Point, ResortGameState } from './types';
+export const WIDTH = 44, HEIGHT = 52;
+export const LEVELS = [0, 15, 50, 100, 180, 280];
+export const ROOM_DEFS = Array.from({ length: 6 }, (_, i) => ({ id: `room${i + 1}`, name: `Bungalov ${String(i + 1).padStart(2, '0')}`, x: i % 2 ? 23 : 3, y: 34 - Math.floor(i / 2) * 10, width: 10, height: 8, unlockLevel: i + 1, cost: [0, 100, 180, 260, 380, 520][i], color: [0x68baa6, 0xf4bd81, 0x87bad0, 0xeaa19c, 0x9bbc82, 0xc0a1d4][i] }));
+export const ROOM_DOOR = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x < 15 ? r.x + 9 : r.x, y: r.y + 5 });
+export const ROOM_APPROACH = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x < 15 ? r.x + 10 : r.x - 1, y: r.y + 5 });
+export const ROOM_WORK = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x + 5, y: r.y + 5 });
+export const TOWEL_RACK = { x: 12.5, y: 46 }, DIRTY_BASKET = { x: 10, y: 46 };
+export const LAUNDRY_TRASH = { x: 4.5, y: 47.4 };
+export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 10, y: 47 }, CLEAN_TAKE = { x: 12, y: 47 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
+export const receptionQueuePoint = (index: number): Point => ({ x: 19, y: 46 + index });
+export const SEAT_DEFS = [24, 27, 30, 33].map((x, i) => ({ id: `seat${i + 1}`, x, y: 10 })).concat([{ id: 'seat5', x: 25.5, y: 13 }, { id: 'seat6', x: 31.5, y: 13 }]);
+export const taskDuration = (level: number) => [1, .8, .65][level - 1];
+export const incomeFactor = (level: number) => [1, 1.25, 1.5][level - 1];
+export const upgradeCost = (id: string, level: number) => (id === 'reception' ? 100 : id === 'laundry' ? 120 : id === 'pool' ? 180 : 80) * level;
+export function initialResort(test = false): ResortGameState {
+  return { version: 1, concept: 'ege-resort', money: test ? 999999 : 150, xp: test ? 280 : 0, elapsed: 0, spawnTimer: 0, nextId: 10,
+    player: { id: 'player', x: 19, y: 48, path: [], bag: { clean: 0, dirty: 0 } }, guests: [], workers: [], tasks: [], bar: { open: test, cash: 0 },
+    facilities: [{ id: 'reception', kind: 'reception', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, { id: 'laundry', kind: 'laundry', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, ...ROOM_DEFS.map((r, i) => ({ id: r.id, kind: 'room' as const, open: test || !i, level: 1, dirty: false, towels: 1, cash: 0 })), { id: 'pool', kind: 'pool', open: test, level: 1, dirty: false, towels: test ? 999 : 0, cash: 0 }],
+    seats: SEAT_DEFS.map((r, i) => ({ id: r.id, open: test && i < 2, dirty: false, towel: test && i < 2 })), laundry: { clean: test ? 999 : 8, dirty: 0, remaining: null }, boost: { remaining: 0, multiplier: 1.5 }, settings: { paused: false, speed: 1 }, stats: { welcomed: 0, stays: 0, cleaned: 0, washed: 0, poolVisits: 0, earned: 0 } };
+}
+export function areasFor(s: ResortGameState): Area[] {
+  const areas: Area[] = [
+    { id: 'office', label: 'Ofis · çalışan geliştirme', mode: 'work', target: 'office', x: 29, y: 48 },
+    { id: 'laundryDirtyTake', label: 'Kirli raftan çamaşır al', mode: 'work', target: 'laundry', taskKind: 'laundryDirtyTake', x: DIRTY_BASKET.x - 2, y: DIRTY_BASKET.y },
+    { id: 'machineLoad', label: 'Makineye kirli çamaşır koy', mode: 'work', target: 'laundry', taskKind: 'machineLoad', x: 5, y: 46 },
+    { id: 'machineUnload', label: 'Makineden temiz çamaşır al', mode: 'work', target: 'laundry', taskKind: 'machineUnload', x: 5, y: 46 },
+    { id: 'laundryCleanDrop', label: 'Temiz çamaşırı rafa koy', mode: 'work', target: 'laundry', taskKind: 'laundryCleanDrop', x: 13, y: 47 },
+    { id: 'laundryTrash', label: 'Elindekini çöpe at', mode: 'work', target: 'laundry', taskKind: 'discardItem', ...LAUNDRY_TRASH },
+    { id: 'checkin', label: 'Müşteri karşıla', mode: 'work', target: 'reception', taskKind: 'checkin', ...RECEPTION },
+    { id: 'receptionCash', label: 'Konaklama geliri', mode: 'cash', target: 'reception', x: 23, y: 46 },
+    { id: 'receptionUpgrade', label: 'Resepsiyon', mode: 'upgrade', target: 'reception', x: 16, y: 46 },
+    { id: 'dirtyDrop', label: 'Kirli havlu bırak', mode: 'work', target: 'laundry', taskKind: 'dirtyDrop', ...DIRTY_DROP },
+    { id: 'cleanTake', label: 'Temiz havlu al', mode: 'work', target: 'laundry', taskKind: 'cleanTake', ...CLEAN_TAKE },
+    { id: 'laundryUpgrade', label: 'Makine kapasitesi', mode: 'upgrade', target: 'laundry', x: 7, y: 47 },
+  ];
+  for (const a of STAFF_AREAS) if (s.workers.length < 5 && !s.workers.some(w => w.role === a.role) && (a.role !== 'pool' || s.facilities.find(f => f.id === 'pool')!.open)) areas.push({ ...a, mode: 'buy' });
+  for (const r of ROOM_DEFS) {
+    const f = s.facilities.find(f => f.id === r.id)!;
+    if (!f.open) areas.push({ id: `${r.id}Buy`, label: r.name, mode: 'buy', target: r.id, ...ROOM_APPROACH(r) });
+    else {
+      areas.push({ id: `${r.id}Work`, label: 'Yatak yanında temizle / havlu bırak', mode: 'work', target: r.id, taskKind: f.dirty ? 'cleanRoom' : 'restockRoom', ...ROOM_WORK(r) });
+      if (f.floorDirty) areas.push({ id: `${r.id}Floor`, label: 'Zemini süpür', mode: 'work', target: r.id, taskKind: 'cleanFloor', x: r.x + 7, y: r.y + 4 });
+      if (f.level >= 2 && f.bathroomDirty) areas.push({ id: `${r.id}Bathroom`, label: 'Banyoyu temizle', mode: 'work', target: r.id, taskKind: 'cleanBathroom', x: r.x + 6, y: r.y + 2 });
+      if (f.level < 2) areas.push({ id: `${r.id}Upgrade`, label: r.name, mode: 'upgrade', target: r.id, x: ROOM_APPROACH(r).x, y: r.y + 7 });
+    }
+  }
+  const pool = s.facilities.find(f => f.id === 'pool')!;
+  if (!pool.open) areas.push({ id: 'poolBuy', label: 'Havuzu aç', mode: 'buy', target: 'pool', ...POOL_GATE });
+  else {
+    const cleanRack = poolTowelRack(pool.level), dirtyRack = poolDirtyRack(pool.level);
+    const cleanWork = { x: cleanRack.x, y: cleanRack.y + 1.5 }, dirtyWork = { x: dirtyRack.x, y: dirtyRack.y + 1.5 };
+    areas.push({ id: 'poolDirtyDrop', label: 'Kirli havluyu havuz sepetine bırak', mode: 'work', target: 'poolDirty', taskKind: 'poolDirtyDrop', ...dirtyWork }, { id: 'poolDirtyTake', label: 'Havuzun kirli havlularını al', mode: 'work', target: 'poolDirty', taskKind: 'poolDirtyTake', ...dirtyWork }, { id: 'poolCleanTake', label: 'Havuz rafından havlu al', mode: 'work', target: 'poolClean', taskKind: 'poolCleanTake', ...cleanWork });
+    areas.push({ id: 'poolCheckin', label: 'Havuz girişi', mode: 'work', target: 'pool', taskKind: 'poolCheckin', ...POOL_GATE }, { id: 'poolStock', label: 'Havuza havlu bırak', mode: 'work', target: 'pool', taskKind: 'poolStock', ...cleanWork }, { id: 'poolCash', label: 'Havuz geliri', mode: 'cash', target: 'pool', x: 18, y: 5 });
+    if (!s.bar?.open) areas.push({ id: 'barBuy', label: 'Havuz barı', mode: 'buy', target: 'bar', ...BAR_WORK });
+    else {
+      areas.push({ id: 'barPrepare', label: 'Limonata hazırla', mode: 'work', target: 'bar', taskKind: 'prepareDrink', ...BAR_WORK }, { id: 'barCash', label: 'Bar geliri', mode: 'cash', target: 'bar', ...BAR_CASH });
+      for (const guest of s.guests.filter(wantsDrink)) {
+        const seat = SEAT_DEFS.find(r => r.id === guest.seat)!;
+        areas.unshift({ id: `drink:${guest.id}`, label: 'Limonata ver', mode: 'work', target: `drink:${guest.id}`, taskKind: 'deliverDrink', x: seat.x, y: seat.y });
+      }
+    }
+    if ((pool.dirt ?? 0) > 0) areas.unshift({ id: 'poolClean', label: 'Havuzu kepçeyle temizle', mode: 'work', target: 'pool', taskKind: 'cleanPool', ...POOL_CLEAN });
+    if (pool.level < 3) areas.push({ id: 'poolUpgrade', label: 'Havuz', mode: 'upgrade', target: 'pool', x: 22, y: 13 });
+    for (const r of SEAT_DEFS) {
+      const seat = s.seats.find(s => s.id === r.id)!;
+      if (seat.open) areas.push({ id: `${r.id}Area`, label: 'Şezlongu temizle', mode: 'work', target: r.id, taskKind: 'cleanSeat', x: r.x, y: r.y });
+      if (seat.open && !seat.dirty && !seat.guest && !seat.towel) areas.push({ id: `${r.id}Towel`, label: 'Şezlonga havlu ser', mode: 'work', target: r.id, taskKind: 'restockSeat', x: r.x, y: r.y });
+    }
+  }
+  return areas.filter(a => a.mode !== 'upgrade' || s.facilities.find(f => f.id === a.target)!.level < 3);
+}

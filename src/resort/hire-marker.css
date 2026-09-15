@@ -1,0 +1,44 @@
+.purchase-progress {
+  position: absolute;
+  inset: -7px;
+  border-radius: inherit;
+  padding: 3px;
+  background: conic-gradient(#b5ef83 var(--purchase-progress), #ffffff55 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.floor-label.reception-hire {
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+  padding: 8px;
+  border: 3px solid #fffbed;
+  border-radius: 50%;
+  background: #48ad78;
+  color: white;
+  box-shadow: 0 3px 0 #287c5655, 0 0 0 2px #a4dda8;
+}
+.floor-label.reception-hire svg { display: block; width: 100%; height: 100%; }
+.floor-label.upgrade-marker { width:50px; height:50px; min-width:50px; padding:9px; border:3px solid #fffbed; border-radius:50%; background:#e2ae4f; color:white; box-shadow:0 3px 0 #9d702f55,0 0 0 2px #f3d88d }
+.floor-label.upgrade-marker svg { display:block; width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round }
+.floor-label.upgrade-marker .hire-price { position:absolute; left:50%; bottom:-12px; transform:translateX(-50%); padding:2px 7px; border:2px solid #fffbed; border-radius:9px; background:#a87831; color:white; font-size:10px; font-weight:800; white-space:nowrap }
+.floor-label.reception-hire .hire-price {
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  border: 2px solid #fffbed;
+  border-radius: 9px;
+  background: #327c54;
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+@media (max-width: 620px) {
+  .floor-label.reception-hire { width: 43px; height: 43px; min-width: 43px; padding: 6px; }
+}

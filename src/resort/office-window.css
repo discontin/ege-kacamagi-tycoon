@@ -1,0 +1,9 @@
+.resort-drawer.office-window{inset:50% auto auto 50%;height:auto;width:min(560px,92vw);max-height:82dvh;border-radius:22px;transform:translate(-50%,-50%) scale(.96);opacity:0;visibility:hidden;box-shadow:0 18px 70px #244d4560;padding:32px;z-index:25}
+.resort-drawer.office-window.open{transform:translate(-50%,-50%);opacity:1;visibility:visible}
+.office-window .worker-card button{background:#dceccf;padding:10px 12px;border-radius:10px;margin:4px 0}
+.office-skills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.office-skills.single{grid-template-columns:minmax(0,160px)}
+.office-skill{display:flex;flex-direction:column;gap:8px;padding:12px 10px;background:#f0f5e5;border:1px solid #dce6cc;border-radius:12px;font-size:11px;min-width:0}
+.office-skill small{color:#72977d;font-size:10px}.office-window .office-skill button{margin-top:auto;padding:9px 5px;font-size:10px;white-space:normal}
+@media(max-width:620px){.office-skills{gap:5px}.office-skill{padding:9px 6px;font-size:10px}.office-skill small,.office-window .office-skill button{font-size:9px}}
+@media(max-width:620px){.resort-drawer.office-window{padding:30px 20px;width:92vw}}

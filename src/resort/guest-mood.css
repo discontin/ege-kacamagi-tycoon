@@ -1,0 +1,13 @@
+.guest-mood {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  font-size: 27px;
+  line-height: 1;
+  padding: 5px;
+  border: 2px solid #fffbed;
+  border-radius: 50%;
+  background: #fff6d9ed;
+  box-shadow: 0 3px 7px #6b594333;
+  pointer-events: none;
+}
+@media (max-width: 620px) { .guest-mood { font-size: 23px; padding: 3px; } }

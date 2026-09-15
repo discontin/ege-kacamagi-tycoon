@@ -1,0 +1,134 @@
+import { initialResort, LEVELS, ROOM_DEFS } from './data';
+import { atOffice } from './Office';
+import './office-window.css';
+import './quick-controls.css';
+import { resortGoal } from './Guidance';
+import { linenCount } from './Linen';
+import { ResortSaveService } from './SaveService';
+import { ResortSimulation } from './Simulation';
+import type { Role } from './types';
+import type { ResortWorld } from './World';
+
+const roles: Record<Role, string> = { reception: 'Resepsiyon', rooms: 'Oda temizliği + havlu', pool: 'Havuz + limonata + bakım', hauling: 'Çamaşırhane + havuz havluları', bartender: 'Havuz hizmeti' };
+const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+export class ResortUI {
+  world?: ResortWorld;
+  private panel = 'village';
+  private lastPanel = '';
+  private lastMessage = -1;
+  private interval: number;
+  private html(selector: string, value: string) { const el = document.querySelector(selector)!; if (el.innerHTML !== value) el.innerHTML = value; }
+  constructor(private sim: ResortSimulation, private save: ResortSaveService) {
+    document.querySelector('#app')!.innerHTML = `
+      <main id="game" aria-label="Tatil köyü haritası"></main>
+      <header class="resort-brand"><span class="brand-mark">☀</span><div>Ege<span>Kaçamağı.</span><small>TATİL KÖYÜ TYCOON</small></div></header>
+      <div id="level-card" class="level-card"></div><div id="wallet" class="wallet"></div>
+      <div class="mode-controls">${sim.testMode ? '<span>∞ TEST MODU · KAYIT YOK</span><button data-action="test">Normal oyuna dön</button>' : '<button data-action="test">∞ Sınırsız test modu</button>'}</div>
+      <div class="quick-controls" aria-label="Oyun kontrolleri">${sim.testMode ? '<button id="test-speed" data-action="speed" aria-label="2 kat hız" aria-pressed="false">2× Hız</button>' : ''}<button data-action="reset" aria-label="Oyunu sıfırla">↻ Sıfırla</button></div>
+      <div class="camera-controls"><button data-action="zoom-in" aria-label="Yakınlaştır">＋</button><button data-action="zoom-out" aria-label="Uzaklaştır">−</button><button data-action="focus" aria-label="Karaktere odaklan">◎</button><button data-action="map" aria-label="Tüm haritayı göster">▦</button></div>
+      <div class="resort-toast" id="toast" role="status"></div>
+      <div id="joystick" aria-label="Hareket çubuğu"><div id="joystick-knob"></div></div>
+      <nav hidden aria-label="Yönetim panelleri"><button data-action="panel" data-panel="village">⌂<small>Köy</small></button><button data-action="panel" data-panel="workers">♙<small>Ekip</small></button><button data-action="panel" data-panel="journey">☆<small>Hedefler</small></button><button data-action="panel" data-panel="help">?<small>Rehber</small></button></nav>
+      <div hidden><div id="bag-stat"></div><div id="laundry-stat"></div><div id="time-controls"></div></div>
+      <aside id="drawer" class="resort-drawer"><button data-action="close" class="drawer-close" aria-label="Paneli kapat">×</button><div id="drawer-body"></div></aside>
+      <dialog id="pause-dialog"><h2>Oyun duraklatıldı</h2><p>Esc ile oyuna dönebilirsin.</p><label>Ses seviyesi <output id="volume-value">%100</output><input id="sound-volume" aria-label="Ses seviyesi" type="range" min="0" max="100" step="1"></label><p><button data-action="resume">Oyuna devam et</button><button data-action="reset">Sıfırla</button></p></dialog>
+      <dialog id="restart-dialog"><h2>Oyunu sıfırla?</h2><p>${sim.testMode ? 'Test köyü baştan başlar. Normal oyun kaydın değişmez.' : 'Tatil köyündeki mevcut ilerlemen sıfırlanır. Bu işlem geri alınamaz.'}</p><button data-action="cancel-reset">Vazgeç</button><button data-action="confirm-reset">Sıfırla</button></dialog>`;
+    document.querySelector('#app')!.addEventListener('click', e => { const t = (e.target as HTMLElement).closest<HTMLElement>('[data-action]'); if (t) this.action(t); });
+
+    this.interval = window.setInterval(() => this.render(), 150); this.render();
+    const pause = document.querySelector<HTMLDialogElement>('#pause-dialog')!;
+    pause.addEventListener('cancel', e => { e.preventDefault(); this.sim.state.settings.paused = false; pause.close(); });
+    window.addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || e.repeat || document.querySelector('#restart-dialog[open]')) return;
+      e.preventDefault(); this.sim.state.settings.paused = !this.sim.state.settings.paused; this.render();
+    });
+    document.querySelector<HTMLInputElement>('#sound-volume')!.addEventListener('input', e => {
+      this.sim.state.settings.volume = Number((e.target as HTMLInputElement).value) / 100; this.render();
+    });
+  }
+  inspect(id: string) { this.panel = 'village'; this.lastPanel = ''; this.render(); document.querySelector('#drawer')!.classList.add('open'); const row = document.querySelector(`[data-facility="${id}"]`); row?.scrollIntoView({ block: 'nearest' }); }
+  private action(t: HTMLElement) {
+    switch (t.dataset.action) {
+      case 'resume': this.sim.state.settings.paused = false; break;
+      case 'staff-speed': this.sim.upgradeWorker(t.dataset.worker!); break;
+      case 'staff-move': this.sim.upgradeMove(t.dataset.worker!); break;
+      case 'staff-carry': this.sim.upgradeCarry(t.dataset.worker!); break;
+      case 'panel': this.panel = t.dataset.panel!; this.lastPanel = ''; document.querySelector('#drawer')!.classList.add('open'); break;
+      case 'close': document.querySelector('#drawer')!.classList.remove('open'); break;
+      case 'goto': this.sim.goToArea(t.dataset.area!); this.world?.centerPlayer(); document.querySelector('#drawer')!.classList.remove('open'); break;
+
+
+      case 'cancel-job': if (this.sim.state.player.task) this.sim.cancelTask(this.sim.state.player.task); break;
+      case 'pause': this.sim.state.settings.paused = !this.sim.state.settings.paused; break;
+      case 'speed': this.sim.state.settings.speed = this.sim.state.settings.speed === 1 ? 2 : 1; break;
+      case 'boost': this.sim.activateBoost(); break;
+      case 'zoom-in': this.world?.setZoom(1.1); break;
+      case 'zoom-out': this.world?.setZoom(.9); break;
+      case 'focus': this.world?.centerPlayer(); break;
+      case 'map': this.world?.showAll(); break;
+      case 'test': { const url = new URL(location.href); if (this.sim.testMode) url.searchParams.delete('test'); else url.searchParams.set('test', '1'); location.href = url.href; break; }
+      case 'save': this.sim.notify(this.save.save(this.sim.state) ? this.sim.testMode ? 'Test modu normal kaydını değiştirmez.' : 'Tatil köyün kaydedildi.' : 'Kayıt yapılamadı. Tarayıcı depolamasını kontrol et.'); break;
+      case 'reset': document.querySelector<HTMLDialogElement>('#restart-dialog')!.showModal(); break;
+      case 'cancel-reset': document.querySelector<HTMLDialogElement>('#restart-dialog')!.close(); break;
+      case 'confirm-reset': { const fresh = new ResortSimulation(initialResort(this.sim.testMode), this.sim.testMode).state; fresh.settings.volume = this.sim.state.settings.volume; if (this.sim.testMode || this.save.save(fresh)) { this.sim.reset(); document.querySelector<HTMLDialogElement>('#restart-dialog')!.close(); document.querySelector<HTMLDialogElement>('#pause-dialog')!.close(); document.querySelector('#drawer')!.classList.remove('open'); this.officeVisited = false; this.world?.centerPlayer(); } else this.sim.notify('Kayıt yapılamadı; mevcut köyün korunuyor.'); break; }
+    }
+    this.render();
+  }
+  private goal() { return resortGoal(this.sim.state, this.sim.testMode); }
+  private village() {
+    const s = this.sim.state;
+    return `<span class="eyebrow">KÜÇÜK BİR EGE HİKÂYESİ</span><h2>Senin tatil köyün<span>.</span></h2><p class="intro">Misafirlerin rahat etsin, sen köyünü büyüt. İşleri beyaz karelerde durarak yap.</p><div class="panel-metrics"><b>${s.stats.stays}<small>Konaklama</small></b><b>${s.stats.poolVisits}<small>Havuz ziyareti</small></b><b>${s.stats.earned}<small>Toplanan para</small></b></div>${s.facilities.map(f => {
+      const r = ROOM_DEFS.find(r => r.id === f.id), name = r?.name ?? (f.id === 'reception' ? 'Resepsiyon' : f.id === 'laundry' ? 'Çamaşırhane' : 'Havuz');
+      const a = this.sim.areas.find(a => a.target === f.id && a.mode === (f.open ? 'work' : 'buy'));
+      const description = !f.open ? `Seviye ${a ? this.sim.requiredLevel(a) : 1} · ${a ? this.sim.cost(a) : 0} para` : f.kind === 'room' ? f.guest ? 'Misafir ağırlanıyor' : f.dirty ? 'Yatağı toparla' : f.floorDirty ? 'Zemini süpür' : f.bathroomDirty ? 'Banyoyu temizle' : f.needsSheet ? 'Temiz çarşaf ve havlu getir' : f.towels ? 'Misafire hazır' : 'Temiz havlu gerekiyor' : f.kind === 'laundry' ? 'Kirliyi bırak → yıka → temizini taşı' : f.cash ? `${f.cash} para kasada` : 'Hizmete hazır';
+      return `<article class="facility-row" data-facility="${f.id}"><span class="row-icon">${f.kind === 'room' ? '⌂' : f.kind === 'pool' ? '≈' : f.kind === 'laundry' ? '▣' : '☀'}</span><div><b>${name}</b><small>${description}${f.open ? ' · Sv. ' + f.level : ''}</small></div>${a ? `<button data-action="goto" data-area="${a.id}">${f.open ? 'Git' : 'Alanı bul'}</button>` : ''}</article>`;
+    }).join('')}${this.sim.facility('pool').open ? `<article class="facility-row"><span class="row-icon">🍋</span><div><b>Havuz barı</b><small>${s.bar?.open ? 'Limonata servisi · ' + s.bar.cash + ' ₺ kasada' : '200 ₺ karşılığında aç'}</small></div><button data-action="goto" data-area="${s.bar?.open ? 'barPrepare' : 'barBuy'}">Git</button></article>` : ''}<div class="bonus-card"><b>☀ Biraz hız kazanalım</b><p>120 saniye çalışma ve üretim %50 hızlı. Gerçek reklam değil, test bonusu.</p><button data-action="boost" ${s.boost.remaining > 0 ? 'disabled' : ''}>${s.boost.remaining > 0 ? Math.ceil(s.boost.remaining) + ' sn kaldı' : 'Bonusu etkinleştir'}</button></div><div class="coming-soon"><b>İleride köye katılacaklar</b><p>Restoran · Spa · Plaj hizmetleri · Otopark</p><small>Bu sürümde kapalı; henüz satın alınamaz.</small></div>`;
+  }
+  private workers() {
+    const s = this.sim.state;
+    return `<span class="eyebrow">EKİBİN</span><h2>Herkes kendi işinde<span>.</span></h2><p class="intro">İlgili bölümün yanındaki yeşil personel simgesinde durarak işe al. Çalışan kendi bölümünde otomatik çalışır.</p>${s.workers.map(w => `<article class="worker-card"><div class="worker-header"><b>♙ ${esc(w.name)}</b><small>${roles[w.role]}</small></div><p>${esc(w.status)}</p></article>`).join('')}${!s.workers.length ? '<p class="empty">Resepsiyon, odalar, çamaşırhane ve havuz yakınındaki personel simgelerini kullan.</p>' : ''}`;
+  }
+  private journey() {
+    const s = this.sim.state, goals = [['İlk misafiri karşıla', s.stats.welcomed > 0], ['İlk konaklamayı tamamla', s.stats.stays > 0], ['İlk odayı temizle', s.stats.cleaned > 0], ['Kirli havluyu yıka', s.stats.washed > 0], ['İkinci bungalovu aç', this.sim.facility('room2').open], ['İlk çalışanı al', s.workers.length > 0], ['Havuzu aç', this.sim.facility('pool').open], ['İlk havuz hizmetini tamamla', s.stats.poolVisits > 0], ['Altı bungalovu aç', ROOM_DEFS.every(r => this.sim.facility(r.id).open)]];
+    return `<span class="eyebrow">BÜYÜK BİR KAÇAMAĞA DOĞRU</span><h2>Küçük adımlar<span>.</span></h2><p class="intro">Konaklama +10, oda temizliği +5, havuz hizmeti +5 XP.</p>${goals.map(([title, done]) => `<div class="goal-row ${done ? 'done' : ''}"><span>${done ? '✓' : '○'}</span>${title}</div>`).join('')}<h3>Seviye açılışları</h3>${LEVELS.map((xp, i) => `<p class="unlock-line">⭐ ${i + 1}. seviye · ${xp} XP${i ? ' · Bungalov ' + (i + 1) : ' · Başlangıç' }${i === 1 ? ' + çalışanlar' : i === 3 ? ' + havuz' : ''}</p>`).join('')}`;
+  }
+  private help() {
+    return `<span class="eyebrow">NASIL OYNANIR?</span><h2>Acele yok, tatildesin<span>.</span></h2><ol class="help-list"><li>Beyaz resepsiyon karesinde dur. Misafir varsa hazır bir odaya yerleşir.</li><li>Misafir karşılanınca para toplama noktasında ücret birikir. Yanına yürüyerek topla.</li><li>Yatak simgesine yürü: yatağın herhangi bir kenarında durarak çarşafları topla. Kirli havlu ve çarşaf çantana alınır; ikisi de sepete taşınıp makinede yıkanır. Temiz çarşafı raftan alıp yatağa geri getir. Süpürge simgesinin alanında zemini ayrıca temizle.</li><li>Kirli havlu sepetine yaklaş; havlular otomatik bırakılır. Makine kendisi yıkar.</li><li>Temiz havlu rafına yaklaşarak havlu al; odanın karesinde durarak bırak. En fazla dört temiz havlu ve iki temiz çarşaf taşınır; toplam çanta kapasitesi test modunda da sekiz parçadır.</li><li>Yeşil alan yeni tesis açar, sarı alan mevcut tesisi yükseltir. 1,3 saniye bekle; yeniden satın almak için ayrılıp dön.</li><li>Havuzu açınca konaklayan misafirler yer varsa havuza gider. Girişte karşıla, rafta havlu bulundur ve şezlongları temizle.</li></ol><p>Havuz barını 200 ₺’ye aç. Bardak simgesindeki misafire limonata hazırlayıp tepsiyle götür; teslim başına 15 ₺ bar kasasına gelir. Dört havuz ziyareti sonrası yeni girişler bakım için durur; kepçe simgesine veya havuzun kenarına yaklaşarak temizle. Bar yanında barmen alabilirsin.</p><h3>Kontroller</h3><p>WASD / oklar veya mobil hareket çubuğu. Yere ve kare etiketine dokunarak yürü. Etkileşim tuşu yok.</p><p>Boşluk: duraklat. Tekerlek / iki parmak: yakınlaştır. Sürükle: kamerayı gezdir. ◎: karaktere dön.</p><p>Bir işi yarıda bırakınca aynı kareye dönerek devam edebilirsin. Rehberdeki görevi bırak düğmesi görev rezervasyonunu serbest bırakır.</p>${this.sim.state.player.task ? '<button data-action="cancel-job">Geçerli görevi bırak</button>' : ''}<button class="primary" data-action="save">Şimdi kaydet</button><p class="muted">15 saniyede otomatik kayıt · ${this.save.lastSaved || 'Henüz kayıt yok'}. Çevrimdışı gelir yok. Eski oyun kaydı korunur.</p><button class="danger" data-action="reset">Yeni tatil köyü kur</button>`;
+  }
+  private officeVisited = false;
+  private office() {
+    const skill = (name: string, stat: string, action: string, id: string, level: number, cost: number) => `<div class="office-skill"><b>${name}</b><small>${stat}</small><button data-action="${action}" data-worker="${id}" ${level >= 3 ? 'disabled' : ''}>${level >= 3 ? 'Maksimum' : 'Yükselt ↑ · ' + (this.sim.testMode ? 'Ücretsiz' : cost + ' ₺')}</button></div>`;
+    return `<h2>İşletme ofisi</h2><p>Çalışanlarının yeteneklerini geliştir.</p>${this.sim.state.workers.map(w => `<article class="worker-card"><b>${esc(w.name)} · ${roles[w.role]}</b><div class="office-skills ${w.role === 'reception' ? 'single' : ''}">${skill('Hizmet Hızı', 'Sv. ' + w.level + ' · %' + [65, 80, 100][w.level - 1], 'staff-speed', w.id, w.level, 120 * w.level)}${w.role !== 'reception' ? skill('Yürüyüş Hızı', 'Sv. ' + (w.moveLevel ?? 1) + '/3', 'staff-move', w.id, w.moveLevel ?? 1, 100 * (w.moveLevel ?? 1)) + skill('Taşıma', (w.carryLevel ?? 1) + ' havlu', 'staff-carry', w.id, w.carryLevel ?? 1, 100 * (w.carryLevel ?? 1)) : ''}</div></article>`).join('') || '<p>Önce ilgili bölümden bir çalışan işe al.</p>'}`;
+  }
+  render() {
+    const pause = document.querySelector<HTMLDialogElement>('#pause-dialog')!;
+    if (this.sim.state.settings.paused && !pause.open && !document.querySelector('#restart-dialog[open]')) pause.showModal();
+    if (!this.sim.state.settings.paused && pause.open) pause.close();
+    const volume = this.sim.state.settings.volume ?? 1;
+    this.world?.setVolume(volume);
+    document.querySelector<HTMLInputElement>('#sound-volume')!.value = String(Math.round(volume * 100));
+    document.querySelector('#volume-value')!.textContent = '%' + Math.round(volume * 100);
+    const speedButton = document.querySelector<HTMLButtonElement>('#test-speed');
+    if (speedButton) {
+      const fast = this.sim.state.settings.speed === 2;
+      speedButton.textContent = fast ? '2× Hız · Açık' : '2× Hız';
+      speedButton.setAttribute('aria-pressed', String(fast));
+      speedButton.setAttribute('aria-label', fast ? 'Normal hıza dön' : '2 kat hız');
+    }
+    const p = this.sim.state.player, nearbyOffice = atOffice(p) && !p.path.length;
+    document.querySelector('#drawer')!.classList.toggle('office-window', nearbyOffice || this.panel === 'office');
+    if (nearbyOffice && !this.officeVisited) { this.panel = 'office'; this.lastPanel = ''; document.querySelector('#drawer')!.classList.add('open'); }
+    if (!nearbyOffice && this.panel === 'office') document.querySelector('#drawer')!.classList.remove('open');
+    this.officeVisited = nearbyOffice;
+    const s = this.sim.state, level = this.sim.level, base = LEVELS[level - 1], end = LEVELS[level];
+    this.html('#wallet', `<span>₺</span><b>${this.sim.testMode ? '∞' : Math.floor(s.money).toLocaleString('tr-TR')}<small>kasa</small></b>`);
+    this.html('#level-card', `<div><span class="level-star">★ ${level}</span><b>Bir tatil köyü hikâyesi<small>${s.xp}${end ? '/' + end : ''} XP${s.boost.remaining ? ' · ☀ ' + Math.ceil(s.boost.remaining) + ' sn hız bonusu' : ''}</small></b></div><div class="xp-track"><i style="width:${end ? Math.min(100, (s.xp - base) / (end - base) * 100) : 100}%"></i></div>`);
+    this.html('#bag-stat', `<span>☀ ${s.player.bag.clean} <small>temiz</small></span><span>♺ ${s.player.bag.dirty} <small>kirli</small></span><span>▱ ${s.player.bag.cleanSheets ?? 0}/${s.player.bag.dirtySheets ?? 0} <small>temiz/kirli çarşaf</small></span><small>${s.player.drink ? '<span>🍋 <small>limonata</small></span>' : ''}ÇANTA ${linenCount(s.player.bag)}/${this.sim.bagCapacity}</small>`);
+    this.html('#laundry-stat', `<span>▣ ${this.sim.testMode ? '∞' : s.laundry.clean}<small>temiz raf</small></span><span>${s.laundry.dirty}<small>havlu yıkanacak</small></span><span>▱ ${s.laundry.cleanSheets ?? 0}/${s.laundry.dirtySheets ?? 0}<small>temiz/kirli çarşaf</small></span>`);
+    this.html('#time-controls', `<button data-action="pause" aria-label="${s.settings.paused ? 'Devam et' : 'Duraklat'}">${s.settings.paused ? '▶' : 'Ⅱ'}</button><button data-action="speed" aria-label="Oyun hızı">${s.settings.speed}×</button>`);
+    const html = this.panel === 'office' ? this.office() : this.panel === 'workers' ? this.workers() : this.panel === 'journey' ? this.journey() : this.panel === 'help' ? this.help() : this.village();
+    if (html !== this.lastPanel && document.activeElement?.tagName !== 'SELECT') { document.querySelector('#drawer-body')!.innerHTML = html; this.lastPanel = html; }
+    if (this.lastMessage !== this.sim.messageId) { const id = this.sim.messageId; this.lastMessage = id; const t = document.querySelector('#toast')!; t.textContent = this.sim.message; t.classList.add('show'); window.setTimeout(() => { if (id === this.sim.messageId) t.classList.remove('show'); }, 4500); }
+  }
+  dispose() { clearInterval(this.interval); }
+}

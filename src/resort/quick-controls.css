@@ -1,0 +1,5 @@
+.quick-controls{position:absolute;top:100px;right:20px;z-index:20;display:flex;gap:8px;padding:6px;background:#fffbedf5;border:2px solid #f3e4bd;border-radius:14px;box-shadow:0 3px 12px #36595025}
+.quick-controls button{min-height:42px;padding:10px 15px;border-radius:9px;font-weight:800;font-size:13px;background:#f4d47d;color:#365c52}
+.quick-controls button[data-action="reset"]{background:#f1dfce;color:#81563e}
+.quick-controls button[aria-pressed="true"]{background:#69b397;color:#fff}
+@media(max-width:620px){.quick-controls{top:104px;right:10px;gap:5px;padding:4px}.quick-controls button{padding:9px 10px;font-size:11px}}
