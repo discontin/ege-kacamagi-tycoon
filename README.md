@@ -2,6 +2,10 @@
 
 Three.js + TypeScript + Vite ile masaüstü/mobil tarayıcıda çalışan, low-poly 3D Ege tatil köyü prototipi. Gerçek müşteri kuyruğu, bungalov konaklaması, temizlik, fiziksel havlu taşıma, çamaşırhane, havuz ve görevli çalışanlar içerir.
 
+## Tarayıcıda oyna
+
+[Ege Kaçamağı'nı aç](https://discontin.github.io/ege-kacamagi-tycoon/)
+
 ## Çalıştırma
 
 ```sh
