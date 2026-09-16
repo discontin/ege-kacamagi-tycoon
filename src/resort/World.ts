@@ -219,12 +219,15 @@ export class ResortWorld {
     });
     const bedColor = f.level === 2 ? 0x70b9ac : 0x80b8d9;
     const singleRoom = f.level === 1, bedX = singleRoom ? 0 : -1.5, bedWidth = singleRoom ? 1.8 : 3.35, bedDepth = singleRoom ? 3.8 : 4.15;
-    const bed = this.prop(g, singleRoom ? 'bedSingle' : 'bedDouble', bedX, .2, -.5, { width: bedDepth });
+    const bed = this.prop(g, singleRoom ? 'bedSingle' : 'bedDouble', bedX, .2, -.5, {});
     bed?.model.traverse(object => {
       if (!(object instanceof T.Mesh)) return;
       const materials = Array.isArray(object.material) ? object.material : [object.material];
-      if (materials.some(material => material.name === 'carpet')) object.visible = false;
+      // Keep the new CC0 bed frame/headboard and build all three linen states
+      // ourselves, so dirty, stripped and freshly-sheeted beds stay distinct.
+      if (materials.some(material => material.name === 'soft' || material.name === 'accent')) object.visible = false;
     });
+    if (bed) bed.root.children[0].scale.set(bedWidth / (singleRoom ? 1.17 : 2.02), 1, bedDepth / 2.204);
     if (!bed) { this.box(g, singleRoom ? 0xac7359 : 0x98634f, bedX, .46, -.5, bedWidth, .6, bedDepth); this.box(g, 0xfff8e8, bedX, .82, -.5, bedWidth - .15, .35, bedDepth - .2); }
     const blankBed = this.box(g, 0xfff8e8, bedX, 1.13, -.5, bedWidth - .15, .055, 2.3);
     blankBed.visible = !f.dirty && !!f.needsSheet;
@@ -234,7 +237,7 @@ export class ResortWorld {
     const tipPile = new T.Group(); tipPile.position.set(2.5, 1.8, -2); g.add(tipPile);
     for (let i = 0; i < 3; i++) { const note = this.box(tipPile, i % 2 ? 0x92d85d : 0x3f9c58, .03 * i, i * .07, 0, .55, .045, .3); note.rotation.y = (i - 1) * .12; this.box(note, 0xffed9b, 0, .025, 0, .11, .012, .17); }
     this.tipModels.set(r.id, tipPile);
-    this.prop(g, 'bedsideTable', singleRoom ? 1.45 : -.05, .2, -2.25, { height: .85 }); this.prop(g, 'tableLamp', singleRoom ? 1.45 : -.05, .85, -2.25, { height: .62 }); this.prop(g, 'roomRug', bedX, .2, 1.55, { width: singleRoom ? 2.5 : 3.2 }); this.prop(g, 'plant', -3.5, .2, -2.6, { height: 1 });
+    this.prop(g, 'bedsideTable', singleRoom ? 1.45 : -.05, .2, -2.25, { height: .85 }); this.prop(g, 'tableLamp', singleRoom ? 1.45 : -.05, .85, -2.25, { height: .62 }); this.prop(g, 'plant', -3.5, .2, -2.6, { height: 1 });
     // Level one uses the future bathroom corner as a compact writing area, so the
     // room feels furnished before that space is replaced by the bathroom upgrade.
     if (singleRoom) { this.prop(g, 'table', 2.75, .2, -1.9, { width: 1.65 }); this.prop(g, 'chair', 2.75, .2, -.75, { height: 1.15 }, Math.PI); this.prop(g, 'plant', 3.75, .2, -2.65, { height: .9 }); }

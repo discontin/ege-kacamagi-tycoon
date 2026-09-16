@@ -15,7 +15,7 @@ Tatil köyü; Kenney modellerini, havuz için OpenGameArt dokusunu ve 3DAssets.d
 | [Nature Kit](https://kenney.nl/assets/nature-kit) | Farklı palmiye ağaçları, çalılar, kayalar ve renkli çiçekler | 2.1 | CC0 |
 | [Furniture Kit](https://kenney.nl/assets/furniture-kit) | Yataklar, pencere, ofis masası/sandalyesi, raflar, mobilyalar ve saksılar | 2.0 | CC0 |
 | [Blue Pool Tiles](https://opengameart.org/content/blue-pool-tiles) | Havuz içi mozaik albedo ve normal dokuları | 1.0 | CC0 |
-| [Hotel and Resort Operations](https://3dassets.dev/packs/hotel-and-resort-operations) | Havuz kenarı şezlongu | v1 | CC0 |
+| [Hotel and Resort Operations](https://3dassets.dev/packs/hotel-and-resort-operations) | Yeni oda yatakları (ikiz ve king) ile havuz kenarı şezlongu | v1 | CC0 |
 | [Laundromat and Cleaning Services](https://3dassets.dev/packs/laundrette-and-cleaning) | Ticari çamaşır makinesi, üst üste makine ve tekerlekli çöp kutusu | v1 | CC0 |
 | [Pavement 05](https://polyhaven.com/a/pavement_05) | Orta yürüyüş yolunun taş kaplama dokusu | 1K | CC0 |
 
@@ -23,7 +23,7 @@ Her kaynağın `License.txt` dosyası kendi `public/assets/...` klasöründe kor
 
 GLB dosyaları değiştirilmeden kopyalanmıştır. Ölçek, yerleşim ve bazı doğa malzemelerinin rengi oyun çalışırken ayarlanır. Factory Kit ve Mini Characters GLB'lerinin başvurduğu `Textures/colormap.png` dosyaları korunmalıdır. Evler, platformlar, duvarlar, araçlar ve bazı üretim detayları oyun koduyla oluşturulur; referans oyunun modelleri kullanılmaz.
 
-Blue Pool Tiles dosyaları 15 Eylül 2026'da OpenGameArt kaynağından indirilmiştir. Poolside Sun Lounger, ticari çamaşır makineleri ve tekerlekli çöp kutusu aynı tarihte 3DAssets.dev CDN'inden alınmıştır; kaynak sayfaları modellerin CC0 olduğunu ve atıf gerektirmediğini belirtir. Pavement 05'in 1K diffuse haritası Poly Haven'ın resmî indirme sunucusundan alınmıştır.
+Blue Pool Tiles dosyaları 15 Eylül 2026'da OpenGameArt kaynağından indirilmiştir. Yeni oda yatakları, Poolside Sun Lounger, ticari çamaşır makineleri ve tekerlekli çöp kutusu aynı tarihte 3DAssets.dev CDN'inden alınmıştır; kaynak sayfaları modellerin CC0 olduğunu ve atıf gerektirmediğini belirtir. Pavement 05'in 1K diffuse haritası Poly Haven'ın resmî indirme sunucusundan alınmıştır.
 
 ## İndirme doğrulamaları
 

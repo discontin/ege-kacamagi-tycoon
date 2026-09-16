@@ -1,6 +1,9 @@
-Poolside sun lounger from the Hotel and Resort Operations pack by 3DAssets.dev.
+Poolside sun lounger and twin/king guest-room beds from the Hotel and Resort Operations pack by 3DAssets.dev.
 Source: https://3dassets.dev/packs/hotel-and-resort-operations
-Asset: https://3dassets.dev/assets/hotel-and-resort-operations-poolside-sun-lounger
+Assets:
+- https://3dassets.dev/assets/hotel-and-resort-operations-poolside-sun-lounger
+- https://3dassets.dev/assets/hotel-and-resort-operations-bed-twin-f37d7f41
+- https://3dassets.dev/assets/hotel-and-resort-operations-bed-king-upholstered-819ff50d
 License: Creative Commons CC0 1.0 Universal.
 Attribution is not required. Free for personal and commercial use.
-Downloaded 15 September 2026.
+Downloaded 15-16 September 2026.
