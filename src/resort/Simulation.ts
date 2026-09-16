@@ -3,7 +3,7 @@ import { guestTip } from './GuestMood';
 import { atOffice, carryingCapacity, OFFICE, towelLimit, workerMoveSpeed } from './Office';
 import { guestPreferences } from './GuestPreferences';
 import { staffHireCost, staffRole } from './StaffHiring';
-import { areasFor, CLEAN_TAKE, DIRTY_DROP, EXIT, HEIGHT, incomeFactor, initialResort, LEVELS, POOL_GATE, receptionQueuePoint, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, taskDuration, upgradeCost, WIDTH } from './data';
+import { areasFor, CLEAN_TAKE, DIRTY_DROP, EXIT, HEIGHT, incomeFactor, initialResort, LEVELS, MAP_MAX_X, MAP_MIN_X, POOL_GATE, receptionQueuePoint, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, taskDuration, upgradeCost, WIDTH } from './data';
 import type { Actor, Area, GuestState, PlayerState, Point, ResortGameState, Role, TaskKind, TaskState, WorkerState } from './types';
 import { serviceGuestReady } from './CustomerService';
 import { workAreaContains } from './WorkAreas';
@@ -86,7 +86,7 @@ export class ResortSimulation {
   isWalkable(x: number, y: number) {
     const officeLeft = OFFICE.x - 4, officeRight = OFFICE.x + 4;
     if (x >= officeLeft && x <= officeRight && y >= 44 && y <= 50 && (y === 44 || x === officeLeft && y !== 48 || x === officeRight || y === 50 && x !== OFFICE.x || x >= OFFICE.x - 1 && x <= OFFICE.x + 1 && y === 46)) return false;
-    if (x < 1 || x > 38 || y < -3 || y >= HEIGHT - 1) return false;
+    if (x < MAP_MIN_X || x > MAP_MAX_X || y < -3 || y >= HEIGHT - 1) return false;
     if (this.state.bar?.open && insideBar({ x, y })) return false;
     { const level = this.facility('pool').level, halfW = level >= 2 ? 6.4 : 4.8, halfD = level >= 2 ? 3.7 : 2.8; if (x >= 28.5 - halfW && x <= 28.5 + halfW && y >= 4.5 - halfD && y <= 4.5 + halfD) return false; }
     if (x >= 17 && x <= 21 && y >= 43 && y <= 44) return false;

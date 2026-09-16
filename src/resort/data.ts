@@ -2,9 +2,11 @@ import { BAR_CASH, BAR_WORK, POOL_CLEAN, poolDirtyRack, poolTowelRack, wantsDrin
 import { STAFF_AREAS } from './StaffHiring';
 import { OFFICE } from './Office';
 import type { Area, Point, ResortGameState } from './types';
-export const WIDTH = 44, HEIGHT = 52;
+export const WIDTH = 46, HEIGHT = 52, MAP_MIN_X = 0, MAP_MAX_X = 40;
 export const LEVELS = [0, 15, 50, 100, 180, 280];
-export const ROOM_DEFS = Array.from({ length: 6 }, (_, i) => ({ id: `room${i + 1}`, name: `Bungalov ${String(i + 1).padStart(2, '0')}`, x: i % 2 ? 23 : 3, y: 34 - Math.floor(i / 2) * 10, width: 10, height: 8, unlockLevel: i + 1, cost: [0, 100, 180, 260, 380, 520][i], color: [0x68baa6, 0xf4bd81, 0x87bad0, 0xeaa19c, 0x9bbc82, 0xc0a1d4][i] }));
+// Keep a little breathing room on both sides of the resort while making the
+// central promenade wide enough for the reception traffic.
+export const ROOM_DEFS = Array.from({ length: 6 }, (_, i) => ({ id: `room${i + 1}`, name: `Bungalov ${String(i + 1).padStart(2, '0')}`, x: i % 2 ? 24 : 2, y: 34 - Math.floor(i / 2) * 10, width: 10, height: 8, unlockLevel: i + 1, cost: [0, 100, 180, 260, 380, 520][i], color: [0x68baa6, 0xf4bd81, 0x87bad0, 0xeaa19c, 0x9bbc82, 0xc0a1d4][i] }));
 export const ROOM_DOOR = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x < 15 ? r.x + 9 : r.x, y: r.y + 5 });
 export const ROOM_APPROACH = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x < 15 ? r.x + 10 : r.x - 1, y: r.y + 5 });
 export const ROOM_WORK = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x + 5, y: r.y + 5 });

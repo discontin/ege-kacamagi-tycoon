@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ResortSimulation } from './Simulation';
 import { OFFICE, carryingCapacity, workerMoveSpeed } from './Office';
+import { ROOM_DEFS } from './data';
 import { validResort } from './SaveService';
 
 describe('staff upgrade office', () => {
@@ -17,7 +18,7 @@ describe('staff upgrade office', () => {
     s.upgradeWorker(w.id); expect(workerMoveSpeed(w)).toBe(speed); expect(w.level).toBe(2);
     s.upgradeMove(w.id); expect(workerMoveSpeed(w)).toBeGreaterThan(speed); expect(w.level).toBe(2);
     s.state.spawnTimer = -100; s.facility('room1').dirty = true;
-    Object.assign(w, { x: 8, y: 39, path: [] }); s.tick(.1);
+    Object.assign(w, { x: ROOM_DEFS[0].x + 5, y: ROOM_DEFS[0].y + 5, path: [] }); s.tick(.1);
     expect(s.state.tasks.find(t => t.owner === w.id)!.remaining).toBeCloseTo(6 - .1 * .8);
   });
   it('is reachable through its side entrance and upgrades require being at the office', () => {

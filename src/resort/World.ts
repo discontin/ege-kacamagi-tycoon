@@ -7,7 +7,7 @@ import { staffIconSvg, staffRole } from './StaffHiring';
 import * as T from 'three';
 import { AssetLibrary } from '../game/AssetLibrary';
 import type { AssetKey } from '../game/assetCatalog';
-import { HEIGHT, LAUNDRY_ORIGIN, RECEPTION, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, DIRTY_BASKET, TOWEL_RACK, WIDTH } from './data';
+import { HEIGHT, LAUNDRY_ORIGIN, MAP_MAX_X, MAP_MIN_X, RECEPTION, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, DIRTY_BASKET, TOWEL_RACK, WIDTH } from './data';
 import { ResortSimulation } from './Simulation';
 import type { Actor, Area, Point, Towels } from './types';
 import { taskIndicators, taskIconSvg, type TaskIndicator } from './TaskIndicators';
@@ -144,28 +144,30 @@ export class ResortWorld {
     this.prop(office, 'officeChair', 0, .18, .25, { height: 1.08 }, Math.PI);
     this.prop(office, 'officeLaptop', .32, 1.18, -1.05, { width: .72 }, Math.PI);
     this.prop(office, 'plantSmallA', -3, .1, -2, { height: 1.25 });
-    const ground = this.group({ x: 18, y: 25 }, this.scene); this.box(ground, 0xeeddb4, 0, -.22, 0, 40, .4, 60);
-    const grass = this.group({ x: 17, y: 27 }, this.scene); this.box(grass, 0xa3c98c, 0, -.03, 0, 34, .08, 46);
+    const ground = this.group({ x: 19, y: 25 }, this.scene); this.box(ground, 0xeeddb4, 0, -.22, 0, 44, .4, 60);
+    const grass = this.group({ x: 18, y: 27 }, this.scene); this.box(grass, 0xa3c98c, 0, -.03, 0, 38, .08, 46);
     const sea = this.group({ x: 57, y: 27 }, this.scene); const water = new T.Mesh(new T.PlaneGeometry(45, 100), new T.MeshStandardMaterial({ color: 0x41babc, roughness: .24, metalness: .12 })); water.rotation.x = -Math.PI / 2; water.position.y = -.12; sea.add(water); this.wave = water;
     for (let i = 0; i < 4; i++) this.box(sea, [0x76d4cf, 0x99e0d5, 0xb9e7d9, 0xe4f0db][i], -21.5 + i * .65, -.06, 0, .3, .025, 80);
     const promenade = [0xc39a6b, 0xcba477, 0xb99468, 0xd1ac80, 0xc09c73];
     const courtyard = [0xd0ad82, 0xc9a478, 0xd8b88e, 0xc7a27a, 0xd3b18a];
-    this.paving({ x: 18, y: 47 }, 31, 8, courtyard);
+    this.paving({ x: 19, y: 47 }, 37, 8, courtyard);
     for (const r of ROOM_DEFS) {
       const door = ROOM_DOOR(r);
-      const promenadeEdge = door.x < 18 ? 14 : 22;
+      const promenadeEdge = door.x < 18 ? 14 : 24;
       this.paving({ x: (door.x + promenadeEdge) / 2, y: door.y }, Math.abs(promenadeEdge - door.x), 2, courtyard, .035);
     }
     // Draw the central route last so room thresholds can meet its edge without
     // cutting pale horizontal bands through the continuous stone surface.
-    this.paving({ x: 18, y: 25.5 }, 8, 35, promenade, .045, this.promenadeMaterial);
+    this.paving({ x: 19, y: 25.5 }, 10, 35, promenade, .045, this.promenadeMaterial);
     // Narrow terracotta borders frame the main promenade and its garden edges.
-    for (const x of [14.08, 21.92]) {
+    for (const x of [14.08, 23.92]) {
       const border = this.group({ x, y: 25.5 }, this.scene);
       this.box(border, 0xa97451, 0, .085, 0, .16, .035, 35);
     }
-    for (const [x, y] of [[1, 8], [2, 23], [2, 43], [34, 16], [34, 31], [34, 46], [16, 2], [32, 1]]) this.palm(x, y, 4 + (y % 3));
-    for (let y = 3; y < 49; y += 5) { const g = this.group({ x: 1, y }, this.scene); this.prop(g, 'bush', 0, 0, 0, { width: 1.7 }); }
+    // Edge landscaping stays outside the bungalow footprints after the map
+    // expansion, so tree crowns cannot spill into guest rooms.
+    for (const [x, y] of [[-1, 8], [-1, 23], [-1, 43], [36, 16], [36, 31], [36, 46], [16, 2], [32, 1]]) this.palm(x, y, 4 + (y % 3));
+    for (let y = 3; y < 49; y += 5) { const g = this.group({ x: 0, y }, this.scene); this.prop(g, 'bush', 0, 0, 0, { width: 1.7 }); }
     for (let y = 14; y < 48; y += 3) { const g = this.group({ x: 35, y }, this.scene); this.box(g, 0xfff5d5, 0, .6, 0, .12, 1.2, .12); this.box(g, 0xfff5d5, 0, .7, 1.4, .1, .1, 2.8); }
     const sign = this.group({ x: 16, y: 49 }, this.scene); this.box(sign, 0x9b7857, 0, 1, 0, .15, 2, .15); this.box(sign, 0x327e76, 0, 1.9, 0, 2.1, .8, .15);
     for (const [i, [x, y]] of [[15, 23], [21, 32], [15, 42]].entries()) { const g = this.group({ x, y }, this.scene); this.prop(g, i % 2 ? 'plantSmallA' : 'plantSmallB', 0, .05, 0, { height: 1.2 }); this.prop(g, i % 2 ? 'flowerRed' : 'flowerPurple', 0, .3, 0, { height: .55 }); }
@@ -595,7 +597,7 @@ export class ResortWorld {
     window.addEventListener('keyup', e => this.keys.delete(e.key.toLowerCase()), opts); window.addEventListener('blur', () => { this.keys.clear(); this.touch = { x: 0, y: 0 }; }, opts);
     canvas.addEventListener('wheel', e => { e.preventDefault(); this.setZoom(e.deltaY < 0 ? 1.08 : .92); }, { ...opts, passive: false });
     canvas.addEventListener('pointerdown', e => { this.origin = { x: e.clientX, y: e.clientY }; this.dragged = false; this.pointers.set(e.pointerId, this.origin); canvas.setPointerCapture(e.pointerId); }, opts);
-    canvas.addEventListener('pointermove', e => { const prev = this.pointers.get(e.pointerId); if (!prev) return; const p = { x: e.clientX, y: e.clientY }; this.pointers.set(e.pointerId, p); if (this.pointers.size === 2) { const [a, b] = [...this.pointers.values()], d = distance(a, b); if (this.pinch) this.setZoom(d / this.pinch); this.pinch = d; this.dragged = true; return; } if (this.origin && distance(p, this.origin) > 7) this.dragged = true; if (this.dragged) { this.follow = false; this.target.x -= (p.x - prev.x) * .04 / this.zoom; this.target.z -= (p.y - prev.y) * .05 / this.zoom; this.target.x = T.MathUtils.clamp(this.target.x, -17, 20); this.target.z = T.MathUtils.clamp(this.target.z, -26, 25); } }, opts);
+    canvas.addEventListener('pointermove', e => { const prev = this.pointers.get(e.pointerId); if (!prev) return; const p = { x: e.clientX, y: e.clientY }; this.pointers.set(e.pointerId, p); if (this.pointers.size === 2) { const [a, b] = [...this.pointers.values()], d = distance(a, b); if (this.pinch) this.setZoom(d / this.pinch); this.pinch = d; this.dragged = true; return; } if (this.origin && distance(p, this.origin) > 7) this.dragged = true; if (this.dragged) { this.follow = false; this.target.x -= (p.x - prev.x) * .04 / this.zoom; this.target.z -= (p.y - prev.y) * .05 / this.zoom; this.target.x = T.MathUtils.clamp(this.target.x, MAP_MIN_X - 19, MAP_MAX_X - 19); this.target.z = T.MathUtils.clamp(this.target.z, -26, 25); } }, opts);
     canvas.addEventListener('pointerup', e => { if (!this.dragged && this.pointers.size === 1) { const p = this.ground({ x: e.clientX, y: e.clientY }); if (p) { const a = this.sim.areas.find(a => distance(a, p) < 1); this.sim.goTo(a ?? p); this.follow = true; } } this.pointers.delete(e.pointerId); this.pinch = 0; }, opts);
     canvas.addEventListener('pointercancel', e => this.pointers.delete(e.pointerId), opts);
     const joystick = document.querySelector<HTMLElement>('#joystick')!, knob = document.querySelector<HTMLElement>('#joystick-knob')!;
