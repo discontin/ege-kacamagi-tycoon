@@ -21,6 +21,9 @@ import { LAUNDRY_WALLS, laundryMachines } from './LaundryLayout';
 import './hire-marker.css';
 
 interface Character { root: T.Group; load: T.Group; broom: T.Group; tray: T.Group; iceCream: T.Group; net: T.Group; mixer?: T.AnimationMixer; actions: Map<string, T.AnimationAction>; mode: string; previous: T.Vector3; bagKey: string }
+// Keep the reception's cash and upgrade interaction zones available to the
+// simulation, but remove their old yellow floor markers from the scene.
+const HIDDEN_RECEPTION_MARKERS = new Set(['receptionCash', 'receptionUpgrade']);
 const world = (p: Point) => new T.Vector3(p.x - 19, 0, p.y - 27);
 export class ResortWorld {
   private scene = new T.Scene();
@@ -397,6 +400,7 @@ export class ResortWorld {
       const outline = new T.Mesh(geometry, new T.MeshBasicMaterial({ color, side: T.DoubleSide })); outline.rotation.x = -Math.PI / 2; outline.position.y = .17; root.add(outline);
       const label = document.createElement('button'); label.className = `floor-label ${a.mode}`; label.setAttribute('aria-label', `${a.label} alanına yürü`); label.addEventListener('click', () => { this.sim.goToArea(a.id); this.follow = true; }, { signal: this.abort.signal }); this.labels.append(label); this.pads.set(a.id, { root, outline, fill, label, area: a });
       if (a.mode === 'cash') { const pile = new T.Group(); for (let i = 0; i < 4; i++) this.box(pile, i % 2 ? 0x9ad364 : 0x60a957, 0, .25 + i * .12, 0, .8, .1, .4); root.add(pile); this.moneyModels.set(a.target, pile); }
+      if (HIDDEN_RECEPTION_MARKERS.has(a.id)) { fill.visible = false; outline.visible = false; label.style.display = 'none'; }
     }
     for (const f of this.sim.state.facilities) { if (f.kind === 'room' || f.kind === 'reception' || f.id === 'laundry') continue; const l = document.createElement('div'); l.className = 'facility-label'; l.addEventListener('click', () => this.inspect(f.id), { signal: this.abort.signal }); this.labels.append(l); this.facilityLabels.set(f.id, l); }
   }
@@ -552,7 +556,13 @@ export class ResortWorld {
     for (const event of this.sim.feedback.splice(0)) this.feel.emit(event);
     this.feel.update(s.settings.paused ? 0 : dt * s.settings.speed, world(s.player));
     for (const p of this.pads.values()) {
-      const a = p.area, task = s.tasks.find(t => t.target === a.target && (a.taskKind === t.kind || a.id === `${t.target}Work` && (t.kind === 'cleanRoom' || t.kind === 'restockRoom'))), near = this.sim.inside(s.player, a);
+      const a = p.area;
+      if (HIDDEN_RECEPTION_MARKERS.has(a.id)) {
+        p.fill.visible = false; p.outline.visible = false; p.label.style.display = 'none';
+        if (a.mode === 'cash') { const cash = a.target === 'bar' ? s.bar!.cash : this.sim.facility(a.target).cash; this.moneyModels.get(a.target)!.visible = cash > 0; }
+        continue;
+      }
+      const task = s.tasks.find(t => t.target === a.target && (a.taskKind === t.kind || a.id === `${t.target}Work` && (t.kind === 'cleanRoom' || t.kind === 'restockRoom'))), near = this.sim.inside(s.player, a);
       const progress = task ? 1 - task.remaining / task.total : near ? .3 : 0;
       (p.outline.material as T.MeshBasicMaterial).color.set(near ? 0xb7ef8d : a.mode === 'buy' ? this.sim.level >= this.sim.requiredLevel(a) ? 0x92e6a3 : 0xb3b7a0 : a.mode === 'upgrade' ? 0xffd675 : 0xffffff);
       (p.fill.material as T.MeshBasicMaterial).opacity = a.mode === 'work' ? .1 + progress * .4 : .55;
