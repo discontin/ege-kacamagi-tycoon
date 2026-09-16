@@ -5,7 +5,7 @@ import { guestMood } from './GuestMood';
 import './guest-mood.css';
 import { staffIconSvg, staffRole } from './StaffHiring';
 import * as T from 'three';
-import { AssetLibrary } from '../game/AssetLibrary';
+import { AssetLibrary, type AssetInstance } from '../game/AssetLibrary';
 import type { AssetKey } from '../game/assetCatalog';
 import { HEIGHT, LAUNDRY_ORIGIN, LAUNDRY_TRASH, MAP_MAX_X, MAP_MIN_X, RECEPTION, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, DIRTY_BASKET, TOWEL_RACK, WIDTH } from './data';
 import { ResortSimulation } from './Simulation';
@@ -44,6 +44,7 @@ export class ResortWorld {
   private bedLinen = new Map<string, BedLinen>();
   private bathroomDoors = new Map<string, T.Group>();
   private stockModels = new Map<string, T.Mesh[]>();
+  private washerDoors: { root: T.Object3D; mixer: T.AnimationMixer; open: T.AnimationAction; close: T.AnimationAction; closed: boolean }[] = [];
   private poolLeaves: T.Mesh[] = [];
   private drums: T.Mesh[] = [];
   private feel: ResortGameFeel;
@@ -310,6 +311,7 @@ export class ResortWorld {
     for (const machine of laundryMachines(f.level)) {
       const x = machine.x - LAUNDRY_ORIGIN.x, stacked = f.level >= 2;
       const appliance = this.prop(g, stacked ? 'washerStacked' : 'washer', x, .2, machine.y - LAUNDRY_ORIGIN.y, { height: stacked ? 2.25 : 1.75 });
+      if (appliance) this.setupWasherDoor(appliance);
       if (!appliance) this.box(g, 0xfff9e8, x, 1, 0, machine.width, 1.8, machine.depth);
     }
     this.prop(g, 'rack', TOWEL_RACK.x - LAUNDRY_ORIGIN.x, .1, TOWEL_RACK.y - LAUNDRY_ORIGIN.y, { height: 2.2 });
@@ -323,6 +325,16 @@ export class ResortWorld {
     rack.towels.slice(8).forEach(towel => towel.visible = false);
     const sheets: T.Mesh[] = []; for (let i = 0; i < 4; i++) { const sheet = this.box(rack.root, 0xfff2dc, i % 2 ? .46 : -.46, 1.75 + Math.floor(i / 2) * .13, 0, .85, .12, .76); this.box(sheet, 0x73c4d1, 0, 0, .39, .8, .04, .01); sheets.push(sheet); } this.stockModels.set('laundrySheets', sheets);
     this.prop(g, 'bin', LAUNDRY_TRASH.x - LAUNDRY_ORIGIN.x, .2, 2.35, { height: 1.2 });
+  }
+  private setupWasherDoor(appliance: AssetInstance) {
+    const clips = appliance.clips.map(clip => new T.AnimationClip(clip.name, clip.duration, clip.tracks.filter(track => /door-(?:drum|washer)\.quaternion$/.test(track.name)))).filter(clip => clip.tracks.length);
+    const openClip = clips.find(clip => clip.name === 'open'), closeClip = clips.find(clip => clip.name === 'close');
+    if (!openClip || !closeClip) return;
+    const mixer = new T.AnimationMixer(appliance.model), open = mixer.clipAction(openClip), close = mixer.clipAction(closeClip);
+    for (const action of [open, close]) { action.setLoop(T.LoopOnce, 1); action.clampWhenFinished = true; }
+    // The idle washer is visibly ready to be loaded; the GLB's default pose is shut.
+    open.play(); mixer.update(openClip.duration);
+    this.washerDoors.push({ root: appliance.model, mixer, open, close, closed: false });
   }
   private lemonade(parent: T.Object3D, x: number, y: number, z: number) {
     const g = new T.Group(); g.position.set(x, y, z); parent.add(g);
@@ -385,7 +397,7 @@ export class ResortWorld {
     if (f.level >= 2) { this.sphere(g, 0xffb473, 2.7, .5, -1, .6, 1, .2, 1); this.prop(g, 'plant', -5.8, .1, -3.7, { height: 1.5 }); }
     if (f.level === 3) { this.prop(g, 'plant', 5.8, .1, -3.7, { height: 1.5 }); this.box(g, 0xf2d16e, 0, .4, -3.2, 5, .05, .2); }
   }
-  private clearStructures() { this.structures.traverse(o => { if (o instanceof T.Mesh && o.geometry.userData.generated) o.geometry.dispose(); }); this.structures.clear(); for (const p of this.pads.values()) { p.label.remove(); (p.outline.material as T.Material).dispose(); (p.fill.material as T.Material).dispose(); } this.pads.clear(); for (const l of this.facilityLabels.values()) l.remove(); this.facilityLabels.clear(); this.tipModels.clear(); this.moneyModels.clear(); this.dirtModels.clear(); this.bedLinen.clear(); this.bathroomDoors.clear(); this.stockModels.clear(); this.drums = []; this.poolLeaves = []; }
+  private clearStructures() { this.structures.traverse(o => { if (o instanceof T.Mesh && o.geometry.userData.generated) o.geometry.dispose(); }); this.structures.clear(); for (const washer of this.washerDoors) { washer.mixer.stopAllAction(); washer.mixer.uncacheRoot(washer.root); } this.washerDoors = []; for (const p of this.pads.values()) { p.label.remove(); (p.outline.material as T.Material).dispose(); (p.fill.material as T.Material).dispose(); } this.pads.clear(); for (const l of this.facilityLabels.values()) l.remove(); this.facilityLabels.clear(); this.tipModels.clear(); this.moneyModels.clear(); this.dirtModels.clear(); this.bedLinen.clear(); this.bathroomDoors.clear(); this.stockModels.clear(); this.drums = []; this.poolLeaves = []; }
   private rebuild() {
     const key = JSON.stringify([!!this.sim.state.bar?.open, !!this.sim.facility('pool').dirt, this.sim.state.guests.filter(wantsDrink).map(g => [g.id, g.orderProduct]), this.sim.state.workers.map(w => w.role), this.sim.state.workers.length,this.sim.state.facilities.map(f => [f.id, f.open, f.level, f.dirty, !!f.floorDirty, !!f.bathroomDirty, !!f.needsSheet, !!f.towels]), this.sim.state.seats.map(s => [s.open, s.dirty, !!s.towel, !!s.guest])]);
     if (key === this.layoutKey) return; this.layoutKey = key; this.clearStructures(); ROOM_DEFS.forEach(r => this.bungalow(r)); this.reception(); this.laundry(); this.pool(); this.poolBar();
@@ -503,6 +515,17 @@ export class ResortWorld {
     const dx = this.touch.x + Number(this.keys.has('d') || this.keys.has('arrowright')) - Number(this.keys.has('a') || this.keys.has('arrowleft')), dy = this.touch.y + Number(this.keys.has('s') || this.keys.has('arrowdown')) - Number(this.keys.has('w') || this.keys.has('arrowup'));
     if (Math.hypot(dx, dy) > .05) { this.sim.movePlayer(dx, dy, dt); this.follow = true; }
     this.sim.tick(dt); this.rebuild(); const s = this.sim.state;
+    const washerRunning = s.laundry.remaining !== null && s.laundry.remaining > 0;
+    for (const washer of this.washerDoors) {
+      if (washer.closed !== washerRunning) {
+        const previous = washer.closed ? washer.open : washer.close;
+        previous.stop();
+        const next = washerRunning ? washer.close : washer.open;
+        next.reset().setLoop(T.LoopOnce, 1); next.clampWhenFinished = true; next.play();
+        washer.closed = washerRunning;
+      }
+      washer.mixer.update(s.settings.paused ? 0 : dt * s.settings.speed);
+    }
     if (this.follow) this.target.lerp(world(s.player).add(new T.Vector3(0, 0, -3)), 1 - Math.exp(-dt * 5));
     const d = this.follow ? 1 / this.zoom : Math.max(2.3, 2.1 / this.camera.aspect); this.camera.position.copy(this.target).add(new T.Vector3(0, 20 * d, 23 * d)); this.camera.lookAt(this.target);
     this.updateCharacter(s.player, dt, s.player.bag, s.tasks.some(t => t.owner === 'player' && this.sim.isTaskActive(t)));

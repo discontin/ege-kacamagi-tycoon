@@ -33,7 +33,10 @@ export function initialResort(test = false): ResortGameState {
 export function areasFor(s: ResortGameState): Area[] {
   const areas: Area[] = [
     { id: 'office', label: 'Ofis · çalışan geliştirme', mode: 'work', target: 'office', ...OFFICE },
-    { id: 'laundryDirtyTake', label: 'Kirli raftan çamaşır al', mode: 'work', target: 'laundry', taskKind: 'laundryDirtyTake', x: DIRTY_BASKET.x - 2, y: DIRTY_BASKET.y },
+    // Pick up from the accessible front-right side of the dirty rack. The old
+    // point sat in the narrow gap between the washer and rack, where routes
+    // could not reliably reach it.
+    { id: 'laundryDirtyTake', label: 'Kirli raftan çamaşır al', mode: 'work', target: 'laundry', taskKind: 'laundryDirtyTake', x: DIRTY_BASKET.x + 1, y: DIRTY_DROP.y },
     { id: 'machineLoad', label: 'Makineye kirli çamaşır koy', mode: 'work', target: 'laundry', taskKind: 'machineLoad', x: 5, y: 46 },
     { id: 'machineUnload', label: 'Makineden temiz çamaşır al', mode: 'work', target: 'laundry', taskKind: 'machineUnload', x: 5, y: 46 },
     { id: 'laundryCleanDrop', label: 'Temiz çamaşırı rafa koy', mode: 'work', target: 'laundry', taskKind: 'laundryCleanDrop', ...LAUNDRY_CLEAN_DROP },

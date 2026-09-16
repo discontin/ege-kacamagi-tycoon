@@ -37,4 +37,18 @@ describe('laundry requires physical handling without staff', () => {
     expect(s.state.player.bag.dirty).toBe(2); expect(s.state.laundry.dirty).toBe(0);
     expect(s.state.laundry.remaining).toBeNull();
   });
+  it('routes the player to the clear pickup side of the dirty rack, then lets them load the washer', () => {
+    const s = new ResortSimulation(); s.state.player.bag.dirty = 2;
+    stand(s, 'dirtyDrop'); advance(s, .8);
+    expect(s.state.laundry.dirty).toBe(2);
+    const pickup = s.area('laundryDirtyTake')!;
+    expect(s.isWalkable(Math.round(pickup.x), Math.round(pickup.y))).toBe(true);
+    expect(s.path(s.state.player, pickup).length).toBeGreaterThan(0);
+    expect(taskIndicators(s.state).some(i => i.id === 'laundryPickup')).toBe(true);
+    s.goToArea('laundryDirtyTake'); advance(s, 8);
+    expect(s.state.player.bag.dirty).toBe(2); expect(s.state.laundry.dirty).toBe(0);
+    stand(s, 'machineLoad'); advance(s, .8);
+    expect(s.state.player.bag.dirty).toBe(0); expect(s.state.laundry.washingTowels).toBe(2);
+    expect(s.state.laundry.remaining).toBeGreaterThan(0);
+  });
 });

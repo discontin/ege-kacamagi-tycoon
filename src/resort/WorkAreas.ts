@@ -14,6 +14,7 @@ export function workAreaContains(p: Point, a: Point | Area): boolean {
   if ('mode' in a && a.mode === 'work' && (a.taskKind === 'cleanTake' || a.taskKind === 'dirtyDrop')) {
     // Keep the pickup side separate so standing still cannot undo a transfer.
     if (a.taskKind === 'dirtyDrop' && Math.abs(p.x - (DIRTY_BASKET.x - 2)) <= .5 && Math.abs(p.y - DIRTY_BASKET.y) <= .5) return false;
+    if (a.taskKind === 'dirtyDrop' && Math.abs(p.x - Math.round(a.x + 1)) <= .2 && Math.abs(p.y - Math.round(a.y)) <= .2) return false;
     if (a.taskKind === 'cleanTake' && Math.abs(p.x - LAUNDRY_CLEAN_DROP.x) <= .5 && Math.abs(p.y - LAUNDRY_CLEAN_DROP.y) <= .5) return false;
     if (a.taskKind === 'cleanTake' && p.x >= LAUNDRY_RIGHT_EDGE) return false;
     const rack = a.taskKind === 'cleanTake', center = rack ? TOWEL_RACK : DIRTY_BASKET;
