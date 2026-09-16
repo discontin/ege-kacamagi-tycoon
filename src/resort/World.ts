@@ -169,8 +169,6 @@ export class ResortWorld {
     for (const [x, y] of [[-1, 8], [-1, 23], [-1, 43], [36, 16], [36, 31], [36, 46], [16, 2], [32, 1]]) this.palm(x, y, 4 + (y % 3));
     for (let y = 3; y < 49; y += 5) { const g = this.group({ x: 0, y }, this.scene); this.prop(g, 'bush', 0, 0, 0, { width: 1.7 }); }
     for (let y = 14; y < 48; y += 3) { const g = this.group({ x: 35, y }, this.scene); this.box(g, 0xfff5d5, 0, .6, 0, .12, 1.2, .12); this.box(g, 0xfff5d5, 0, .7, 1.4, .1, .1, 2.8); }
-    const sign = this.group({ x: 16, y: 49 }, this.scene); this.box(sign, 0x9b7857, 0, 1, 0, .15, 2, .15); this.box(sign, 0x327e76, 0, 1.9, 0, 2.1, .8, .15);
-    for (const [i, [x, y]] of [[15, 23], [21, 32], [15, 42]].entries()) { const g = this.group({ x, y }, this.scene); this.prop(g, i % 2 ? 'plantSmallA' : 'plantSmallB', 0, .05, 0, { height: 1.2 }); this.prop(g, i % 2 ? 'flowerRed' : 'flowerPurple', 0, .3, 0, { height: .55 }); }
   }
   private bungalow(r: typeof ROOM_DEFS[number]) {
     const f = this.sim.facility(r.id), g = this.group({ x: r.x + 4.5, y: r.y + 3.5 });
