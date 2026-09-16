@@ -220,6 +220,11 @@ export class ResortWorld {
     const bedColor = f.level === 2 ? 0x70b9ac : 0x80b8d9;
     const singleRoom = f.level === 1, bedX = singleRoom ? 0 : -1.5, bedWidth = singleRoom ? 1.8 : 3.35, bedDepth = singleRoom ? 3.8 : 4.15;
     const bed = this.prop(g, singleRoom ? 'bedSingle' : 'bedDouble', bedX, .2, -.5, { width: bedDepth });
+    bed?.model.traverse(object => {
+      if (!(object instanceof T.Mesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      if (materials.some(material => material.name === 'carpet')) object.visible = false;
+    });
     if (!bed) { this.box(g, singleRoom ? 0xac7359 : 0x98634f, bedX, .46, -.5, bedWidth, .6, bedDepth); this.box(g, 0xfff8e8, bedX, .82, -.5, bedWidth - .15, .35, bedDepth - .2); }
     const blankBed = this.box(g, 0xfff8e8, bedX, 1.13, -.5, bedWidth - .15, .055, 2.3);
     blankBed.visible = !f.dirty && !!f.needsSheet;
