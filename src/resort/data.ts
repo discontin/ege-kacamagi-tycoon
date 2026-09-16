@@ -13,6 +13,7 @@ export const ROOM_WORK = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x + 5, 
 export const LAUNDRY_ORIGIN = { x: 7, y: 45 };
 export const TOWEL_RACK = { x: 11.5, y: 44.5 }, DIRTY_BASKET = { x: 9.5, y: 44.5 };
 export const LAUNDRY_TRASH = { x: 4.5, y: 47.4 };
+export const LAUNDRY_CLEAN_DROP = { x: 12, y: 46.5 };
 export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 9.5, y: 45.5 }, CLEAN_TAKE = { x: 11, y: 45.5 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
 export const receptionQueuePoint = (index: number): Point => ({ x: 19, y: 46 + index });
 export const SEAT_DEFS = [24, 27, 30, 33].map((x, i) => ({ id: `seat${i + 1}`, x, y: 10 })).concat([{ id: 'seat5', x: 25.5, y: 13 }, { id: 'seat6', x: 31.5, y: 13 }]);
@@ -31,7 +32,7 @@ export function areasFor(s: ResortGameState): Area[] {
     { id: 'laundryDirtyTake', label: 'Kirli raftan çamaşır al', mode: 'work', target: 'laundry', taskKind: 'laundryDirtyTake', x: DIRTY_BASKET.x - 2, y: DIRTY_BASKET.y },
     { id: 'machineLoad', label: 'Makineye kirli çamaşır koy', mode: 'work', target: 'laundry', taskKind: 'machineLoad', x: 5, y: 46 },
     { id: 'machineUnload', label: 'Makineden temiz çamaşır al', mode: 'work', target: 'laundry', taskKind: 'machineUnload', x: 5, y: 46 },
-    { id: 'laundryCleanDrop', label: 'Temiz çamaşırı rafa koy', mode: 'work', target: 'laundry', taskKind: 'laundryCleanDrop', x: 13, y: 45.5 },
+    { id: 'laundryCleanDrop', label: 'Temiz çamaşırı rafa koy', mode: 'work', target: 'laundry', taskKind: 'laundryCleanDrop', ...LAUNDRY_CLEAN_DROP },
     { id: 'laundryTrash', label: 'Elindekini çöpe at', mode: 'work', target: 'laundry', taskKind: 'discardItem', ...LAUNDRY_TRASH },
     { id: 'checkin', label: 'Müşteri karşıla', mode: 'work', target: 'reception', taskKind: 'checkin', ...RECEPTION },
     { id: 'receptionCash', label: 'Konaklama geliri', mode: 'cash', target: 'reception', x: 23, y: 46 },

@@ -14,7 +14,7 @@ describe('visible laundry layout and carrying limits', () => {
       expect(s.isWalkable(p.x, p.y)).toBe(true);
       expect(s.path(s.state.player, p).length).toBeGreaterThan(0);
     }
-    for (const p of [{ x: 9, y: 42 }, { x: 2, y: 45 }, { x: 13, y: 43 }, { x: 5, y: 45 }, { x: 12, y: 45 }, { x: 10, y: 45 }]) {
+    for (const p of [{ x: 9, y: 42 }, { x: 2, y: 45 }, { x: 13, y: 43 }, { x: 13, y: 46 }, { x: 5, y: 45 }, { x: 12, y: 45 }, { x: 10, y: 45 }]) {
       expect(s.isWalkable(p.x, p.y)).toBe(false);
     }
   });
