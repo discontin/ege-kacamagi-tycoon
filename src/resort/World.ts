@@ -42,6 +42,7 @@ export class ResortWorld {
   private taskMarkers = new Map<string, { button: HTMLButtonElement; progress: HTMLSpanElement; notice: TaskIndicator }>();
   private dirtModels = new Map<string, T.Mesh[]>();
   private bedLinen = new Map<string, BedLinen>();
+  private bedBlankSurfaces = new Map<string, T.Mesh>();
   private bathroomDoors = new Map<string, T.Group>();
   private stockModels = new Map<string, T.Mesh[]>();
   private poolLeaves: T.Mesh[] = [];
@@ -220,6 +221,9 @@ export class ResortWorld {
     const singleRoom = f.level === 1, bedX = singleRoom ? 0 : -1.5, bedWidth = singleRoom ? 1.8 : 3.35, bedDepth = singleRoom ? 3.8 : 4.15;
     const bed = this.prop(g, singleRoom ? 'bedSingle' : 'bedDouble', bedX, .2, -.5, { width: bedDepth });
     if (!bed) { this.box(g, singleRoom ? 0xac7359 : 0x98634f, bedX, .46, -.5, bedWidth, .6, bedDepth); this.box(g, 0xfff8e8, bedX, .82, -.5, bedWidth - .15, .35, bedDepth - .2); }
+    const blankBed = this.box(g, 0xfff8e8, bedX, 1.13, -.5, bedWidth - .15, .055, 2.3);
+    blankBed.visible = !f.dirty && !!f.needsSheet;
+    this.bedBlankSurfaces.set(r.id, blankBed);
     const linen = new BedLinen(bedColor, color => this.material(color), { single: singleRoom, centerX: bedX }); linen.update(f.dirty ? 0 : 1); g.add(linen.root); this.bedLinen.set(r.id, linen);
     if (!bed) this.box(g, singleRoom ? 0xac7359 : 0x8f5d4a, bedX, singleRoom ? 1.1 : 1.25, -2.45, bedWidth + .1, singleRoom ? 1.25 : 1.55, .2);
     const tipPile = new T.Group(); tipPile.position.set(2.5, 1.8, -2); g.add(tipPile);
@@ -375,7 +379,7 @@ export class ResortWorld {
     if (f.level >= 2) { this.sphere(g, 0xffb473, 2.7, .5, -1, .6, 1, .2, 1); this.prop(g, 'plant', -5.8, .1, -3.7, { height: 1.5 }); }
     if (f.level === 3) { this.prop(g, 'plant', 5.8, .1, -3.7, { height: 1.5 }); this.box(g, 0xf2d16e, 0, .4, -3.2, 5, .05, .2); }
   }
-  private clearStructures() { this.structures.traverse(o => { if (o instanceof T.Mesh && o.geometry.userData.generated) o.geometry.dispose(); }); this.structures.clear(); for (const p of this.pads.values()) { p.label.remove(); (p.outline.material as T.Material).dispose(); (p.fill.material as T.Material).dispose(); } this.pads.clear(); for (const l of this.facilityLabels.values()) l.remove(); this.facilityLabels.clear(); this.tipModels.clear(); this.moneyModels.clear(); this.dirtModels.clear(); this.bedLinen.clear(); this.bathroomDoors.clear(); this.stockModels.clear(); this.drums = []; this.poolLeaves = []; }
+  private clearStructures() { this.structures.traverse(o => { if (o instanceof T.Mesh && o.geometry.userData.generated) o.geometry.dispose(); }); this.structures.clear(); for (const p of this.pads.values()) { p.label.remove(); (p.outline.material as T.Material).dispose(); (p.fill.material as T.Material).dispose(); } this.pads.clear(); for (const l of this.facilityLabels.values()) l.remove(); this.facilityLabels.clear(); this.tipModels.clear(); this.moneyModels.clear(); this.dirtModels.clear(); this.bedLinen.clear(); this.bedBlankSurfaces.clear(); this.bathroomDoors.clear(); this.stockModels.clear(); this.drums = []; this.poolLeaves = []; }
   private rebuild() {
     const key = JSON.stringify([!!this.sim.state.bar?.open, !!this.sim.facility('pool').dirt, this.sim.state.guests.filter(wantsDrink).map(g => [g.id, g.orderProduct]), this.sim.state.workers.map(w => w.role), this.sim.state.workers.length,this.sim.state.facilities.map(f => [f.id, f.open, f.level, f.dirty, !!f.floorDirty, !!f.bathroomDirty, !!f.needsSheet, !!f.towels]), this.sim.state.seats.map(s => [s.open, s.dirty, !!s.towel, !!s.guest])]);
     if (key === this.layoutKey) return; this.layoutKey = key; this.clearStructures(); ROOM_DEFS.forEach(r => this.bungalow(r)); this.reception(); this.laundry(); this.pool(); this.poolBar();
@@ -541,7 +545,7 @@ export class ResortWorld {
     this.beacon.visible = !!destination; if (destination) { this.beacon.position.copy(world(destination)); this.beacon.children[1].position.y = 1.4 + Math.sin(s.elapsed * 3) * .15; }
     this.footsteps.forEach((dot, i) => { const point = s.player.path[i * 2]; dot.visible = !!point; if (point) { dot.position.copy(world(point)); dot.position.y = .2; } });
     for (const [id, meshes] of this.dirtModels) { const task = s.tasks.find(t => t.target === id && t.kind === (id.startsWith('room') ? 'cleanFloor' : 'cleanSeat')), progress = task ? cleaningProgress(task.remaining, task.total) : 0; meshes.forEach((mesh, i) => { mesh.visible = progress < (i + 1) / meshes.length; }); }
-    for (const [id, linen] of this.bedLinen) { const room = this.sim.facility(id), task = s.tasks.find(t => t.target === id && t.kind === 'cleanRoom'); linen.root.visible = room.dirty || !room.needsSheet; linen.update(room.dirty ? task ? cleaningProgress(task.remaining, task.total) : 0 : 1); }
+    for (const [id, linen] of this.bedLinen) { const room = this.sim.facility(id), task = s.tasks.find(t => t.target === id && t.kind === 'cleanRoom'); linen.root.visible = room.dirty || !room.needsSheet; linen.update(room.dirty ? task ? cleaningProgress(task.remaining, task.total) : 0 : 1); const blankBed = this.bedBlankSurfaces.get(id); if (blankBed) blankBed.visible = !room.dirty && !!room.needsSheet; }
     for (const [id, meshes] of this.stockModels) { const n = id === 'laundryClean' ? s.laundry.clean : id === 'laundrySheets' ? s.laundry.cleanSheets ?? 0 : id === 'laundryDirty' ? s.laundry.dirty + (s.laundry.dirtySheets ?? 0) : id === 'poolDirty' ? this.sim.facility('pool').dirtyTowels ?? 0 : this.sim.facility('pool').towels; meshes.forEach((mesh, i) => { mesh.visible = i < n; if (id === 'laundryDirty') { const sheet = i >= s.laundry.dirty; mesh.material = this.material(sheet ? 0x8a9da9 : 0x9a897d); mesh.scale.set(sheet ? 1.16 : 1, 1, sheet ? 1.3 : 1); } }); }
     const maintenance = s.tasks.find(t => t.kind === 'cleanPool');
     const cleanProgress = maintenance ? 1 - maintenance.remaining / maintenance.total : 0;
