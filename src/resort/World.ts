@@ -7,7 +7,7 @@ import { staffIconSvg, staffRole } from './StaffHiring';
 import * as T from 'three';
 import { AssetLibrary } from '../game/AssetLibrary';
 import type { AssetKey } from '../game/assetCatalog';
-import { HEIGHT, RECEPTION, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, DIRTY_BASKET, TOWEL_RACK, WIDTH } from './data';
+import { HEIGHT, LAUNDRY_ORIGIN, RECEPTION, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, DIRTY_BASKET, TOWEL_RACK, WIDTH } from './data';
 import { ResortSimulation } from './Simulation';
 import type { Actor, Area, Point, Towels } from './types';
 import { taskIndicators, taskIconSvg, type TaskIndicator } from './TaskIndicators';
@@ -16,6 +16,7 @@ import { ResortGameFeel } from './GameFeel';
 import { BedLinen } from './BedLinen';
 import { TowelShelf } from './TowelShelf';
 import { linenCount } from './Linen';
+import { OFFICE } from './Office';
 import { LAUNDRY_WALLS, laundryMachines } from './LaundryLayout';
 import './hire-marker.css';
 
@@ -132,7 +133,7 @@ export class ResortWorld {
     stones.receiveShadow = true; g.add(stones);
   }
   private environment() {
-    const office = this.group({ x: 29, y: 47 }, this.scene);
+    const office = this.group({ x: OFFICE.x, y: OFFICE.y - 1 }, this.scene);
     this.box(office, 0xe8c494, 0, .08, 0, 8.5, .16, 6.5);
     this.box(office, 0x8bbcb5, 0, 1.35, -3, 8.3, 2.5, .2);
     this.box(office, 0x8bbcb5, 4, .65, 0, .2, 1.1, 6);
@@ -284,26 +285,27 @@ export class ResortWorld {
     if (f.level === 3) this.prop(g, 'bench', 5, .12, 1, { width: 2.5 }, -Math.PI / 2);
   }
   private laundry() {
-    const f = this.sim.facility('laundry'), g = this.group({ x: 8, y: 45 });
-    this.box(g, 0xf6eacb, .5, .08, .4, 11.4, .16, 5.5);
-    for (const wall of LAUNDRY_WALLS) { this.box(g, 0x99c9cd, wall.x - 8, .15 + wall.height / 2, wall.y - 45, wall.width, wall.height, wall.depth); this.box(g, 0xffe9bf, wall.x - 8, .19 + wall.height, wall.y - 45, wall.width + .1, .12, wall.depth + .1); }
-    for (let z = -1.5; z <= 2.5; z++) this.box(g, 0xe6d7b9, .5, .17, z, 10.7, .015, .035);
+    const f = this.sim.facility('laundry'), g = this.group(LAUNDRY_ORIGIN);
+    // Give the laundry the same long, comfortable footprint as a bungalow.
+    this.box(g, 0xf6eacb, .5, .08, .4, 11.4, .16, 7.8);
+    for (const wall of LAUNDRY_WALLS) { this.box(g, 0x99c9cd, wall.x - LAUNDRY_ORIGIN.x, .15 + wall.height / 2, wall.y - LAUNDRY_ORIGIN.y, wall.width, wall.height, wall.depth); this.box(g, 0xffe9bf, wall.x - LAUNDRY_ORIGIN.x, .19 + wall.height, wall.y - LAUNDRY_ORIGIN.y, wall.width + .1, .12, wall.depth + .1); }
+    for (let z = -3.5; z <= 3.5; z++) this.box(g, 0xe6d7b9, .5, .17, z, 10.7, .015, .035);
     for (const machine of laundryMachines(f.level)) {
-      const x = machine.x - 8, stacked = f.level >= 2;
+      const x = machine.x - LAUNDRY_ORIGIN.x, stacked = f.level >= 2;
       const appliance = this.prop(g, stacked ? 'washerStacked' : 'washer', x, .2, 0, { height: stacked ? 2.25 : 1.75 });
       if (!appliance) this.box(g, 0xfff9e8, x, 1, 0, machine.width, 1.8, machine.depth);
     }
-    this.prop(g, 'rack', TOWEL_RACK.x - 8, .1, TOWEL_RACK.y - 45, { height: 2.2 });
-    const rack = new TowelShelf(color => this.material(color), 2.2, false, false); rack.root.position.set(TOWEL_RACK.x - 8, .1, TOWEL_RACK.y - 45); g.add(rack.root);
-    this.prop(g, 'rack', DIRTY_BASKET.x - 8, .1, DIRTY_BASKET.y - 45, { height: 1.7 });
+    this.prop(g, 'rack', TOWEL_RACK.x - LAUNDRY_ORIGIN.x, .1, TOWEL_RACK.y - LAUNDRY_ORIGIN.y, { height: 2.2 });
+    const rack = new TowelShelf(color => this.material(color), 2.2, false, false); rack.root.position.set(TOWEL_RACK.x - LAUNDRY_ORIGIN.x, .1, TOWEL_RACK.y - LAUNDRY_ORIGIN.y); g.add(rack.root);
+    this.prop(g, 'rack', DIRTY_BASKET.x - LAUNDRY_ORIGIN.x, .1, DIRTY_BASKET.y - LAUNDRY_ORIGIN.y, { height: 1.7 });
     const dirtyRack = new TowelShelf(color => this.material(color), 1.7, true, false);
-    dirtyRack.root.scale.x *= .7; dirtyRack.root.position.set(DIRTY_BASKET.x - 8, .1, DIRTY_BASKET.y - 45); g.add(dirtyRack.root);
+    dirtyRack.root.scale.x *= .7; dirtyRack.root.position.set(DIRTY_BASKET.x - LAUNDRY_ORIGIN.x, .1, DIRTY_BASKET.y - LAUNDRY_ORIGIN.y); g.add(dirtyRack.root);
     dirtyRack.towels.forEach(t => t.material = this.material(0x9a897d));
     const dirty = dirtyRack.towels;
     this.stockModels.set('laundryClean', rack.towels.slice(0, 8)); this.stockModels.set('laundryDirty', dirty);
     rack.towels.slice(8).forEach(towel => towel.visible = false);
     const sheets: T.Mesh[] = []; for (let i = 0; i < 4; i++) { const sheet = this.box(rack.root, 0xfff2dc, i % 2 ? .46 : -.46, 1.75 + Math.floor(i / 2) * .13, 0, .85, .12, .76); this.box(sheet, 0x73c4d1, 0, 0, .39, .8, .04, .01); sheets.push(sheet); } this.stockModels.set('laundrySheets', sheets);
-    this.prop(g, 'bin', -4.2, .2, 2.35, { height: 1.2 });
+    this.prop(g, 'bin', -3.2, .2, 2.35, { height: 1.2 });
   }
   private lemonade(parent: T.Object3D, x: number, y: number, z: number) {
     const g = new T.Group(); g.position.set(x, y, z); parent.add(g);

@@ -1,5 +1,6 @@
 import { BAR_CASH, BAR_WORK, POOL_CLEAN, poolDirtyRack, poolTowelRack, wantsDrink } from './PoolServices';
 import { STAFF_AREAS } from './StaffHiring';
+import { OFFICE } from './Office';
 import type { Area, Point, ResortGameState } from './types';
 export const WIDTH = 44, HEIGHT = 52;
 export const LEVELS = [0, 15, 50, 100, 180, 280];
@@ -7,6 +8,7 @@ export const ROOM_DEFS = Array.from({ length: 6 }, (_, i) => ({ id: `room${i + 1
 export const ROOM_DOOR = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x < 15 ? r.x + 9 : r.x, y: r.y + 5 });
 export const ROOM_APPROACH = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x < 15 ? r.x + 10 : r.x - 1, y: r.y + 5 });
 export const ROOM_WORK = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x + 5, y: r.y + 5 });
+export const LAUNDRY_ORIGIN = { x: 7, y: 45 };
 export const TOWEL_RACK = { x: 12.5, y: 46 }, DIRTY_BASKET = { x: 10, y: 46 };
 export const LAUNDRY_TRASH = { x: 4.5, y: 47.4 };
 export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 10, y: 47 }, CLEAN_TAKE = { x: 12, y: 47 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
@@ -23,7 +25,7 @@ export function initialResort(test = false): ResortGameState {
 }
 export function areasFor(s: ResortGameState): Area[] {
   const areas: Area[] = [
-    { id: 'office', label: 'Ofis · çalışan geliştirme', mode: 'work', target: 'office', x: 29, y: 48 },
+    { id: 'office', label: 'Ofis · çalışan geliştirme', mode: 'work', target: 'office', ...OFFICE },
     { id: 'laundryDirtyTake', label: 'Kirli raftan çamaşır al', mode: 'work', target: 'laundry', taskKind: 'laundryDirtyTake', x: DIRTY_BASKET.x - 2, y: DIRTY_BASKET.y },
     { id: 'machineLoad', label: 'Makineye kirli çamaşır koy', mode: 'work', target: 'laundry', taskKind: 'machineLoad', x: 5, y: 46 },
     { id: 'machineUnload', label: 'Makineden temiz çamaşır al', mode: 'work', target: 'laundry', taskKind: 'machineUnload', x: 5, y: 46 },
