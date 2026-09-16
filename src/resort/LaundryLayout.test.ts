@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ResortSimulation } from './Simulation';
-import { CLEAN_TAKE, DIRTY_BASKET, initialResort, LAUNDRY_RIGHT_EDGE, TOWEL_RACK } from './data';
+import { CLEAN_TAKE, DIRTY_BASKET, initialResort, LAUNDRY_MACHINE, LAUNDRY_RIGHT_EDGE, TOWEL_RACK } from './data';
 import { linenCount } from './Linen';
 
 const advance = (s: ResortSimulation, seconds: number) => {
@@ -10,11 +10,11 @@ const advance = (s: ResortSimulation, seconds: number) => {
 describe('visible laundry layout and carrying limits', () => {
   it.each([1, 2, 3])('keeps the open entrance and empty floor accessible at level %i', level => {
     const s = new ResortSimulation(); s.facility('laundry').level = level;
-    for (const p of [{ x: 4, y: 44 }, { x: 8, y: 46 }, { x: 10, y: 46 }, { x: 12, y: 44 }, { x: 14, y: 46 }]) {
+    for (const p of [{ x: 4, y: 45 }, { x: 8, y: 44 }, { x: 10, y: 46 }, { x: 12, y: 44 }, { x: 14, y: 46 }]) {
       expect(s.isWalkable(p.x, p.y)).toBe(true);
       expect(s.path(s.state.player, p).length, JSON.stringify(p)).toBeGreaterThan(0);
     }
-    for (const p of [{ x: 7, y: 42 }, { x: 2, y: 45 }, { x: LAUNDRY_RIGHT_EDGE, y: 43 }, { x: LAUNDRY_RIGHT_EDGE, y: 47 }, { x: 12, y: 43 }, { x: 12, y: 47 }, { x: 7, y: 48 }, { x: 4.7, y: 45 }, { x: TOWEL_RACK.x, y: TOWEL_RACK.y }, { x: DIRTY_BASKET.x, y: DIRTY_BASKET.y }]) {
+    for (const p of [{ x: 7, y: 42 }, { x: 2, y: 45 }, { x: LAUNDRY_RIGHT_EDGE, y: 43 }, { x: LAUNDRY_RIGHT_EDGE, y: 47 }, { x: 12, y: 43 }, { x: 12, y: 47 }, { x: 7, y: 48 }, { x: LAUNDRY_MACHINE.x, y: LAUNDRY_MACHINE.y }, { x: TOWEL_RACK.x, y: TOWEL_RACK.y }, { x: DIRTY_BASKET.x, y: DIRTY_BASKET.y }]) {
       expect(s.isWalkable(p.x, p.y)).toBe(false);
     }
     expect(s.isWalkable(LAUNDRY_RIGHT_EDGE, 45)).toBe(true);

@@ -12,11 +12,13 @@ export const ROOM_APPROACH = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x <
 export const ROOM_WORK = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x + 5, y: r.y + 5 });
 export const LAUNDRY_ORIGIN = { x: 7, y: 45 };
 export const LAUNDRY_RIGHT_EDGE = 11.5;
-// Keep both laundry shelves against the rear wall, away from the side-door lane.
-export const TOWEL_RACK = { x: 10.2, y: 42.7 }, DIRTY_BASKET = { x: 8.2, y: 42.7 };
+// Keep the machine against the rear wall, with the dirty basket down front and
+// the clean rack on the opposite side so the transfer steps stay readable.
+export const LAUNDRY_MACHINE = { x: 4.7, y: 43.5 };
+export const TOWEL_RACK = { x: 10.2, y: 42.7 }, DIRTY_BASKET = { x: 8.2, y: 46 };
 export const LAUNDRY_TRASH = { x: 3.5, y: 47.4 };
 export const LAUNDRY_CLEAN_DROP = { x: 10.8, y: 44.8 };
-export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 8.2, y: 44 }, CLEAN_TAKE = { x: 9.7, y: 44 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
+export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 8.2, y: 47.2 }, CLEAN_TAKE = { x: 9.7, y: 44 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
 export const receptionQueuePoint = (index: number): Point => ({ x: RECEPTION.x, y: 46 + index });
 export const SEAT_DEFS = [24, 27, 30, 33].map((x, i) => ({ id: `seat${i + 1}`, x, y: 10 })).concat([{ id: 'seat5', x: 25.5, y: 13 }, { id: 'seat6', x: 31.5, y: 13 }]);
 export const taskDuration = (level: number) => [1, .8, .65][level - 1];
@@ -41,7 +43,7 @@ export function areasFor(s: ResortGameState): Area[] {
     { id: 'receptionUpgrade', label: 'Resepsiyon', mode: 'upgrade', target: 'reception', x: 16, y: 46 },
     { id: 'dirtyDrop', label: 'Kirli havlu bırak', mode: 'work', target: 'laundry', taskKind: 'dirtyDrop', ...DIRTY_DROP },
     { id: 'cleanTake', label: 'Temiz havlu al', mode: 'work', target: 'laundry', taskKind: 'cleanTake', ...CLEAN_TAKE },
-    { id: 'laundryUpgrade', label: 'Makine kapasitesi', mode: 'upgrade', target: 'laundry', x: 7, y: 47 },
+    { id: 'laundryUpgrade', label: 'Makine kapasitesi', mode: 'upgrade', target: 'laundry', x: 5.5, y: 47 },
   ];
   for (const a of STAFF_AREAS) {
     const hired = s.workers.filter(w => w.role === a.role).length;

@@ -299,7 +299,7 @@ export class ResortWorld {
     for (let z = -3.5; z <= 3.5; z++) this.box(g, 0xe6d7b9, -.2, .17, z, 8.9, .015, .035);
     for (const machine of laundryMachines(f.level)) {
       const x = machine.x - LAUNDRY_ORIGIN.x, stacked = f.level >= 2;
-      const appliance = this.prop(g, stacked ? 'washerStacked' : 'washer', x, .2, 0, { height: stacked ? 2.25 : 1.75 });
+      const appliance = this.prop(g, stacked ? 'washerStacked' : 'washer', x, .2, machine.y - LAUNDRY_ORIGIN.y, { height: stacked ? 2.25 : 1.75 });
       if (!appliance) this.box(g, 0xfff9e8, x, 1, 0, machine.width, 1.8, machine.depth);
     }
     this.prop(g, 'rack', TOWEL_RACK.x - LAUNDRY_ORIGIN.x, .1, TOWEL_RACK.y - LAUNDRY_ORIGIN.y, { height: 2.2 });

@@ -220,7 +220,7 @@ export class ResortSimulation {
   startTask(a: Area, owner = 'player'): boolean {
     const actor = this.actor(owner); if (!actor || actor.task || !a.taskKind || this.reason(a, actor)) return false;
     if (owner === 'player' && (!this.inside(actor, a) || actor.path.length)) return false;
-    const seconds: Record<TaskKind, number> = { checkin: 3, cleanRoom: 6, cleanFloor: 4, cleanBathroom: 5, restockRoom: .6, dirtyDrop: .6, cleanTake: .6, poolCheckin: 3, cleanSeat: 4, poolStock: .6, cleanPool: 8, prepareDrink: 3, deliverDrink: 1, poolDirtyDrop: .6, poolDirtyTake: .6, poolCleanTake: .6, restockSeat: 1, laundryDirtyTake: .6, machineLoad: .6, machineUnload: .6, laundryCleanDrop: .6, discardItem: .55 };
+    const seconds: Record<TaskKind, number> = { checkin: 3, cleanRoom: 6, cleanFloor: 4, cleanBathroom: 5, restockRoom: .6, dirtyDrop: .6, cleanTake: 1.1, poolCheckin: 3, cleanSeat: 4, poolStock: .6, cleanPool: 8, prepareDrink: 3, deliverDrink: 1, poolDirtyDrop: .6, poolDirtyTake: .6, poolCleanTake: .6, restockSeat: 1, laundryDirtyTake: .6, machineLoad: .6, machineUnload: .6, laundryCleanDrop: .6, discardItem: .55 };
     const f = this.facility(a.target.startsWith('seat') || a.target.startsWith('drink:') || a.target === 'bar' || a.target === 'poolDirty' || a.target === 'poolClean' ? 'pool' : a.target), duration = seconds[a.taskKind] * taskDuration(f.level);
     const task: TaskState = { id: `task${this.state.nextId++}`, kind: a.taskKind, target: a.target, owner, remaining: duration, total: duration };
     if (a.taskKind === 'checkin') { const g = this.state.guests.find(g => g.phase === 'queue')!, r = this.availableRoom()!; task.guest = g.id; task.destination = r.id; r.guest = g.id; }

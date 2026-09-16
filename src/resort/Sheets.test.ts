@@ -15,7 +15,7 @@ describe('physical sheet laundry cycle', () => {
     stand(s, 'laundryDirtyTake'); advance(s, .7);
     for (let i = 0; i < 2; i++) { stand(s, 'machineLoad'); advance(s, 5); stand(s, 'machineUnload'); advance(s, .7); stand(s, 'laundryCleanDrop'); advance(s, .7); }
     expect(s.state.player.bag.dirtySheets).toBe(0); expect(s.state.laundry.cleanSheets).toBe(cleanSheets + 1); expect(s.state.stats.washed).toBe(2);
-    stand(s, 'cleanTake'); advance(s, 1); expect(s.state.player.bag.cleanSheets).toBe(2); expect(linenCount(s.state.player.bag)).toBe(3);
+    stand(s, 'cleanTake'); advance(s, 1.2); expect(s.state.player.bag.cleanSheets).toBe(2); expect(linenCount(s.state.player.bag)).toBe(3);
     stand(s, 'room1Work'); advance(s, 1); expect(room.needsSheet).toBe(false); expect(s.state.player.bag.cleanSheets).toBe(1); expect(room.towels).toBe(1);
   });
   it('can replace the towel before the clean sheet arrives', () => {
