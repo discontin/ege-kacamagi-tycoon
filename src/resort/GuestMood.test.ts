@@ -37,10 +37,10 @@ describe('guest patience and room tips', () => {
   });
   it.each([[0, 5], [10, 3], [20, 1]])('leaves %i-second-wait tips of %i on checkout, and collects only once', (wait, amount) => {
     const s = new ResortSimulation(); checkout(s, wait);
-    expect(s.facility('room1').tips).toBe(amount); expect(s.state.money).toBe(150);
+    expect(s.facility('room1').tips).toBe(amount); expect(s.state.money).toBe(0);
     Object.assign(s.state.player, { x: ROOM_DEFS[0].x + 6, y: ROOM_DEFS[0].y + 2 }); s.tick(.1);
-    expect(s.state.money).toBe(150 + amount); expect(s.facility('room1').tips).toBe(0);
-    advance(s, 1); expect(s.state.money).toBe(150 + amount);
+    expect(s.state.money).toBe(amount); expect(s.facility('room1').tips).toBe(0);
+    advance(s, 1); expect(s.state.money).toBe(amount);
   });
   it('accumulates uncollected tips and workers cannot collect them', () => {
     const s = new ResortSimulation(); checkout(s, 0); checkout(s, 10);

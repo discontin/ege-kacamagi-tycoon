@@ -30,8 +30,9 @@ describe('department-specific hiring', () => {
     expect(s.purchaseArea(area)).toBe(false);
     expect(s.state.money).toBe(300);
   });
-  it('only offers pool staff after the pool opens', () => {
-    const s = new ResortSimulation(); expect(s.area('poolHire')).toBeUndefined();
+  it('shows every department hiring marker from the start', () => {
+    const s = new ResortSimulation();
+    expect(['receptionHire', 'roomsHire', 'haulingHire', 'poolHire'].every(id => !!s.area(id))).toBe(true);
     s.facility('pool').open = true; expect(s.area('poolHire')).toBeDefined();
   });
   it('unlocks the first cleaner at level two and the second at level four', () => {

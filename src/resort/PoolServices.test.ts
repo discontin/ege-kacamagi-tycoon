@@ -109,7 +109,7 @@ describe('pool bar and maintenance', () => {
     stand(s, `drink:${g.id}`); advance(s, 1.1); expect(g.drinkServed).toBe(true);
     expect(s.state.player.drink).toBe(false); expect(s.state.bar!.cash).toBe(15);
     advance(s, 1); expect(s.state.bar!.cash).toBe(15);
-    stand(s, 'barCash'); s.tick(.1); expect(s.state.money).toBe(165); expect(s.state.bar!.cash).toBe(0);
+    stand(s, 'barCash'); s.tick(.1); expect(s.state.money).toBe(15); expect(s.state.bar!.cash).toBe(0);
   });
   it('lets the bartender physically carry and serve an order without player intervention', () => {
     const s = setup(); s.state.bar!.open = true; s.hire('bartender');

@@ -5,9 +5,9 @@ import { ResortSaveService, validResort } from './SaveService';
 describe('reset and settings', () => {
   it('resets live state so later autosaves cannot restore the old village', () => {
     const s = new ResortSimulation(); s.state.money = 1000; s.hire(); s.state.settings.paused = true; s.state.settings.volume = .3;
-    s.reset(); expect(s.state.workers).toHaveLength(0); expect(s.state.money).toBe(150); expect(s.state.settings.paused).toBe(false); expect(s.state.settings.volume).toBe(.3);
+    s.reset(); expect(s.state.workers).toHaveLength(0); expect(s.state.money).toBe(0); expect(s.state.settings.paused).toBe(false); expect(s.state.settings.volume).toBe(.3);
     let raw = ''; const save = new ResortSaveService({ getItem: () => raw, setItem: (_, v) => { raw = v; } });
-    save.save(s.state); expect(save.load().state.money).toBe(150); expect(save.load().state.workers).toHaveLength(0);
+    save.save(s.state); expect(save.load().state.money).toBe(0); expect(save.load().state.workers).toHaveLength(0);
   });
   it('resets test mode without writing normal progress', () => {
     const s = new ResortSimulation(initialResort(true), true); s.state.settings.speed = 2; s.state.settings.paused = true; s.reset();

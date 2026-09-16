@@ -19,7 +19,7 @@ pnpm build
 
 ## Oynanış
 
-- Başlangıç: 150 para, girişe yakın bir hazır bungalov, resepsiyon, çamaşırhane ve rafta sekiz temiz havlu.
+- Başlangıç: 0 para, girişe yakın bir hazır bungalov, resepsiyon, çamaşırhane ve rafta sekiz temiz havlu. Tüm bölüm personel simgeleri baştan görünür; işe alım için para ve planlanan seviye koşulları geçerlidir.
 - Beyaz karede durarak otomatik çalışın. Gölgeliksiz resepsiyon bankosunun arkasındaki kare üç saniyede müşteri karşılar; müşteriler bankonun önünde tek sıra bekler. Müşteri odaya yürür; ilk üç konaklama 12/18/24 saniye, sonrakiler 40 saniyedir. İlk misafir iki saniyede gelir.
 - Konaklama resepsiyon kasasına 40 para bırakır. Para yığınına yürüyerek alın. Oda kirlenir, havlu yenilenene kadar müşteri alamaz.
 - Odanın içinde altı saniye temizlik yapın; kirli havlu çantaya alınır. Kirliyi çamaşırhaneye bırakın. Makine dört saniyede yıkar.
@@ -28,7 +28,7 @@ pnpm build
 - Yeşil alan: yeni bungalov/havuz/şezlong. Sarı alan: üç seviyeli görsel yükseltme. 1,3 saniye bekleyin; ikinci satın alma için ayrılıp dönün.
 - Havuz seviye 4 ve 350 parayla açılır; iki şezlong ve dört havlu dahildir. Diğer şezlonglar 100’er paradır.
 - Konaklamasını bitiren müşteri uygun yer varsa havuza gider. Girişte karşılayın, rafta havlu bulundurun. Kullanım 25 saniye ve 20 paradır; şezlongu dört saniyede temizleyin.
-- Seviye 2’de ilk çalışan 100 para; sonraki çalışan başına +50 para. Normal sınır beş. Resepsiyon, oda, havuz veya taşıma rolünü seçin; aynı işi iki kişi alamaz.
+- Personel işe alımı 200 para ile başlar ve her işe alımda 100 artar; normal sınır beştir. İlk oda temizlikçisi Seviye 2’de, ikinci oda temizlikçisi Seviye 4’te açılır. Resepsiyon, oda, havuz veya taşıma rolünü seçin; aynı işi iki kişi alamaz.
 - Çalışan iş verimliliği seviyelerde %65/%80/%100; eğitim 120 ve 240 para. Fiziksel olarak havlu alıp taşırlar.
 - Tesis iş süreleri seviyelerde %100/%80/%65; bungalov/havuz gelirleri %100/%125/%150. Resepsiyon yükseltmesi kabul süresini, çamaşırhane yükseltmesi yıkama süresini ve raf kapasitesini geliştirir.
 - Konaklama +10 XP, oda temizliği +5, havuz ziyareti +5. Eşikler 0/15/50/100/180/280 XP; ek bungalov fiyatları 100/180/260/380/520.

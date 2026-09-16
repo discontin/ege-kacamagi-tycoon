@@ -23,7 +23,7 @@ export const taskDuration = (level: number) => [1, .8, .65][level - 1];
 export const incomeFactor = (level: number) => [1, 1.25, 1.5][level - 1];
 export const upgradeCost = (id: string, level: number) => (id === 'reception' ? 100 : id === 'laundry' ? 120 : id === 'pool' ? 180 : 80) * level;
 export function initialResort(test = false): ResortGameState {
-  return { version: 1, concept: 'ege-resort', money: test ? 999999 : 150, xp: test ? 280 : 0, elapsed: 0, spawnTimer: 0, nextId: 10,
+  return { version: 1, concept: 'ege-resort', money: test ? 999999 : 0, xp: test ? 280 : 0, elapsed: 0, spawnTimer: 0, nextId: 10,
     player: { id: 'player', x: 19, y: 48, path: [], bag: { clean: 0, dirty: 0 } }, guests: [], workers: [], tasks: [], bar: { open: test, cash: 0 },
     facilities: [{ id: 'reception', kind: 'reception', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, { id: 'laundry', kind: 'laundry', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, ...ROOM_DEFS.map((r, i) => ({ id: r.id, kind: 'room' as const, open: test || !i, level: 1, dirty: false, towels: 1, cash: 0 })), { id: 'pool', kind: 'pool', open: test, level: 1, dirty: false, towels: test ? 999 : 0, cash: 0 }],
     seats: SEAT_DEFS.map((r, i) => ({ id: r.id, open: test && i < 2, dirty: false, towel: test && i < 2 })), laundry: { clean: test ? 999 : 8, dirty: 0, remaining: null }, boost: { remaining: 0, multiplier: 1.5 }, settings: { paused: false, speed: 1 }, stats: { welcomed: 0, stays: 0, cleaned: 0, washed: 0, poolVisits: 0, earned: 0 } };
@@ -45,7 +45,7 @@ export function areasFor(s: ResortGameState): Area[] {
   ];
   for (const a of STAFF_AREAS) {
     const hired = s.workers.filter(w => w.role === a.role).length;
-    if (s.workers.length < 5 && hired < staffRoleLimit(a.role) && (a.role !== 'pool' || s.facilities.find(f => f.id === 'pool')!.open)) {
+    if (s.workers.length < 5 && hired < staffRoleLimit(a.role)) {
       areas.push({ ...a, id: a.role === 'rooms' && hired ? 'roomsHire2' : a.id, label: a.role === 'rooms' && hired ? 'İkinci oda temizlikçisi' : a.label, mode: 'buy' });
     }
   }
