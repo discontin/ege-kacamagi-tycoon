@@ -18,11 +18,11 @@ describe('physical sheet laundry cycle', () => {
     stand(s, 'cleanTake'); advance(s, 1); expect(s.state.player.bag.cleanSheets).toBe(2); expect(linenCount(s.state.player.bag)).toBe(3);
     stand(s, 'room1Work'); advance(s, 1); expect(room.needsSheet).toBe(false); expect(s.state.player.bag.cleanSheets).toBe(1); expect(room.towels).toBe(1);
   });
-  it('cannot replace bed linen with just a towel or clean when only one bag slot is free', () => {
+  it('can replace the towel before the clean sheet arrives', () => {
     const s = new ResortSimulation(), room = s.facility('room1'); room.dirty = true;
     s.state.player.bag = { clean: 4, dirty: 2, dirtySheets: 1 }; stand(s, 'room1Work'); advance(s, 7); expect(room.dirty).toBe(true);
     s.state.player.bag = { clean: 1, dirty: 0 }; room.dirty = false; room.needsSheet = true; room.towels = 0; advance(s, 1);
-    expect(room.needsSheet).toBe(true); expect(s.state.player.bag.clean).toBe(1);
+    expect(room.needsSheet).toBe(true); expect(room.towels).toBe(1); expect(s.state.player.bag.clean).toBe(0);
   });
   it('holds a washed sheet when its output shelf fills, without losing or duplicating it', () => {
     const s = new ResortSimulation(), l = s.state.laundry; l.cleanSheets = 23; s.state.player.bag.dirtySheets = 1; stand(s, 'machineLoad'); advance(s, .7);
