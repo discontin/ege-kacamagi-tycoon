@@ -24,6 +24,7 @@ describe('staff upgrade office', () => {
   it('is reachable through its side entrance and upgrades require being at the office', () => {
     const s = new ResortSimulation(); s.state.money = 1000; s.hire(); const w = s.state.workers[0], money = s.state.money;
     expect(s.path(s.state.player, OFFICE).length).toBeGreaterThan(0);
+    expect(s.isWalkable(26, 48)).toBe(true); expect(s.isWalkable(30, 50)).toBe(false);
     s.upgradeCarry(w.id); s.upgradeWorker(w.id); expect(w.level).toBe(1); expect(carryingCapacity(w)).toBe(8);
     Object.assign(s.state.player, OFFICE); s.upgradeCarry(w.id); s.upgradeWorker(w.id);
     expect(w.level).toBe(2); expect(carryingCapacity(w)).toBe(12); expect(s.state.money).toBe(money - 220);

@@ -85,13 +85,16 @@ export class ResortSimulation {
   inside(p: Point, a: Point | Area) { return workAreaContains(p, a); }
   isWalkable(x: number, y: number) {
     const officeLeft = OFFICE.x - 4, officeRight = OFFICE.x + 4;
-    if (x >= officeLeft && x <= officeRight && y >= 44 && y <= 50 && (y === 44 || x === officeLeft && y !== 48 || x === officeRight || y === 50 && x !== OFFICE.x || x >= OFFICE.x - 1 && x <= OFFICE.x + 1 && y === 46)) return false;
+    if (x >= officeLeft && x <= officeRight && y >= 44 && y <= 50 && (y === 44 || x === officeLeft && y !== 48 || x === officeRight || y === 50 || x >= OFFICE.x - 1 && x <= OFFICE.x + 1 && y === 46)) return false;
     if (x < MAP_MIN_X || x > MAP_MAX_X || y < -3 || y >= HEIGHT - 1) return false;
     if (this.state.bar?.open && insideBar({ x, y })) return false;
     { const level = this.facility('pool').level, halfW = level >= 2 ? 6.4 : 4.8, halfD = level >= 2 ? 3.7 : 2.8; if (x >= 28.5 - halfW && x <= 28.5 + halfW && y >= 4.5 - halfD && y <= 4.5 + halfD) return false; }
     if (x >= 17 && x <= 21 && y >= 43 && y <= 44) return false;
     if (this.facility('pool').open && x >= 18 && x <= 21 && y >= 7 && y <= 8) return false;
     if (laundryObstacles(this.facility('laundry').level).some(f => inFootprint({ x, y }, f))) return false;
+    // The laundry's lower edge is now a wall; its only entrance is the split
+    // right-side wall, around y=45.
+    if (x >= 2 && x <= 11 && y === 48) return false;
     for (const r of ROOM_DEFS) {
       if (x < r.x || x >= r.x + r.width || y < r.y || y >= r.y + r.height) continue;
       if (!this.facility(r.id).open) return false;

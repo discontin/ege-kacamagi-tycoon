@@ -141,9 +141,12 @@ export class ResortWorld {
     this.box(office, 0xe8c494, 0, .08, 0, 8.5, .16, 6.5);
     this.box(office, 0x8bbcb5, 0, 1.35, -3, 8.3, 2.5, .2);
     this.box(office, 0x8bbcb5, 4, .65, 0, .2, 1.1, 6);
-    this.box(office, 0x8bbcb5, -4, .65, -1, .2, 1.1, 4);
-    this.box(office, 0x8bbcb5, -4, .65, 2.6, .2, 1.1, .8);
+    // Leave a visible doorway on the left side while closing the lower/front edge.
+    this.box(office, 0x8bbcb5, -4, .65, -1.2, .2, 1.1, 3.6);
+    this.box(office, 0x8bbcb5, -4, .65, 2.1, .2, 1.1, 1.8);
     for (const x of [-2.5, 2.5]) this.box(office, 0xf7edcf, x, .5, 3, 3, .8, .2);
+    // Close the former front opening; the existing left-side doorway remains.
+    this.box(office, 0xf7edcf, 0, .5, 3, 2, .8, .2);
     this.prop(office, 'officeDesk', 0, .18, -1, { height: .98 });
     this.prop(office, 'officeChair', 0, .18, .25, { height: 1.08 }, Math.PI);
     this.prop(office, 'officeLaptop', .32, 1.18, -1.05, { width: .72 }, Math.PI);
