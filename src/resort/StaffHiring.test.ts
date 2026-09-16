@@ -17,6 +17,7 @@ describe('department-specific hiring', () => {
   });
   it.each(STAFF_AREAS)('hires the correct role at $id and removes only its own marker', definition => {
     const s = new ResortSimulation(); s.facility('pool').open = true; s.state.bar!.open = true; s.state.money = 500;
+    if (definition.role === 'rooms') s.state.xp = 15;
     const area = s.area(definition.id)!;
     expect(s.isWalkable(area.x, area.y)).toBe(true);
     expect(s.path(s.state.player, area).length).toBeGreaterThan(0);
@@ -32,5 +33,14 @@ describe('department-specific hiring', () => {
   it('only offers pool staff after the pool opens', () => {
     const s = new ResortSimulation(); expect(s.area('poolHire')).toBeUndefined();
     s.facility('pool').open = true; expect(s.area('poolHire')).toBeDefined();
+  });
+  it('unlocks the first cleaner at level two and the second at level four', () => {
+    const s = new ResortSimulation(); s.state.money = 1000;
+    const first = s.area('roomsHire')!;
+    Object.assign(s.state.player, first); expect(s.purchaseArea(first)).toBe(false); expect(s.state.workers).toHaveLength(0);
+    s.state.xp = 15; expect(s.purchaseArea(first)).toBe(true); expect(s.state.workers).toHaveLength(1);
+    const second = s.area('roomsHire2')!; expect(s.requiredLevel(second)).toBe(4);
+    Object.assign(s.state.player, second); expect(s.purchaseArea(second)).toBe(false); expect(s.state.workers).toHaveLength(1);
+    s.state.xp = 100; expect(s.purchaseArea(second)).toBe(true); expect(s.state.workers.filter(w => w.role === 'rooms')).toHaveLength(2);
   });
 });

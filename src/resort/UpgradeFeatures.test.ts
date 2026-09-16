@@ -8,12 +8,12 @@ const stand = (s: ResortSimulation, id: string) => Object.assign(s.state.player,
 
 describe('feature-bearing facility upgrades', () => {
   it('makes a level-two bathroom a visible, mandatory room job with a larger tip', () => {
-    const s = new ResortSimulation(); s.state.money = 1000; stand(s, 'room1Upgrade'); advance(s, 1.4);
+    const s = new ResortSimulation(); s.state.money = 1000; s.state.xp = 50; s.facility('room2').open = true; stand(s, 'room1Upgrade'); advance(s, 1.4);
     const room = s.facility('room1'); expect(room.level).toBe(2);
     s.state.guests.push({ id: 'guest20', x: 8, y: 19, path: [], phase: 'staying', room: 'room1', remaining: .1, worstWait: 0 }); room.guest = 'guest20';
     advance(s, .2); expect(room.bathroomDirty).toBe(true); expect(room.tips).toBe(8);
     const notice = taskIndicators(s.state).find(n => n.id === 'room1BathroomClean'); expect(notice?.icon).toBe('bath');
-    room.dirty = false; room.floorDirty = false; room.needsSheet = false; room.towels = 1;
+    room.dirty = false; room.floorDirty = false; room.needsSheet = false; room.towels = 1; s.facility('room2').dirty = true;
     s.state.guests.push({ id: 'waiting', ...receptionQueuePoint(0), path: [], phase: 'queue', remaining: 0 }); stand(s, 'checkin'); advance(s, 4);
     expect(s.state.stats.welcomed).toBe(0);
     stand(s, 'room1Bathroom'); advance(s, 4.2); expect(room.bathroomDirty).toBe(false);

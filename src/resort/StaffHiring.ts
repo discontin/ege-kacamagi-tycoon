@@ -7,6 +7,8 @@ export const STAFF_AREAS = [
   { id: 'poolHire', target: 'poolWorker', role: 'pool', label: 'Havuz ve bar görevlisi', x: 18, y: 11 },
 ] as const;
 export const staffRole = (target: string): Role | undefined => STAFF_AREAS.find(a => a.target === target)?.role;
+export const staffRoleLimit = (role: Role) => role === 'rooms' ? 2 : 1;
+export const staffRequiredLevel = (role: Role, hiredCount: number) => role === 'rooms' ? hiredCount === 0 ? 2 : 4 : 1;
 export const staffHireCost = (currentWorkers: number) => 200 + currentWorkers * 100;
 
 /** Department pictograms share one style, but distinct silhouettes. */

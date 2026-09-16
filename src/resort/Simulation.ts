@@ -2,7 +2,7 @@ import { BAR_CASH, DRINK_REQUEST_DELAY, POOL_STAY_SECONDS, insideBar, wantsDrink
 import { guestTip } from './GuestMood';
 import { atOffice, carryingCapacity, OFFICE, towelLimit, workerMoveSpeed } from './Office';
 import { guestPreferences } from './GuestPreferences';
-import { staffHireCost, staffRole } from './StaffHiring';
+import { staffHireCost, staffRequiredLevel, staffRole, staffRoleLimit } from './StaffHiring';
 import { areasFor, CLEAN_TAKE, DIRTY_DROP, EXIT, HEIGHT, incomeFactor, initialResort, LAUNDRY_RIGHT_EDGE, LEVELS, MAP_MAX_X, MAP_MIN_X, POOL_GATE, receptionQueuePoint, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, taskDuration, upgradeCost, WIDTH } from './data';
 import type { Actor, Area, GuestState, PlayerState, Point, ResortGameState, Role, TaskKind, TaskState, WorkerState } from './types';
 import { serviceGuestReady } from './CustomerService';
@@ -135,7 +135,12 @@ export class ResortSimulation {
     while (a.path.length && left > 0) { const n = a.path[0], d = distance(a, n); if (d <= left) { a.x = n.x; a.y = n.y; a.path.shift(); left -= d; } else { a.x += (n.x - a.x) / d * left; a.y += (n.y - a.y) / d * left; left = 0; } }
   }
   cost(a: Area) { return !!staffRole(a.target) ? staffHireCost(this.state.workers.length) : a.target === 'bar' ? 200 : a.mode === 'upgrade' ? upgradeCost(a.target, this.facility(a.target).level) : a.target === 'pool' ? 350 : a.target.startsWith('seat') ? 100 : ROOM_DEFS.find(r => r.id === a.target)!.cost; }
-  requiredLevel(a: Area) { return a.target === 'pool' ? 4 : a.target.startsWith('seat') ? 4 : ROOM_DEFS.find(r => r.id === a.target)?.unlockLevel ?? 1; }
+  requiredLevel(a: Area) {
+    const role = staffRole(a.target);
+    if (role) return staffRequiredLevel(role, this.state.workers.filter(w => w.role === role).length);
+    if (a.mode === 'upgrade' && a.target.startsWith('room')) return 3;
+    return a.target === 'pool' ? 4 : a.target.startsWith('seat') ? 4 : ROOM_DEFS.find(r => r.id === a.target)?.unlockLevel ?? 1;
+  }
   purchaseProgress(a: Area): number | undefined {
     if ((a.mode !== 'buy' && a.mode !== 'upgrade') || this.purchase.id !== a.id || this.purchase.latched || !this.inside(this.state.player, a) || this.state.player.path.length) return undefined;
     if (!this.testMode && (this.level < this.requiredLevel(a) || this.state.money < this.cost(a))) return undefined;
@@ -144,10 +149,15 @@ export class ResortSimulation {
   purchaseArea(a: Area) {
     if (this.state.settings.paused || !this.inside(this.state.player, a)) return false;
     if (!!staffRole(a.target)) {
-      if (this.state.workers.some(w => w.role === staffRole(a.target)) || this.state.workers.length >= 5) return false;
+      const role = staffRole(a.target)!;
+      if (!this.testMode && this.level < this.requiredLevel(a)) { this.notify(`Seviye ${this.requiredLevel(a)} gerekli. Misafir ağırlayarak XP kazan.`); return false; }
+      if (this.state.workers.filter(w => w.role === role).length >= staffRoleLimit(role) || this.state.workers.length >= 5) return false;
       const count = this.state.workers.length; this.hire(staffRole(a.target)!, true); return this.state.workers.length > count;
     }
     if (a.target === 'bar' && (!this.facility('pool').open || this.state.bar!.open)) return false;
+    if (!this.testMode && a.mode === 'upgrade' && a.target.startsWith('room') && this.state.facilities.filter(f => f.kind === 'room' && f.open).length < 2) {
+      this.notify('Oda yükseltmesi için önce ikinci odayı aç.'); return false;
+    }
     if (!this.testMode && this.level < this.requiredLevel(a)) { this.notify(`Seviye ${this.requiredLevel(a)} gerekli. Misafir ağırlayarak XP kazan.`); return false; }
     const cost = this.cost(a);
     if (!this.testMode && this.state.money < cost) { this.notify('Yeterli para yok. Kasadaki para yığınlarını topla.'); return false; }

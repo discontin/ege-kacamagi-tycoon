@@ -1,5 +1,5 @@
 import { BAR_CASH, BAR_WORK, POOL_CLEAN, poolDirtyRack, poolTowelRack, wantsDrink } from './PoolServices';
-import { STAFF_AREAS } from './StaffHiring';
+import { STAFF_AREAS, staffRoleLimit } from './StaffHiring';
 import { OFFICE } from './Office';
 import type { Area, Point, ResortGameState } from './types';
 export const WIDTH = 46, HEIGHT = 52, MAP_MIN_X = 0, MAP_MAX_X = 40;
@@ -43,7 +43,12 @@ export function areasFor(s: ResortGameState): Area[] {
     { id: 'cleanTake', label: 'Temiz havlu al', mode: 'work', target: 'laundry', taskKind: 'cleanTake', ...CLEAN_TAKE },
     { id: 'laundryUpgrade', label: 'Makine kapasitesi', mode: 'upgrade', target: 'laundry', x: 7, y: 47 },
   ];
-  for (const a of STAFF_AREAS) if (s.workers.length < 5 && !s.workers.some(w => w.role === a.role) && (a.role !== 'pool' || s.facilities.find(f => f.id === 'pool')!.open)) areas.push({ ...a, mode: 'buy' });
+  for (const a of STAFF_AREAS) {
+    const hired = s.workers.filter(w => w.role === a.role).length;
+    if (s.workers.length < 5 && hired < staffRoleLimit(a.role) && (a.role !== 'pool' || s.facilities.find(f => f.id === 'pool')!.open)) {
+      areas.push({ ...a, id: a.role === 'rooms' && hired ? 'roomsHire2' : a.id, label: a.role === 'rooms' && hired ? 'İkinci oda temizlikçisi' : a.label, mode: 'buy' });
+    }
+  }
   for (const r of ROOM_DEFS) {
     const f = s.facilities.find(f => f.id === r.id)!;
     if (!f.open) areas.push({ id: `${r.id}Buy`, label: r.name, mode: 'buy', target: r.id, ...ROOM_APPROACH(r) });
