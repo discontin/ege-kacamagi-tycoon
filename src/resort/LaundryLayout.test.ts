@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ResortSimulation } from './Simulation';
-import { DIRTY_BASKET, initialResort, LAUNDRY_RIGHT_EDGE, TOWEL_RACK } from './data';
+import { CLEAN_TAKE, DIRTY_BASKET, initialResort, LAUNDRY_RIGHT_EDGE, TOWEL_RACK } from './data';
 import { linenCount } from './Linen';
 
 const advance = (s: ResortSimulation, seconds: number) => {
@@ -33,7 +33,7 @@ describe('visible laundry layout and carrying limits', () => {
 
   it('stops repeated test-mode pickup at two towels', () => {
     const s = new ResortSimulation(initialResort(), true);
-    Object.assign(s.state.player, { x: TOWEL_RACK.x + .5, y: 45.5 }); advance(s, 20);
+    Object.assign(s.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); advance(s, 20);
     expect(s.state.player.bag.clean).toBe(2);
     expect(linenCount(s.state.player.bag)).toBe(2);
     expect(s.state.tasks).toHaveLength(0);
@@ -41,7 +41,7 @@ describe('visible laundry layout and carrying limits', () => {
 
   it('limits fresh sheets to two and towels to two even with infinite test stock', () => {
     const s = new ResortSimulation(initialResort(), true); s.facility('room1').dirty = true;
-    Object.assign(s.state.player, { x: TOWEL_RACK.x + .5, y: 45.5 }); advance(s, 20);
+    Object.assign(s.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); advance(s, 20);
     expect(s.state.player.bag.clean).toBe(2);
     expect(s.state.player.bag.cleanSheets).toBe(2);
     expect(linenCount(s.state.player.bag)).toBe(4);
@@ -50,7 +50,7 @@ describe('visible laundry layout and carrying limits', () => {
 
   it('counts dirty laundry toward the eight-piece test-mode bag capacity', () => {
     const s = new ResortSimulation(initialResort(), true); s.facility('room1').dirty = true;
-    Object.assign(s.state.player, { x: TOWEL_RACK.x + .5, y: 45.5 }); s.state.player.bag.dirty = 6; advance(s, 20);
+    Object.assign(s.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); s.state.player.bag.dirty = 6; advance(s, 20);
     expect(linenCount(s.state.player.bag)).toBe(8);
     expect(s.state.player.bag.cleanSheets).toBe(2);
     expect(s.state.player.bag.clean).toBe(0);
