@@ -159,12 +159,12 @@ export class ResortWorld {
       const promenadeEdge = door.x < 18 ? 14 : 24;
       this.paving({ x: (door.x + promenadeEdge) / 2, y: door.y }, Math.abs(promenadeEdge - door.x), 2, courtyard, .035);
     }
-    // Fill the complete corridor between the bungalow rows. The left row ends
-    // at x=12 while the right row starts at x=24, so a 12-cell route centered
-    // at x=18 keeps both sides flush instead of leaving a pale strip on the left.
-    this.paving({ x: 18, y: 25.5 }, 12, 35, promenade, .045, this.promenadeMaterial);
+    // Fill the complete corridor between the bungalow rows. The left entrance
+    // edge is around x=11 and the right row starts at x=24, so the 13-cell
+    // route reaches both sides without leaving a pale strip on the left.
+    this.paving({ x: 17.5, y: 25.5 }, 13, 35, promenade, .045, this.promenadeMaterial);
     // Narrow terracotta borders frame the main promenade and its garden edges.
-    for (const x of [12.08, 23.92]) {
+    for (const x of [11.08, 23.92]) {
       const border = this.group({ x, y: 25.5 }, this.scene);
       this.box(border, 0xa97451, 0, .085, 0, .16, .035, 35);
     }
