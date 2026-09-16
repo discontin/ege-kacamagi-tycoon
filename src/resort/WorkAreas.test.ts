@@ -42,6 +42,8 @@ describe('bedside work region', () => {
     Object.assign(s.state.player, { x: r.x + 1, y: r.y + 3 }); s.state.player.bag.clean = 1; advance(s, 1);
     expect(f.towels).toBe(1); expect(s.state.player.bag.clean).toBe(0);
     f.dirty = true; s.state.player.bag = { clean: 4, dirty: 4 }; advance(s, 1); expect(s.state.tasks).toHaveLength(0);
+    expect(s.message).toBe('Çanta dolu. Yatağı temizlemek için önce elindekileri bırak.');
+    const messageId = s.messageId; advance(s, 1); expect(s.messageId).toBe(messageId);
     s.state.player.bag = { clean: 0, dirty: 0 }; s.state.xp = 20; s.hire();
     expect(s.startTask(s.area('room1Work')!, s.state.workers[0].id)).toBe(true);
     expect(s.startTask(s.area('room1Work')!)).toBe(false);

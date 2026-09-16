@@ -20,6 +20,7 @@ export class ResortSimulation {
   messageId = 0;
   status = 'Beyaz karede dur · otomatik çalış';
   private purchase = { id: '', hold: 0, latched: false };
+  private blockedNotice = '';
   constructor(public state = initialResort(), readonly testMode = false) {
     // Rooms now end at level two. Preserve older saves by folding former level-three
     // suites back into the fully featured level-two room instead of rejecting them.
@@ -56,7 +57,7 @@ export class ResortSimulation {
     const volume = this.state.settings.volume;
     this.state = new ResortSimulation(initialResort(this.testMode), this.testMode).state;
     this.state.settings.volume = volume;
-    this.purchase = { id: '', hold: 0, latched: false }; this.feedback = []; this.status = '';
+    this.purchase = { id: '', hold: 0, latched: false }; this.blockedNotice = ''; this.feedback = []; this.status = '';
     this.notify('Tatil köyü sıfırlandı!');
   }
   get level() { return LEVELS.filter(n => this.state.xp >= n).length; }
@@ -178,7 +179,7 @@ export class ResortSimulation {
       case 'prepareDrink': return !this.state.bar?.open ? 'Bar kapalı' : actor.drink ? 'Elindeki siparişi teslim et' : !this.state.guests.some(g => wantsDrink(g) && !this.state.tasks.some(t => t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink'))) ? 'Sipariş bekleniyor' : null;
       case 'deliverDrink': { const g = this.state.guests.find(g => `drink:${g.id}` === a.target); return !actor.drink ? 'Bardan siparişi al' : !g || (actor.heldProduct ?? 'lemonade') !== (g.orderProduct ?? 'lemonade') || !wantsDrink(g) || this.state.tasks.some(t => t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink')) ? 'Sipariş başka birine ait veya bitmiş' : null; }
       case 'checkin': return !this.state.guests.some(g => g.phase === 'queue') ? 'Misafir bekleniyor' : !serviceGuestReady(this.state, 'checkin') ? 'Misafirin bankoya gelmesi bekleniyor' : !this.availableRoom() ? 'Hazır oda yok · temizle ve havlu bırak' : null;
-      case 'cleanRoom': return actor.bag.clean + actor.bag.dirty >= towelLimit(actor) || bagCount(actor) + 2 > carryingCapacity(actor) ? 'Çantada iki yer gerekli · kirli havlu ve çarşafı bırak' : null;
+      case 'cleanRoom': return actor.bag.clean + actor.bag.dirty >= towelLimit(actor) || bagCount(actor) + 2 > carryingCapacity(actor) ? 'Çanta dolu. Yatağı temizlemek için önce elindekileri bırak.' : null;
       case 'cleanFloor': return !room!.floorDirty ? 'Zemin temiz' : null;
       case 'cleanBathroom': return !room!.bathroomDirty ? 'Banyo temiz' : null;
       case 'restockRoom': return room!.towels > 0 && !room!.needsSheet ? 'Oda hazır' : room!.needsSheet && !(actor.bag.cleanSheets ?? 0) ? 'Raftan temiz çarşaf getir' : room!.towels === 0 && actor.bag.clean <= 0 ? 'Çamaşırhaneden temiz havlu getir' : null;
@@ -420,7 +421,17 @@ export class ResortSimulation {
         if (pending && (pending.target !== at.target || pending.kind !== at.taskKind) && !this.reason(at, p)) this.cancelTask(pending.id);
         if (pending && (pending.kind === 'cleanTake' || pending.kind === 'poolCleanTake') && at.taskKind !== pending.kind) this.cancelTask(pending.id);
         if (delivery && pending && pending.kind !== 'deliverDrink') this.cancelTask(pending.id);
-        if (!p.task) { this.status = this.reason(at, p) ?? at.label; this.startTask(at); }
+        if (!p.task) {
+          const reason = this.reason(at, p);
+          this.status = reason ?? at.label;
+          if (reason) {
+            const noticeKey = `${at.id}:${reason}`;
+            if (this.blockedNotice !== noticeKey) { this.blockedNotice = noticeKey; this.notify(reason); }
+          } else {
+            this.blockedNotice = '';
+            this.startTask(at);
+          }
+        }
       }
     } else { this.purchase = { id: '', hold: 0, latched: false }; const task = this.state.tasks.find(t => t.id === p.task); this.status = p.task ? task?.kind === 'cleanRoom' || task?.kind === 'restockRoom' ? 'Görev bekliyor · yatağın yanına dön' : 'Görev bekliyor · çalışma karesine dön' : 'Beyaz karede dur · otomatik çalış'; }
     for (const w of this.state.workers) {
