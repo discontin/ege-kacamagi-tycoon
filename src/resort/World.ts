@@ -44,7 +44,7 @@ export class ResortWorld {
   private bedLinen = new Map<string, BedLinen>();
   private bathroomDoors = new Map<string, T.Group>();
   private stockModels = new Map<string, T.Mesh[]>();
-  private washerDoors: { root: T.Object3D; mixer: T.AnimationMixer; open: T.AnimationAction; close: T.AnimationAction; interior: T.Group; materials: T.Material[]; closed: boolean }[] = [];
+  private washerDoors: { root: T.Object3D; mixer: T.AnimationMixer; open: T.AnimationAction; close: T.AnimationAction; closed: boolean }[] = [];
   private poolLeaves: T.Mesh[] = [];
   private drums: T.Mesh[] = [];
   private feel: ResortGameFeel;
@@ -310,7 +310,7 @@ export class ResortWorld {
     for (let z = -3.5; z <= 3.5; z++) this.box(g, 0xe6d7b9, -.2, .17, z, 8.9, .015, .035);
     for (const machine of laundryMachines(f.level)) {
       const x = machine.x - LAUNDRY_ORIGIN.x, stacked = f.level >= 2;
-      const appliance = this.prop(g, stacked ? 'washerStacked' : 'washer', x, .2, machine.y - LAUNDRY_ORIGIN.y, { height: stacked ? 2.25 : 1.75 });
+      const appliance = this.prop(g, stacked ? 'washerStacked' : 'washer', x, .2, machine.y - LAUNDRY_ORIGIN.y, { height: stacked ? 2.25 : 1.62 });
       if (appliance) this.setupWasherDoor(appliance);
       if (!appliance) this.box(g, 0xfff9e8, x, 1, 0, machine.width, 1.8, machine.depth);
     }
@@ -328,30 +328,13 @@ export class ResortWorld {
   }
   private setupWasherDoor(appliance: AssetInstance) {
     const clips = appliance.clips.map(clip => new T.AnimationClip(clip.name, clip.duration, clip.tracks.filter(track => /door-(?:drum|washer)\.quaternion$/.test(track.name)))).filter(clip => clip.tracks.length);
-    const openClip = clips.find(clip => clip.name === 'open'), closeClip = clips.find(clip => clip.name === 'close');
+    const openClip = clips.find(clip => clip.name === 'door-open' || clip.name === 'open'), closeClip = clips.find(clip => clip.name === 'door-close' || clip.name === 'close');
     if (!openClip || !closeClip) return;
     const mixer = new T.AnimationMixer(appliance.model), open = mixer.clipAction(openClip), close = mixer.clipAction(closeClip);
     for (const action of [open, close]) { action.setLoop(T.LoopOnce, 1); action.clampWhenFinished = true; }
-    // The source GLB animates the door but has no drum behind it. Add a small
-    // recessed stainless drum so the open machine reads as hollow, not blank.
-    const interior = new T.Group(); interior.position.set(0, .62, .445); appliance.model.add(interior);
-    const tubeMaterial = new T.MeshStandardMaterial({ color: 0x9aabb0, roughness: .62, metalness: .16, side: T.DoubleSide });
-    const materials: T.Material[] = [tubeMaterial];
-    const add = (geometry: T.BufferGeometry, material: T.Material, x = 0, y = 0, z = 0) => {
-      geometry.userData.generated = true;
-      const mesh = new T.Mesh(geometry, material); mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true; interior.add(mesh); return mesh;
-    };
-    add(new T.CylinderGeometry(.133, .108, .15, 32, 1, true), tubeMaterial, 0, 0, -.04).rotation.x = Math.PI / 2;
-    const back = add(new T.CylinderGeometry(.106, .106, .012, 32), this.material(0x273438), 0, 0, -.112); back.rotation.x = Math.PI / 2;
-    const rimMaterial = new T.MeshStandardMaterial({ color: 0xd5dedc, roughness: .42, metalness: .24, side: T.DoubleSide }); materials.push(rimMaterial);
-    add(new T.TorusGeometry(.137, .009, 8, 32), rimMaterial, 0, 0, .028);
-    for (let i = 0; i < 12; i++) {
-      const angle = i / 12 * Math.PI * 2;
-      add(new T.CircleGeometry(.007, 8), this.material(0x4d5b5f), Math.cos(angle) * .066, Math.sin(angle) * .066, -.103);
-    }
-    // The idle washer is visibly ready to be loaded; the GLB's default pose is shut.
+    // The new CC0 washer has its real drum and animated porthole built in.
     open.play(); mixer.update(openClip.duration);
-    this.washerDoors.push({ root: appliance.model, mixer, open, close, interior, materials, closed: false });
+    this.washerDoors.push({ root: appliance.model, mixer, open, close, closed: false });
   }
   private lemonade(parent: T.Object3D, x: number, y: number, z: number) {
     const g = new T.Group(); g.position.set(x, y, z); parent.add(g);
@@ -414,7 +397,7 @@ export class ResortWorld {
     if (f.level >= 2) { this.sphere(g, 0xffb473, 2.7, .5, -1, .6, 1, .2, 1); this.prop(g, 'plant', -5.8, .1, -3.7, { height: 1.5 }); }
     if (f.level === 3) { this.prop(g, 'plant', 5.8, .1, -3.7, { height: 1.5 }); this.box(g, 0xf2d16e, 0, .4, -3.2, 5, .05, .2); }
   }
-  private clearStructures() { this.structures.traverse(o => { if (o instanceof T.Mesh && o.geometry.userData.generated) o.geometry.dispose(); }); this.structures.clear(); for (const washer of this.washerDoors) { washer.mixer.stopAllAction(); washer.mixer.uncacheRoot(washer.root); washer.materials.forEach(material => material.dispose()); } this.washerDoors = []; for (const p of this.pads.values()) { p.label.remove(); (p.outline.material as T.Material).dispose(); (p.fill.material as T.Material).dispose(); } this.pads.clear(); for (const l of this.facilityLabels.values()) l.remove(); this.facilityLabels.clear(); this.tipModels.clear(); this.moneyModels.clear(); this.dirtModels.clear(); this.bedLinen.clear(); this.bathroomDoors.clear(); this.stockModels.clear(); this.drums = []; this.poolLeaves = []; }
+  private clearStructures() { this.structures.traverse(o => { if (o instanceof T.Mesh && o.geometry.userData.generated) o.geometry.dispose(); }); this.structures.clear(); for (const washer of this.washerDoors) { washer.mixer.stopAllAction(); washer.mixer.uncacheRoot(washer.root); } this.washerDoors = []; for (const p of this.pads.values()) { p.label.remove(); (p.outline.material as T.Material).dispose(); (p.fill.material as T.Material).dispose(); } this.pads.clear(); for (const l of this.facilityLabels.values()) l.remove(); this.facilityLabels.clear(); this.tipModels.clear(); this.moneyModels.clear(); this.dirtModels.clear(); this.bedLinen.clear(); this.bathroomDoors.clear(); this.stockModels.clear(); this.drums = []; this.poolLeaves = []; }
   private rebuild() {
     const key = JSON.stringify([!!this.sim.state.bar?.open, !!this.sim.facility('pool').dirt, this.sim.state.guests.filter(wantsDrink).map(g => [g.id, g.orderProduct]), this.sim.state.workers.map(w => w.role), this.sim.state.workers.length,this.sim.state.facilities.map(f => [f.id, f.open, f.level, f.dirty, !!f.floorDirty, !!f.bathroomDirty, !!f.needsSheet, !!f.towels]), this.sim.state.seats.map(s => [s.open, s.dirty, !!s.towel, !!s.guest])]);
     if (key === this.layoutKey) return; this.layoutKey = key; this.clearStructures(); ROOM_DEFS.forEach(r => this.bungalow(r)); this.reception(); this.laundry(); this.pool(); this.poolBar();
@@ -535,16 +518,13 @@ export class ResortWorld {
     const washerRunning = s.laundry.remaining !== null && s.laundry.remaining > 0;
     for (const washer of this.washerDoors) {
       if (washer.closed !== washerRunning) {
-        const previous = washer.closed ? washer.open : washer.close;
+        const previous = washer.closed ? washer.close : washer.open;
         previous.stop();
         const next = washerRunning ? washer.close : washer.open;
         next.reset().setLoop(T.LoopOnce, 1); next.clampWhenFinished = true; next.play();
         washer.closed = washerRunning;
       }
       washer.mixer.update(s.settings.paused ? 0 : dt * s.settings.speed);
-      // Keep the added drum tucked behind the door while it swings, then reveal
-      // it once the opening animation is complete (and hide it as closing starts).
-      washer.interior.visible = !washer.closed && !washer.open.isRunning();
     }
     if (this.follow) this.target.lerp(world(s.player).add(new T.Vector3(0, 0, -3)), 1 - Math.exp(-dt * 5));
     const d = this.follow ? 1 / this.zoom : Math.max(2.3, 2.1 / this.camera.aspect); this.camera.position.copy(this.target).add(new T.Vector3(0, 20 * d, 23 * d)); this.camera.lookAt(this.target);

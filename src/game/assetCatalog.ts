@@ -1,4 +1,4 @@
-/** Original CC0 files, downloaded directly from Kenney. See THIRD_PARTY_ASSETS.md. */
+/** Third-party model catalog; source and license details are in THIRD_PARTY_ASSETS.md. */
 export const ASSET_CATALOG = {
   player: ['mini-characters', 'character-male-e'],
   worker: ['mini-characters', 'character-female-e'],
@@ -74,7 +74,7 @@ export const ASSET_CATALOG = {
   loungeSofa: ['furniture-kit', 'loungeSofa'],
   barStool: ['furniture-kit', 'stoolBar'],
   barCounter: ['furniture-kit', 'kitchenBar'],
-  washer: ['3dassets/laundrette-and-cleaning', 'commercial-washer-700'],
+  washer: ['3dassets/home-appliances-and-utility', 'washer-front-load-600'],
   washerStacked: ['3dassets/laundrette-and-cleaning', 'stacked-washer-dryer-700'],
   iceCream: ['food-kit', 'ice-cream'],
   sunLounger: ['3dassets/hotel-resort', 'poolside-sun-lounger'],

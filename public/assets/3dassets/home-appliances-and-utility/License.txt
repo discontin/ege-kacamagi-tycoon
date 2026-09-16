@@ -1,0 +1,7 @@
+Front load washing machine 600 by 3DAssets.dev.
+Source: https://3dassets.dev/assets/home-appliances-and-utility-washing-machine-front-load-8cf238bc
+Pack: https://3dassets.dev/packs/home-appliances-and-utility
+Model: https://cdn.3dassets.dev/assets/14050/v1/model.glb
+License: CC0 1.0 Universal
+Personal and commercial use are permitted; attribution is not required.
+License text: https://creativecommons.org/publicdomain/zero/1.0/

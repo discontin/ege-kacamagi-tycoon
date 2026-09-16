@@ -7,7 +7,7 @@ import { ASSET_CATALOG, assetPath, type AssetKey } from './assetCatalog';
 import { AssetLibrary } from './AssetLibrary';
 
 const keys = Object.keys(ASSET_CATALOG) as AssetKey[];
-interface GlbMetadata { asset: { version: string }; images?: { uri?: string }[]; buffers?: { uri?: string }[]; skins?: unknown[]; animations?: { name: string }[] }
+interface GlbMetadata { asset: { version: string }; images?: { uri?: string }[]; buffers?: { uri?: string }[]; skins?: unknown[]; nodes?: { name?: string }[]; animations?: { name: string; channels?: { target: { node: number; path: string } }[] }[] }
 function metadata(key: AssetKey): GlbMetadata {
   const file = resolve('public', assetPath(key)), bytes = readFileSync(file);
   expect(bytes.toString('ascii', 0, 4), key).toBe('glTF');
@@ -52,6 +52,16 @@ describe('shipped CC0 assets', () => {
       expect(json.skins?.length, key).toBeGreaterThan(0);
       expect(json.animations?.map(a => a.name), key).toEqual(expect.arrayContaining(['idle', 'walk', 'interact-right', 'holding-both']));
     }
+  });
+  it('ships a washer with real door-open and door-close clips', () => {
+    const json = metadata('washer');
+    expect(json.animations?.map(a => a.name)).toEqual(expect.arrayContaining(['door-open', 'door-close']));
+    for (const name of ['door-open', 'door-close']) {
+      const targets = json.animations?.find(animation => animation.name === name)?.channels?.map(({ target }) => [json.nodes?.[target.node]?.name, target.path]);
+      expect(targets).toContainEqual(['door-drum', 'rotation']);
+    }
+    const license = readFileSync(resolve('public/assets/3dassets/home-appliances-and-utility/License.txt'), 'utf8');
+    expect(license).toContain('CC0 1.0'); expect(license).toContain('commercial');
   });
 });
 

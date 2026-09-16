@@ -16,7 +16,8 @@ Tatil köyü; Kenney modellerini, havuz için OpenGameArt dokusunu ve 3DAssets.d
 | [Furniture Kit](https://kenney.nl/assets/furniture-kit) | Yataklar, pencere, ofis masası/sandalyesi, raflar, mobilyalar ve saksılar | 2.0 | CC0 |
 | [Blue Pool Tiles](https://opengameart.org/content/blue-pool-tiles) | Havuz içi mozaik albedo ve normal dokuları | 1.0 | CC0 |
 | [Hotel and Resort Operations](https://3dassets.dev/packs/hotel-and-resort-operations) | Yeni oda yatakları (ikiz ve king) ile havuz kenarı şezlongu | v1 | CC0 |
-| [Laundromat and Cleaning Services](https://3dassets.dev/packs/laundrette-and-cleaning) | Ticari çamaşır makinesi, üst üste makine ve tekerlekli çöp kutusu | v1 | CC0 |
+| [Laundromat and Cleaning Services](https://3dassets.dev/packs/laundrette-and-cleaning) | Üst üste makine ve tekerlekli çöp kutusu | v1 | CC0 |
+| [Home Appliances and Utility Room](https://3dassets.dev/packs/home-appliances-and-utility) | Kapak animasyonlu, tamburu görünen önden yüklemeli çamaşır makinesi | v1 | CC0 |
 | [Pavement 05](https://polyhaven.com/a/pavement_05) | Orta yürüyüş yolunun taş kaplama dokusu | 1K | CC0 |
 
 Her kaynağın `License.txt` dosyası kendi `public/assets/...` klasöründe korunur ve build çıktısına kopyalanır. Bu dosyalar kişisel ve ticari kullanıma izin verir; atıf zorunlu değildir. Kenney için isteğe bağlı kredi: “3D assets by Kenney (kenney.nl)”. [CC0 metni](https://creativecommons.org/publicdomain/zero/1.0/).
@@ -24,6 +25,8 @@ Her kaynağın `License.txt` dosyası kendi `public/assets/...` klasöründe kor
 GLB dosyaları değiştirilmeden kopyalanmıştır. Ölçek, yerleşim ve bazı doğa malzemelerinin rengi oyun çalışırken ayarlanır. Factory Kit ve Mini Characters GLB'lerinin başvurduğu `Textures/colormap.png` dosyaları korunmalıdır. Evler, platformlar, duvarlar, araçlar ve bazı üretim detayları oyun koduyla oluşturulur; referans oyunun modelleri kullanılmaz.
 
 Blue Pool Tiles dosyaları 15 Eylül 2026'da OpenGameArt kaynağından indirilmiştir. Yeni oda yatakları, Poolside Sun Lounger, ticari çamaşır makineleri ve tekerlekli çöp kutusu aynı tarihte 3DAssets.dev CDN'inden alınmıştır; kaynak sayfaları modellerin CC0 olduğunu ve atıf gerektirmediğini belirtir. Pavement 05'in 1K diffuse haritası Poly Haven'ın resmî indirme sunucusundan alınmıştır.
+
+Önden yüklemeli yeni çamaşır makinesi 16 Eylül 2026'da Home Appliances and Utility Room paketinden alınmıştır. Kaynak modelin ayrı `door-open` ve `door-close` animasyon klipleri ile tambur iç geometrisi vardır; model sayfası CC0 1.0 olarak lisanslandığını belirtir.
 
 ## İndirme doğrulamaları
 
