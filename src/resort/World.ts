@@ -24,6 +24,7 @@ interface Character { root: T.Group; load: T.Group; broom: T.Group; tray: T.Grou
 // Keep the reception's cash and upgrade interaction zones available to the
 // simulation, but remove their old yellow floor markers from the scene.
 const HIDDEN_RECEPTION_MARKERS = new Set(['receptionCash', 'receptionUpgrade']);
+const RECEPTION_VISUAL_X = RECEPTION.x - 1;
 const world = (p: Point) => new T.Vector3(p.x - 19, 0, p.y - 27);
 export class ResortWorld {
   private scene = new T.Scene();
@@ -57,7 +58,7 @@ export class ResortWorld {
   private poolTileNormal: T.Texture;
   private poolTileMaterial: T.MeshStandardMaterial;
   private poolWaterMaterial: T.MeshStandardMaterial;
-  private target = world({ x: 19, y: 44 });
+  private target = world({ x: RECEPTION.x, y: 44 });
   private keys = new Set<string>();
   private touch: Point = { x: 0, y: 0 };
   private zoom = 1;
@@ -262,8 +263,7 @@ export class ResortWorld {
     }
   }
   private reception() {
-    const f = this.sim.facility('reception'), g = this.group({ x: 19, y: 43.5 });
-    this.box(g, 0xf7eacb, 0, .12, 0, 6.5, .2, 4.5);
+    const f = this.sim.facility('reception'), g = this.group({ x: RECEPTION_VISUAL_X, y: 43.5 });
     // Standalone, low rounded counter: no canopy, awning or supporting posts.
     const rounded = (w: number, d: number, h: number, y: number, color: number) => {
       const r = .3, x = w / 2, z = d / 2, shape = new T.Shape();
@@ -587,7 +587,7 @@ export class ResortWorld {
       if (a.mode === 'work' || a.mode === 'upgrade' && a.target !== 'laundry' && !featuredTestUpgrade) p.label.style.display = 'none';
     }
     for (const [id, l] of this.facilityLabels) {
-      const f = this.sim.facility(id), r = ROOM_DEFS.find(r => r.id === id), pos = r ? world({ x: r.x + 4.5, y: r.y + 1 }) : world(id === 'reception' ? { x: 19, y: 43 } : id === 'laundry' ? { x: 8, y: 44 } : { x: 28, y: 2 });
+      const f = this.sim.facility(id), r = ROOM_DEFS.find(r => r.id === id), pos = r ? world({ x: r.x + 4.5, y: r.y + 1 }) : world(id === 'reception' ? { x: RECEPTION_VISUAL_X, y: 43 } : id === 'laundry' ? { x: 8, y: 44 } : { x: 28, y: 2 });
       const g = s.guests.find(g => g.id === f.guest), title = r?.name ?? (id === 'reception' ? 'Resepsiyon' : id === 'laundry' ? 'Çamaşırhane' : 'Havuz');
       const description = !f.open ? 'YENİ ALAN' : f.kind === 'room' ? g ? g.phase === 'staying' ? `Konaklıyor · ${Math.ceil(g.remaining)} sn` : 'Misafir geliyor' : f.dirty ? 'YATAĞI TOPLA' : f.floorDirty ? 'ZEMİNİ SÜPÜR' : f.bathroomDirty ? 'BANYOYU TEMİZLE' : f.needsSheet ? 'TEMİZ ÇARŞAF GEREKLİ' : f.towels ? 'MİSAFİRE HAZIR' : 'TEMİZ HAVLU GEREKLİ' : id === 'laundry' ? `${this.sim.testMode ? '∞' : s.laundry.clean} temiz · ${s.laundry.dirty} kirli${s.laundry.remaining !== null ? ' · ' + Math.ceil(s.laundry.remaining) + ' sn' : ''}` : id === 'reception' ? `${s.guests.filter(g => g.phase === 'queue').length} misafir sırada` : `${s.seats.filter(s => s.open && !s.guest && !s.dirty).length} boş şezlong`;
       const text = `<b>${title}</b><small>${description}${f.open ? ' · Sv. ' + f.level : ''}</small>${r && f.open ? `<small class="room-class">${['Standart oda · 40 ₺', 'Konfor oda · 50 ₺'][f.level - 1]}</small>` : ''}`; if (l.innerHTML !== text) l.innerHTML = text; l.classList.toggle('dirty', f.dirty); pos.y = r ? 3.5 : 4; this.project(l, pos); if (!this.follow || !f.open) l.style.display = 'none';
@@ -596,7 +596,7 @@ export class ResortWorld {
     this.wave.position.y = -.12 + Math.sin(now / 1500) * .025; this.renderer.render(this.scene, this.camera); this.frame = requestAnimationFrame(this.animate);
   };
   centerPlayer() { this.follow = true; }
-  showAll() { this.follow = false; this.target.copy(world({ x: 19, y: 27 })); }
+  showAll() { this.follow = false; this.target.copy(world({ x: RECEPTION.x, y: 27 })); }
   setZoom(factor: number) { this.zoom = T.MathUtils.clamp(this.zoom * factor, .65, 1.6); this.follow = true; }
   private resize() { const r = this.host.getBoundingClientRect(); this.renderer.setSize(r.width, r.height); this.camera.aspect = r.width / Math.max(1, r.height); this.camera.updateProjectionMatrix(); }
   private ground(p: Point) { const r = this.host.getBoundingClientRect(), ray = new T.Raycaster(); ray.setFromCamera(new T.Vector2((p.x - r.left) / r.width * 2 - 1, -(p.y - r.top) / r.height * 2 + 1), this.camera); const hit = new T.Vector3(); if (!ray.ray.intersectPlane(new T.Plane(new T.Vector3(0, 1, 0), 0), hit)) return; return { x: Math.round(hit.x + 19), y: Math.round(hit.z + 27) }; }
