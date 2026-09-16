@@ -3,7 +3,7 @@ import { guestTip } from './GuestMood';
 import { atOffice, carryingCapacity, OFFICE, towelLimit, workerMoveSpeed } from './Office';
 import { guestPreferences } from './GuestPreferences';
 import { staffHireCost, staffRole } from './StaffHiring';
-import { areasFor, CLEAN_TAKE, DIRTY_DROP, EXIT, HEIGHT, incomeFactor, initialResort, LEVELS, MAP_MAX_X, MAP_MIN_X, POOL_GATE, receptionQueuePoint, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, taskDuration, upgradeCost, WIDTH } from './data';
+import { areasFor, CLEAN_TAKE, DIRTY_DROP, EXIT, HEIGHT, incomeFactor, initialResort, LAUNDRY_RIGHT_EDGE, LEVELS, MAP_MAX_X, MAP_MIN_X, POOL_GATE, receptionQueuePoint, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, taskDuration, upgradeCost, WIDTH } from './data';
 import type { Actor, Area, GuestState, PlayerState, Point, ResortGameState, Role, TaskKind, TaskState, WorkerState } from './types';
 import { serviceGuestReady } from './CustomerService';
 import { workAreaContains } from './WorkAreas';
@@ -92,6 +92,10 @@ export class ResortSimulation {
     if (x >= 17 && x <= 21 && y >= 43 && y <= 44) return false;
     if (this.facility('pool').open && x >= 18 && x <= 21 && y >= 7 && y <= 8) return false;
     if (laundryObstacles(this.facility('laundry').level).some(f => inFootprint({ x, y }, f))) return false;
+    // The right laundry wall is solid except for its widened three-cell side door.
+    // The lowest door cell keeps the entrance clear of the clean-towel rack just
+    // inside the room, so pathfinding can actually pass through the opening.
+    if (x === Math.ceil(LAUNDRY_RIGHT_EDGE) && y >= 42 && y <= 48 && (y < 44 || y > 46)) return false;
     // The laundry's lower edge is now a wall; its only entrance is the split
     // right-side wall, around y=45.
     if (x >= 2 && x <= 11 && y === 48) return false;

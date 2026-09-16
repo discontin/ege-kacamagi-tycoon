@@ -4,9 +4,9 @@ export interface LaundryFootprint extends Point { width: number; depth: number }
 export const LAUNDRY_WALLS = [
   { x: 6.75, y: 42, width: 9.5, depth: .25, height: 1.1 },
   { x: 2, y: 45, width: .25, depth: 7.5, height: 1.1 },
-  // The right side is the new entrance: split the wall around one usable door.
-  { x: LAUNDRY_RIGHT_EDGE, y: 43, width: .25, depth: 3, height: 1.1 },
-  { x: LAUNDRY_RIGHT_EDGE, y: 47, width: .25, depth: 3, height: 1.1 },
+  // The right side is the new entrance: split the wall around a wide door.
+  { x: LAUNDRY_RIGHT_EDGE, y: 42.75, width: .25, depth: 2.5, height: 1.1 },
+  { x: LAUNDRY_RIGHT_EDGE, y: 47.25, width: .25, depth: 2.5, height: 1.1 },
   // Close the whole lower/front edge; the room is entered from the side only.
   { x: 6.75, y: 48.75, width: 9.5, depth: .25, height: 1.1 },
 ];
