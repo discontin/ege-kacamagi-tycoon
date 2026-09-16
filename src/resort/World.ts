@@ -222,12 +222,14 @@ export class ResortWorld {
     bed?.model.traverse(object => {
       if (!(object instanceof T.Mesh)) return;
       const materials = Array.isArray(object.material) ? object.material : [object.material];
-      // Keep the new CC0 bed frame/headboard and build all three linen states
-      // ourselves, so dirty, stripped and freshly-sheeted beds stay distinct.
-      if (materials.some(material => material.name === 'soft' || material.name === 'accent')) object.visible = false;
+      // The asset's white carcass includes a second mattress/cover surface.
+      // Keep its frame and headboard; render one explicit mattress and our own
+      // three linen states so the stripped bed cannot show layered white covers.
+      if (materials.some(material => ['soft', 'accent', 'carcass'].includes(material.name))) object.visible = false;
     });
     if (bed) bed.root.children[0].scale.set(bedWidth / (singleRoom ? 1.17 : 2.02), 1, bedDepth / 2.204);
-    if (!bed) { this.box(g, singleRoom ? 0xac7359 : 0x98634f, bedX, .46, -.5, bedWidth, .6, bedDepth); this.box(g, 0xfff8e8, bedX, .82, -.5, bedWidth - .15, .35, bedDepth - .2); }
+    this.box(g, singleRoom ? 0x987658 : 0x8c694f, bedX, .48, -.5, bedWidth, .42, bedDepth);
+    this.box(g, 0xfff8e8, bedX, .82, -.5, bedWidth - .15, .28, bedDepth - .2);
     const linen = new BedLinen(bedColor, color => this.material(color), { single: singleRoom, centerX: bedX }); linen.update(f.dirty ? 0 : 1); g.add(linen.root); this.bedLinen.set(r.id, linen);
     if (!bed) this.box(g, singleRoom ? 0xac7359 : 0x8f5d4a, bedX, singleRoom ? 1.1 : 1.25, -2.45, bedWidth + .1, singleRoom ? 1.25 : 1.55, .2);
     const tipPile = new T.Group(); tipPile.position.set(2.5, 1.8, -2); g.add(tipPile);

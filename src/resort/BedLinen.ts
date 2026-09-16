@@ -10,7 +10,6 @@ export class BedLinen {
   private single: boolean;
   constructor(color: number, material: (color: number) => T.Material, options: { single?: boolean; centerX?: number } = {}) {
     this.single = !!options.single; this.centerX = options.centerX ?? -1.5;
-    this.fabric(this.single ? 1.55 : 2.65, 3.55, 0xfff8e8, this.centerX, -.5, .995, .16, material);
     this.fabric(this.single ? 1.62 : 2.72, 2.3, color, this.centerX, .2, 1.06, .38, material);
     for (let i = 0; i < (this.single ? 1 : 2); i++) {
       const geometry = new T.SphereGeometry(.5, 12, 6); geometry.userData.generated = true;
