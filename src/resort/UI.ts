@@ -24,7 +24,7 @@ export class ResortUI {
       <header class="resort-brand"><span class="brand-mark">☀</span><div>Ege<span>Kaçamağı.</span><small>TATİL KÖYÜ TYCOON</small></div></header>
       <div id="level-card" class="level-card"></div><div id="wallet" class="wallet"></div>
       <div class="mode-controls">${sim.testMode ? '<span>∞ TEST MODU · KAYIT YOK</span><button data-action="test">Normal oyuna dön</button>' : '<button data-action="test">∞ Sınırsız test modu</button>'}</div>
-      <div class="quick-controls" aria-label="Oyun kontrolleri">${sim.testMode ? '<button id="test-speed" data-action="speed" aria-label="2 kat hız" aria-pressed="false">2× Hız</button>' : ''}<button data-action="reset" aria-label="Oyunu sıfırla">↻ Sıfırla</button></div>
+      <div class="quick-controls" aria-label="Oyun kontrolleri"><button id="speed-button" data-action="speed" aria-label="2 kat hız" aria-pressed="false">2× Hız</button><button data-action="reset" aria-label="Oyunu sıfırla">↻ Sıfırla</button></div>
       <div class="camera-controls"><button data-action="zoom-in" aria-label="Yakınlaştır">＋</button><button data-action="zoom-out" aria-label="Uzaklaştır">−</button><button data-action="focus" aria-label="Karaktere odaklan">◎</button><button data-action="map" aria-label="Tüm haritayı göster">▦</button></div>
       <div class="resort-toast" id="toast" role="status"></div>
       <div id="joystick" aria-label="Hareket çubuğu"><div id="joystick-knob"></div></div>
@@ -108,7 +108,7 @@ export class ResortUI {
     this.world?.setVolume(volume);
     document.querySelector<HTMLInputElement>('#sound-volume')!.value = String(Math.round(volume * 100));
     document.querySelector('#volume-value')!.textContent = '%' + Math.round(volume * 100);
-    const speedButton = document.querySelector<HTMLButtonElement>('#test-speed');
+    const speedButton = document.querySelector<HTMLButtonElement>('#speed-button');
     if (speedButton) {
       const fast = this.sim.state.settings.speed === 2;
       speedButton.textContent = fast ? '2× Hız · Açık' : '2× Hız';
