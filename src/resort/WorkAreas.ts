@@ -1,5 +1,5 @@
 import { staffRole } from './StaffHiring';
-import { DIRTY_BASKET, ROOM_DEFS, TOWEL_RACK } from './data';
+import { DIRTY_BASKET, LAUNDRY_CLEAN_DROP, LAUNDRY_RIGHT_EDGE, ROOM_DEFS, TOWEL_RACK } from './data';
 import type { Area, Point } from './types';
 
 /** Shared by automatic jobs, progress indicators and floor highlights. */
@@ -14,7 +14,8 @@ export function workAreaContains(p: Point, a: Point | Area): boolean {
   if ('mode' in a && a.mode === 'work' && (a.taskKind === 'cleanTake' || a.taskKind === 'dirtyDrop')) {
     // Keep the pickup side separate so standing still cannot undo a transfer.
     if (a.taskKind === 'dirtyDrop' && Math.abs(p.x - (DIRTY_BASKET.x - 2)) <= .5 && Math.abs(p.y - DIRTY_BASKET.y) <= .5) return false;
-    if (a.taskKind === 'cleanTake' && Math.abs(p.x - 12) <= .5 && Math.abs(p.y - 46.5) <= .5) return false;
+    if (a.taskKind === 'cleanTake' && Math.abs(p.x - LAUNDRY_CLEAN_DROP.x) <= .5 && Math.abs(p.y - LAUNDRY_CLEAN_DROP.y) <= .5) return false;
+    if (a.taskKind === 'cleanTake' && p.x >= LAUNDRY_RIGHT_EDGE) return false;
     const rack = a.taskKind === 'cleanTake', center = rack ? TOWEL_RACK : DIRTY_BASKET;
     const dx = Math.abs(p.x - center.x) - (rack ? 1 : .6), dy = Math.abs(p.y - center.y) - (rack ? .5 : .55);
     // Work within arm's reach of any edge, never from inside the shelf/basket itself.

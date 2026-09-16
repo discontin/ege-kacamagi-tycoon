@@ -35,10 +35,10 @@ export function taskIndicators(s: ResortGameState): TaskIndicator[] {
   if (towelsNeeded && (s.laundry.clean > 0 && s.player.bag.clean < 4 || (s.laundry.cleanSheets ?? 0) > 0 && (s.player.bag.cleanSheets ?? 0) < 2 && s.facilities.some(f => f.needsSheet))) add('laundryClean', 'cleanTake', 'towel', 'Temiz havlu ve çarşaf al', TOWEL_RACK.x, TOWEL_RACK.y, 2.7, 'laundry', 'cleanTake');
   if (s.laundry.remaining !== null) {
     const done = s.laundry.remaining === 0;
-    add('laundryWash', done ? 'machineUnload' : 'machineLoad', 'wash', done ? 'Yıkanan çamaşırı makineden al' : 'Makine çamaşırları yıkıyor', 5.5, 45, 2.5);
+    add('laundryWash', done ? 'machineUnload' : 'machineLoad', 'wash', done ? 'Yıkanan çamaşırı makineden al' : 'Makine çamaşırları yıkıyor', 4.7, 45, 2.5);
     out.at(-1)!.state = s.settings.paused ? 'waiting' : done ? 'todo' : 'working';
   }
-  if (s.laundry.remaining !== 0 && (s.laundry.washingTowels ?? 0) + (s.laundry.washingSheets ?? 0) < 3 + 2 * (s.facilities.find(f => f.id === 'laundry')!.level - 1) && dirtyLinenCount(s.player.bag) > 0) add('laundryLoad', 'machineLoad', 'wash', 'Kirli çamaşırı makineye koy', 5.5, 45, 2.5, 'laundry', 'machineLoad');
+  if (s.laundry.remaining !== 0 && (s.laundry.washingTowels ?? 0) + (s.laundry.washingSheets ?? 0) < 3 + 2 * (s.facilities.find(f => f.id === 'laundry')!.level - 1) && dirtyLinenCount(s.player.bag) > 0) add('laundryLoad', 'machineLoad', 'wash', 'Kirli çamaşırı makineye koy', 4.7, 45, 2.5, 'laundry', 'machineLoad');
   if (s.laundry.dirty + (s.laundry.dirtySheets ?? 0) > 0 && !dirtyLinenCount(s.player.bag)) add('laundryPickup', 'laundryDirtyTake', 'dirty', 'Kirli raftan çamaşır al', DIRTY_BASKET.x, DIRTY_BASKET.y, 2.3, 'laundry', 'laundryDirtyTake');
   if (s.player.carryingWashed) add('laundryPutClean', 'laundryCleanDrop', 'towel', 'Yıkanan çamaşırı temiz rafa koy', TOWEL_RACK.x, TOWEL_RACK.y, 2.7, 'laundry', 'laundryCleanDrop');
   if (linenCount(s.player.bag) > 0 || s.player.drink) add('laundryTrash', 'laundryTrash', 'trash', 'Elindekini çöpe at', LAUNDRY_TRASH.x, LAUNDRY_TRASH.y, 1.8, 'laundry', 'discardItem');
