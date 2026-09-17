@@ -20,10 +20,10 @@ describe('feature-bearing facility upgrades', () => {
     stand(s, 'checkin'); advance(s, 3.2); expect(s.state.stats.welcomed).toBe(1);
   });
 
-  it('opens two clean loungers and ice-cream orders at pool level two', () => {
+  it('adds two clean loungers and ice-cream orders at pool level two', () => {
     const s = new ResortSimulation(); s.state.money = 1000; s.state.xp = 100; const pool = s.facility('pool'); pool.open = true; pool.towels = 2;
-    s.state.seats.slice(0, 2).forEach(seat => { seat.open = true; seat.towel = true; }); stand(s, 'poolUpgrade'); advance(s, 1.4);
-    expect(pool.level).toBe(2); expect(s.state.seats.filter(seat => seat.open)).toHaveLength(4); expect(s.state.seats.slice(2, 4).every(seat => !seat.dirty && seat.towel)).toBe(true);
+    s.state.seats.slice(0, 4).forEach(seat => { seat.open = true; seat.towel = true; }); stand(s, 'poolUpgrade'); advance(s, 1.4);
+    expect(pool.level).toBe(2); expect(s.state.seats.filter(seat => seat.open)).toHaveLength(6); expect(s.state.seats.slice(4, 6).every(seat => !seat.dirty && seat.towel)).toBe(true);
     s.state.bar!.open = true; s.state.guests.push({ id: 'guest2', x: 24, y: 10, path: [], phase: 'swimming', seat: 'seat1', remaining: 129, wantsLemonade: true });
     advance(s, .1); const guest = s.state.guests[0]; expect(guest.orderProduct).toBe('icecream');
     stand(s, 'barPrepare'); advance(s, 2.5); expect(s.state.player.heldProduct).toBe('icecream');

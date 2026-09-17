@@ -12,15 +12,18 @@ export const ROOM_APPROACH = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x <
 export const ROOM_WORK = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x + 5, y: r.y + 5 });
 export const LAUNDRY_ORIGIN = { x: 7, y: 45 };
 export const LAUNDRY_RIGHT_EDGE = 11.5;
-// Keep the machine and both shelves against the rear wall, with a clear gap
-// between the dirty basket and the clean rack.
-export const LAUNDRY_MACHINE = { x: 4.7, y: 43.5 };
-export const TOWEL_RACK = { x: 10.8, y: 42.7 }, DIRTY_BASKET = { x: 8.2, y: 42.7 };
-export const LAUNDRY_TRASH = { x: 3.5, y: 47.4 };
-export const LAUNDRY_CLEAN_DROP = { x: 10.8, y: 44.8 };
-export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 8.2, y: 44 }, CLEAN_TAKE = { x: 10.3, y: 44 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
+export const LAUNDRY_FRONT_EDGE = 51;
+// Keep the washer close to the left wall and face it toward the side entrance.
+// The shelves stay along the rear wall with a clear gap between them.
+export const LAUNDRY_MACHINE = { x: 3, y: 45 };
+export const LAUNDRY_MACHINE_AREA = { x: 4.2, y: 45 };
+export const TOWEL_RACK = { x: 9, y: 42.7 }, DIRTY_BASKET = { x: 5.5, y: 42.7 };
+export const LAUNDRY_TRASH = { x: 5.4, y: 49 };
+export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 4.3, y: 43.4 }, DIRTY_TAKE = { x: 6.6, y: 43.4 }, CLEAN_TAKE = { x: 10, y: 44 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
 export const receptionQueuePoint = (index: number): Point => ({ x: RECEPTION.x, y: 46 + index });
 export const SEAT_DEFS = [24, 27, 30, 33].map((x, i) => ({ id: `seat${i + 1}`, x, y: 10 })).concat([{ id: 'seat5', x: 25.5, y: 13 }, { id: 'seat6', x: 31.5, y: 13 }]);
+export const poolSeatCount = (level: number) => level < 2 ? 4 : 6;
+export const machineCapacityForLevel = (level: number) => 5 + 2 * (level - 1);
 export const taskDuration = (level: number) => [1, .8, .65][level - 1];
 export const incomeFactor = (level: number) => [1, 1.25, 1.5][level - 1];
 export const upgradeCost = (id: string, level: number) => (id === 'reception' ? 100 : id === 'laundry' ? 120 : id === 'pool' ? 180 : 80) * level;
@@ -28,31 +31,37 @@ export function initialResort(test = false): ResortGameState {
   return { version: 1, concept: 'ege-resort', money: test ? 999999 : 0, xp: test ? 280 : 0, elapsed: 0, spawnTimer: 0, nextId: 10,
     player: { id: 'player', x: 19, y: 48, path: [], bag: { clean: 0, dirty: 0 } }, guests: [], workers: [], tasks: [], bar: { open: test, cash: 0 },
     facilities: [{ id: 'reception', kind: 'reception', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, { id: 'laundry', kind: 'laundry', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, ...ROOM_DEFS.map((r, i) => ({ id: r.id, kind: 'room' as const, open: test || !i, level: 1, dirty: false, towels: 1, cash: 0 })), { id: 'pool', kind: 'pool', open: test, level: 1, dirty: false, towels: test ? 999 : 0, cash: 0 }],
-    seats: SEAT_DEFS.map((r, i) => ({ id: r.id, open: test && i < 2, dirty: false, towel: test && i < 2 })), laundry: { clean: test ? 999 : 8, dirty: 0, remaining: null }, boost: { remaining: 0, multiplier: 1.5 }, settings: { paused: false, speed: 1 }, stats: { welcomed: 0, stays: 0, cleaned: 0, washed: 0, poolVisits: 0, earned: 0 } };
+    seats: SEAT_DEFS.map((r, i) => ({ id: r.id, open: test && i < 4, dirty: false, towel: test && i < 4 })), laundry: { clean: test ? 999 : 8, dirty: 0, remaining: null }, boost: { remaining: 0, multiplier: 1.5 }, settings: { paused: false, speed: 1 }, stats: { welcomed: 0, stays: 0, cleaned: 0, washed: 0, poolVisits: 0, earned: 0 } };
 }
 export function areasFor(s: ResortGameState): Area[] {
   const areas: Area[] = [
     { id: 'office', label: 'Ofis · çalışan geliştirme', mode: 'work', target: 'office', ...OFFICE },
-    // Pick up from the accessible front-right side of the dirty rack. The old
-    // point sat in the narrow gap between the washer and rack, where routes
-    // could not reliably reach it.
-    { id: 'laundryDirtyTake', label: 'Kirli raftan çamaşır al', mode: 'work', target: 'laundry', taskKind: 'laundryDirtyTake', x: DIRTY_BASKET.x + 1, y: DIRTY_DROP.y },
-    { id: 'machineLoad', label: 'Makineye kirli çamaşır koy', mode: 'work', target: 'laundry', taskKind: 'machineLoad', x: 5, y: 46 },
-    { id: 'machineUnload', label: 'Makineden temiz çamaşır al', mode: 'work', target: 'laundry', taskKind: 'machineUnload', x: 5, y: 46 },
-    { id: 'laundryCleanDrop', label: 'Temiz çamaşırı rafa koy', mode: 'work', target: 'laundry', taskKind: 'laundryCleanDrop', ...LAUNDRY_CLEAN_DROP },
+    // Use a dedicated right-front square for dirty pickup, well clear of the
+    // deposit square and reachable around the washer row at every level.
+    { id: 'laundryDirtyTake', label: 'Kirli raftan çamaşır al', mode: 'work', target: 'laundry', taskKind: 'laundryDirtyTake', ...DIRTY_TAKE },
+    { id: 'machineLoad', label: 'Makineye kirli çamaşır koy', mode: 'work', target: 'laundry', taskKind: 'machineLoad', ...LAUNDRY_MACHINE_AREA },
+    { id: 'machineUnload', label: 'Makineyi boşalt · temizler rafa eklenir', mode: 'work', target: 'laundry', taskKind: 'machineUnload', ...LAUNDRY_MACHINE_AREA },
     { id: 'laundryTrash', label: 'Elindekini çöpe at', mode: 'work', target: 'laundry', taskKind: 'discardItem', ...LAUNDRY_TRASH },
     { id: 'checkin', label: 'Müşteri karşıla', mode: 'work', target: 'reception', taskKind: 'checkin', ...RECEPTION },
     { id: 'receptionCash', label: 'Konaklama geliri', mode: 'cash', target: 'reception', x: 23, y: 46 },
     { id: 'receptionUpgrade', label: 'Resepsiyon', mode: 'upgrade', target: 'reception', x: 16, y: 46 },
     { id: 'dirtyDrop', label: 'Kirli havlu bırak', mode: 'work', target: 'laundry', taskKind: 'dirtyDrop', ...DIRTY_DROP },
     { id: 'cleanTake', label: 'Temiz havlu al', mode: 'work', target: 'laundry', taskKind: 'cleanTake', ...CLEAN_TAKE },
-    { id: 'laundryUpgrade', label: 'Makine kapasitesi', mode: 'upgrade', target: 'laundry', x: 5.5, y: 47 },
+    { id: 'laundryUpgrade', label: 'Makine kapasitesi', mode: 'upgrade', target: 'laundry', x: 8, y: 47 },
   ];
+  const openRoomCount = s.facilities.filter(f => f.kind === 'room' && f.open).length;
+  const poolOpen = s.facilities.find(f => f.kind === 'pool')!.open;
   for (const a of STAFF_AREAS) {
+    if (a.role === 'pool' && !poolOpen) continue;
     const hired = s.workers.filter(w => w.role === a.role).length;
-    if (s.workers.length < 5 && hired < staffRoleLimit(a.role)) {
-      areas.push({ ...a, id: a.role === 'rooms' && hired ? 'roomsHire2' : a.id, label: a.role === 'rooms' && hired ? 'İkinci oda temizlikçisi' : a.label, mode: 'buy' });
-    }
+    if (s.workers.length >= 5 || hired >= staffRoleLimit(a.role)) continue;
+    if (a.role === 'rooms') {
+      if (hired === 0) areas.push({ ...a, mode: 'buy' });
+      else if (hired === 1 && openRoomCount >= 4) {
+        // Offer the second cleaner beside the left bungalow in the second row.
+        areas.push({ ...a, id: 'roomsHire2', label: 'İkinci oda temizlikçisi', x: 12.25, y: ROOM_DEFS[2].y + 3, mode: 'buy' });
+      }
+    } else areas.push({ ...a, mode: 'buy' });
   }
   for (const r of ROOM_DEFS) {
     const f = s.facilities.find(f => f.id === r.id)!;

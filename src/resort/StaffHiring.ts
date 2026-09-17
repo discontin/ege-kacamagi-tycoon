@@ -2,7 +2,8 @@ import type { Role } from './types';
 export const STAFF_AREAS = [
   // Left side of the reception desk: this is the clear red-marked spot in front of reception.
   { id: 'receptionHire', target: 'receptionWorker', role: 'reception', label: 'Resepsiyon çalışanı', x: 16, y: 44 },
-  { id: 'roomsHire', target: 'roomsWorker', role: 'rooms', label: 'Oda temizlikçisi', x: 14, y: 37 },
+  // Keep the cleaner hiring pad tucked against the promenade's left edge.
+  { id: 'roomsHire', target: 'roomsWorker', role: 'rooms', label: 'Oda temizlikçisi', x: 12.25, y: 37 },
   { id: 'haulingHire', target: 'haulingWorker', role: 'hauling', label: 'Çamaşırhane görevlisi', x: 10, y: 49 },
   { id: 'poolHire', target: 'poolWorker', role: 'pool', label: 'Havuz ve bar görevlisi', x: 18, y: 11 },
 ] as const;

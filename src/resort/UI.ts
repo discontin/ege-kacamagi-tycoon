@@ -1,6 +1,7 @@
 import { initialResort, LEVELS, ROOM_DEFS } from './data';
 import { atOffice } from './Office';
 import './office-window.css';
+import './game-menus.css';
 import './quick-controls.css';
 import { resortGoal } from './Guidance';
 import { linenCount } from './Linen';
@@ -31,8 +32,31 @@ export class ResortUI {
       <nav hidden aria-label="Yönetim panelleri"><button data-action="panel" data-panel="village">⌂<small>Köy</small></button><button data-action="panel" data-panel="workers">♙<small>Ekip</small></button><button data-action="panel" data-panel="journey">☆<small>Hedefler</small></button><button data-action="panel" data-panel="help">?<small>Rehber</small></button></nav>
       <div hidden><div id="bag-stat"></div><div id="laundry-stat"></div><div id="time-controls"></div></div>
       <aside id="drawer" class="resort-drawer"><button data-action="close" class="drawer-close" aria-label="Paneli kapat">×</button><div id="drawer-body"></div></aside>
-      <dialog id="pause-dialog"><h2>Oyun duraklatıldı</h2><p>Esc ile oyuna dönebilirsin.</p><label>Ses seviyesi <output id="volume-value">%100</output><input id="sound-volume" aria-label="Ses seviyesi" type="range" min="0" max="100" step="1"></label><p><button data-action="resume">Oyuna devam et</button><button data-action="reset">Sıfırla</button></p></dialog>
-      <dialog id="restart-dialog"><h2>Oyunu sıfırla?</h2><p>${sim.testMode ? 'Test köyü baştan başlar. Normal oyun kaydın değişmez.' : 'Tatil köyündeki mevcut ilerlemen sıfırlanır. Bu işlem geri alınamaz.'}</p><button data-action="cancel-reset">Vazgeç</button><button data-action="confirm-reset">Sıfırla</button></dialog>`;
+      <dialog id="pause-dialog" class="game-menu">
+        <div class="game-menu-frame">
+          <header class="game-menu-ribbon"><span>☀ EGE KAÇAMAĞI</span><span class="menu-status">MOLA ZAMANI</span></header>
+          <div class="game-menu-content">
+            <div class="pause-heading"><span class="pause-emblem">Ⅱ</span><div><small>KÜÇÜK BİR NEFES</small><h2>Mola ver, kaptan!</h2><p>Köyün seni bekliyor. Hazır olduğunda kaldığın yerden sürdür.</p></div></div>
+            <section class="sound-card" aria-label="Ses ayarı"><div class="menu-section-heading"><span>♫</span><b>ORTAM SESİ</b><output id="volume-value">%100</output></div><label class="volume-row"><span aria-hidden="true">🔈</span><input id="sound-volume" aria-label="Ses seviyesi" type="range" min="0" max="100" step="1"></label></section>
+            <section class="music-card" aria-label="Müzik çalar, yakında eklenecek">
+              <span class="music-cover" aria-hidden="true">♫</span>
+              <div class="music-player">
+                <div class="music-title-row"><div><b>Fon müziği</b><small>İlerleyen aşamada eklenecek</small></div><span>YAKINDA</span></div>
+                <div class="music-timeline" aria-hidden="true"><i></i></div>
+                <div class="music-controls"><small>--:--</small><div><button disabled aria-label="Önceki parça">◀</button><button class="music-play" disabled aria-label="Müzik yakında eklenecek">▶</button><button disabled aria-label="Sonraki parça">▶▶</button></div><small>--:--</small></div>
+              </div>
+            </section>
+            <div class="menu-actions"><button data-action="resume" class="menu-continue"><span>Oyuna dön</span><kbd>ESC ↵</kbd></button><button data-action="reset" class="menu-newgame">Yeni köy kur</button></div>
+          </div>
+          <footer class="game-menu-footer"><span>☼</span> Her şey yolunda, tatil devam ediyor.</footer>
+        </div>
+      </dialog>
+      <dialog id="restart-dialog" class="game-menu restart-menu">
+        <div class="game-menu-frame">
+          <header class="game-menu-ribbon"><span>☀ EGE KAÇAMAĞI</span><span class="menu-status">YENİ SAYFA</span></header>
+          <div class="game-menu-content restart-content"><span class="restart-emblem">↻</span><small>KÖYÜ YENİDEN KUR</small><h2>Yeni bir başlangıç?</h2><p>${sim.testMode ? 'Test köyü baştan başlar. Normal oyun kaydın değişmez.' : 'Mevcut ilerlemen sıfırlanır. Bu karar geri alınamaz.'}</p><div class="menu-actions"><button data-action="cancel-reset" class="menu-continue">Biraz daha kal</button><button data-action="confirm-reset" class="menu-newgame">Sıfırla</button></div></div>
+        </div>
+      </dialog>`;
     document.querySelector('#app')!.addEventListener('click', e => { const t = (e.target as HTMLElement).closest<HTMLElement>('[data-action]'); if (t) this.action(t); });
 
     this.interval = window.setInterval(() => this.render(), 150); this.render();
@@ -97,8 +121,25 @@ export class ResortUI {
   }
   private officeVisited = false;
   private office() {
-    const skill = (name: string, stat: string, action: string, id: string, level: number, cost: number) => `<div class="office-skill"><b>${name}</b><small>${stat}</small><button data-action="${action}" data-worker="${id}" ${level >= 3 ? 'disabled' : ''}>${level >= 3 ? 'Maksimum' : 'Yükselt ↑ · ' + (this.sim.testMode ? 'Ücretsiz' : cost + ' ₺')}</button></div>`;
-    return `<h2>İşletme ofisi</h2><p>Çalışanlarının yeteneklerini geliştir.</p>${this.sim.state.workers.map(w => `<article class="worker-card"><b>${esc(w.name)} · ${roles[w.role]}</b><div class="office-skills ${w.role === 'reception' ? 'single' : ''}">${skill('Hizmet Hızı', 'Sv. ' + w.level + ' · %' + [65, 80, 100][w.level - 1], 'staff-speed', w.id, w.level, 120 * w.level)}${w.role !== 'reception' ? skill('Yürüyüş Hızı', 'Sv. ' + (w.moveLevel ?? 1) + '/3', 'staff-move', w.id, w.moveLevel ?? 1, 100 * (w.moveLevel ?? 1)) + skill('Taşıma', (w.carryLevel ?? 1) + ' havlu', 'staff-carry', w.id, w.carryLevel ?? 1, 100 * (w.carryLevel ?? 1)) : ''}</div></article>`).join('') || '<p>Önce ilgili bölümden bir çalışan işe al.</p>'}`;
+    const workers = this.sim.state.workers;
+    const skill = (name: string, stat: string, action: string, id: string, level: number, cost: number, glyph: string) => `
+      <div class="office-skill">
+        <div class="office-skill-info"><span class="office-skill-icon">${glyph}</span><span><b>${name}</b><small>${stat}</small></span><strong>${level}/3</strong></div>
+        <div class="office-meter" aria-label="Seviye ${level} / 3">${[1, 2, 3].map(step => `<i class="${step <= level ? 'lit' : ''}"></i>`).join('')}</div>
+        <button data-action="${action}" data-worker="${id}" ${level >= 3 ? 'disabled' : ''}>${level >= 3 ? 'EN İYİ SEVİYE' : `Geliştir <span>${this.sim.testMode ? 'Ücretsiz' : cost + ' ₺'}</span>`}</button>
+      </div>`;
+      return `
+        <header class="office-banner"><div><small>PERSONEL · EĞİTİM</small><h2>İşletme ofisi</h2><p>Ekibinin gelişimini buradan yönet.</p></div><span class="office-team-count"><b>${workers.length}</b><small>ÇALIŞAN</small></span></header>
+        <div class="office-roster"><span>EKİP LİSTESİ</span><small>Gelişim hemen etkili olur</small></div>
+      ${workers.map(w => `
+        <article class="office-worker">
+          <header class="office-worker-head"><span class="office-avatar">${esc(w.name[0].toUpperCase())}</span><span class="office-worker-name"><b>${esc(w.name)}</b><small>${roles[w.role]}</small></span><span class="office-rank">SV. ${w.level}</span></header>
+          <div class="office-skills ${w.role === 'reception' ? 'single' : ''}">
+            ${skill('Hizmet hızı', '%' + [65, 80, 100][w.level - 1] + ' verim', 'staff-speed', w.id, w.level, 120 * w.level, '☀')}
+            ${w.role !== 'reception' ? skill('Yürüyüş', 'Daha hızlı hareket', 'staff-move', w.id, w.moveLevel ?? 1, 100 * (w.moveLevel ?? 1), '➜') + skill('Taşıma', (w.carryLevel ?? 1) + ' havlu kapasitesi', 'staff-carry', w.id, w.carryLevel ?? 1, 100 * (w.carryLevel ?? 1), '▱') : ''}
+          </div>
+        </article>`).join('') || '<div class="office-empty"><span>♙</span><b>Ekip henüz kurulmadı</b><p>Önce köydeki yeşil personel simgelerinden bir çalışan al.</p></div>'}
+      <footer class="office-footer"><span>✦</span> Her yükseltme iş başında hemen etkisini gösterir.</footer>`;
   }
   render() {
     const pause = document.querySelector<HTMLDialogElement>('#pause-dialog')!;

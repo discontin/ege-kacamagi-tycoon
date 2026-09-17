@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ResortSimulation } from './Simulation';
-import { areasFor, initialResort, RECEPTION, receptionQueuePoint, ROOM_DEFS, ROOM_WORK } from './data';
+import { areasFor, initialResort, POOL_GATE, RECEPTION, receptionQueuePoint, ROOM_DEFS, ROOM_WORK } from './data';
 import { RESORT_SAVE_KEY, ResortSaveService, validResort } from './SaveService';
 
 const advance = (s: ResortSimulation, seconds: number) => { for (let i = 0; i < seconds * 10; i++) s.tick(.1); };
@@ -27,10 +27,10 @@ describe('resort guest and towel cycle', () => {
     const s = new ResortSimulation(), r = s.facility('room1'); r.dirty = true; r.towels = 0;
     stand(s, 'room1Work'); advance(s, 6.2); expect(r.dirty).toBe(false); expect(s.state.player.bag.dirty).toBe(1); expect(r.towels).toBe(0);
     stand(s, 'dirtyDrop'); advance(s, 5.5); expect(s.state.player.bag.dirty).toBe(0); expect(s.state.stats.washed).toBe(0);
-    stand(s, 'laundryDirtyTake'); advance(s, .7); stand(s, 'machineLoad'); advance(s, 5); stand(s, 'machineUnload'); advance(s, 1.4); stand(s, 'laundryCleanDrop'); advance(s, .7);
-    expect(s.state.stats.washed).toBe(2); expect(s.state.laundry.clean).toBe(9);
-    stand(s, 'cleanTake'); advance(s, 1.2); expect(s.state.player.bag.clean).toBe(1); expect(s.state.laundry.clean).toBe(8);
-    stand(s, 'room1Work'); advance(s, 1); expect(r.towels).toBe(1); expect(s.state.player.bag.clean).toBe(0);
+    stand(s, 'laundryDirtyTake'); advance(s, 2.8); stand(s, 'machineLoad'); advance(s, 11); stand(s, 'machineUnload'); advance(s, 1.4);
+    expect(s.state.stats.washed).toBe(2); expect(s.state.laundry.clean).toBe(9); expect(s.state.laundry.cleanSheets).toBe(9);
+    stand(s, 'cleanTake'); advance(s, 2); expect(s.state.player.bag.clean).toBe(1); expect(s.state.laundry.clean).toBe(8);
+    stand(s, 'room1Work'); advance(s, 3); expect(r.towels).toBe(1); expect(s.state.player.bag.clean).toBe(0);
   });
   it('does not start outside the bedside region and resumes the same reserved job on return', () => {
     const s = new ResortSimulation(), r = s.facility('room1'); r.dirty = true; r.towels = 0; stand(s, 'room1Work'); s.state.player.x += .51; advance(s, 1); expect(s.state.tasks).toHaveLength(0);
@@ -39,11 +39,25 @@ describe('resort guest and towel cycle', () => {
   });
   it('blocks cleaning with a full bag and preserves outputs at a full laundry shelf', () => {
     const s = new ResortSimulation(); s.facility('room1').dirty = true; s.state.player.bag = { clean: 4, dirty: 4 }; stand(s, 'room1Work'); advance(s, 10); expect(s.facility('room1').dirty).toBe(true);
-    s.state.laundry = { clean: 24, dirty: 1, remaining: 0 }; advance(s, 2); expect(s.state.laundry.remaining).toBe(0); expect(s.state.laundry.clean).toBe(24);
+    s.state.laundry = { clean: 24, dirty: 1, remaining: 0, washingTowels: 1, washingSheets: 0 }; advance(s, 2); expect(s.state.laundry.remaining).toBe(0); expect(s.state.laundry.clean).toBe(24);
     s.state.laundry.clean--; s.tick(.1); expect(s.state.laundry.clean).toBe(23); expect(s.state.stats.washed).toBe(0);
-    s.state.player.bag = { clean: 0, dirty: 0 }; stand(s, 'machineUnload'); advance(s, .7); stand(s, 'laundryCleanDrop'); advance(s, .7); expect(s.state.laundry.clean).toBe(24); expect(s.state.stats.washed).toBe(1);
+    s.state.player.bag = { clean: 0, dirty: 0 }; stand(s, 'machineUnload'); advance(s, .7); expect(s.state.laundry.clean).toBe(24); expect(s.state.player.bag.clean).toBe(0); expect(s.state.stats.washed).toBe(1);
   });
-  it('limits the queue and total guests without penalties', () => { const s = new ResortSimulation(); advance(s, 300); expect(s.state.guests).toHaveLength(4); expect(s.state.guests.every(g => g.phase === 'queue')).toBe(true); expect(s.state.money).toBe(0); });
+  it('keeps early arrivals spaced out and increases demand as more rooms open', () => {
+    const s = new ResortSimulation(); advance(s, 2.2); expect(s.state.guests).toHaveLength(1);
+    const first = s.state.guests[0]; first.phase = 'staying'; first.room = 'room1'; first.remaining = 120; first.path = [];
+    s.facility('room1').guest = first.id; s.state.stats.welcomed = 1; s.state.spawnTimer = 0;
+    advance(s, 29); expect(s.state.guests).toHaveLength(1);
+    advance(s, 1.2); expect(s.state.guests).toHaveLength(2);
+    const second = s.state.guests.find(g => g.phase === 'queue')!;
+    s.facility('room2').open = true; second.phase = 'staying'; second.room = 'room2'; second.remaining = 120; second.path = [];
+    s.facility('room2').guest = second.id;
+    for (const room of s.state.facilities.filter(f => f.kind === 'room' && ['room3', 'room4', 'room5', 'room6'].includes(f.id))) room.open = true;
+    s.state.spawnTimer = 0; advance(s, 60);
+    expect(s.state.guests.filter(g => g.phase === 'queue')).toHaveLength(4);
+    expect(s.state.guests).toHaveLength(6);
+  });
+  it('limits the queue and total guests without penalties', () => { const s = new ResortSimulation(); advance(s, 300); expect(s.state.guests).toHaveLength(1); expect(s.state.guests.every(g => g.phase === 'queue')).toBe(true); expect(s.state.money).toBe(0); });
 });
 
 describe('pool and expansion', () => {
@@ -51,8 +65,24 @@ describe('pool and expansion', () => {
     const s = new ResortSimulation(); s.state.money = 100; stand(s, 'room2Buy'); advance(s, 2); expect(s.facility('room2').open).toBe(false);
     s.state.player.x++; s.tick(.1); s.state.xp = 20; stand(s, 'room2Buy'); advance(s, 2); expect(s.facility('room2').open).toBe(true); expect(s.state.money).toBe(0); expect(s.facility('room2').towels).toBe(1); advance(s, 3); expect(s.state.money).toBe(0);
   });
-  it('opens the pool with two seats and four towels, then serves and cleans', () => {
-    const s = new ResortSimulation(); s.state.xp = 100; s.state.money = 500; stand(s, 'poolBuy'); advance(s, 2); expect(s.facility('pool').open).toBe(true); expect(s.state.seats.filter(s => s.open)).toHaveLength(2); expect(s.facility('pool').towels).toBe(2); expect(s.state.seats.filter(seat => seat.towel)).toHaveLength(2);
+  it('keeps the pool and its hire marker locked until all six rooms are open', () => {
+    const s = new ResortSimulation(); s.state.xp = 280; s.state.money = 1000;
+    expect(s.area('poolBuy')).toBeDefined(); expect(s.area('poolHire')).toBeUndefined();
+    expect(s.areas.some(a => a.id.startsWith('pool') && a.id !== 'poolBuy')).toBe(false);
+    expect(s.purchaseProgress(s.area('poolBuy')!)).toBeUndefined();
+    const stalePoolArea = { id: 'poolBuy', label: 'Havuzu aç', mode: 'buy' as const, target: 'pool', ...POOL_GATE };
+    Object.assign(s.state.player, { x: POOL_GATE.x, y: POOL_GATE.y });
+    expect(s.purchaseArea(stalePoolArea)).toBe(false); expect(s.facility('pool').open).toBe(false);
+    for (const id of ['room2', 'room3', 'room4', 'room5', 'room6']) s.facility(id).open = true;
+    const poolArea = s.area('poolBuy')!; expect(s.requiredLevel(poolArea)).toBe(4);
+    expect(s.purchaseArea(poolArea)).toBe(true); expect(s.facility('pool').open).toBe(true);
+    expect(s.area('poolHire')).toBeDefined();
+    expect(s.state.seats.filter(s => s.open)).toHaveLength(4); expect(s.facility('pool').towels).toBe(2); expect(s.state.seats.filter(seat => seat.towel)).toHaveLength(4);
+  });
+  it('opens the pool with four seats and six towels, then serves and cleans', () => {
+    const s = new ResortSimulation(); s.state.xp = 280; s.state.money = 1000;
+    for (const id of ['room2', 'room3', 'room4', 'room5', 'room6']) s.facility(id).open = true;
+    stand(s, 'poolBuy'); advance(s, 2); expect(s.facility('pool').open).toBe(true); expect(s.state.seats.filter(s => s.open)).toHaveLength(4); expect(s.facility('pool').towels).toBe(2); expect(s.state.seats.filter(seat => seat.towel)).toHaveLength(4);
     s.state.guests.push({ id: 'poolGuest', x: 21, y: 9, path: [], phase: 'poolQueue', remaining: 0 }); stand(s, 'poolCheckin'); advance(s, 165);
     expect(s.state.stats.poolVisits).toBe(1); expect(s.facility('pool').cash).toBe(20); expect(s.state.seats[0].dirty).toBe(true);
     stand(s, 'seat1Area'); advance(s, 4.2); expect(s.state.seats[0].dirty).toBe(false); expect(s.state.player.bag.dirty).toBe(1);
@@ -60,6 +90,13 @@ describe('pool and expansion', () => {
   });
   it('sends a checked-out guest to the pool only when there is room', () => {
     const s = new ResortSimulation(initialResort(true), true); s.state.guests.push({ id: 'guest1', x: 8, y: 19, path: [], phase: 'staying', room: 'room1', remaining: .1 }); s.facility('room1').guest = 'guest1'; s.tick(.2); expect(s.state.guests[0].phase).toBe('toPool');
+  });
+  it('migrates an older open level-one pool save to the four-seat minimum', () => {
+    const state = initialResort(), pool = state.facilities.find(f => f.id === 'pool')!; pool.open = true;
+    state.seats.slice(0, 2).forEach(seat => { seat.open = true; seat.towel = true; });
+    const s = new ResortSimulation(state);
+    expect(s.state.seats.filter(seat => seat.open)).toHaveLength(4);
+    expect(s.state.seats.slice(2, 4).every(seat => seat.towel)).toBe(true);
   });
   it('does not admit a pool guest without towels', () => { const s = new ResortSimulation(initialResort(true)); s.facility('pool').towels = 0; s.state.seats.forEach(seat => seat.towel = false); s.state.guests.push({ id: 'poolGuest', x: 21, y: 9, path: [], phase: 'poolQueue', remaining: 0 }); stand(s, 'poolCheckin'); advance(s, 5); expect(s.state.guests[0].phase).toBe('poolQueue'); });
   it('upgrades once per entry and charges the correct amount', () => { const s = new ResortSimulation(); s.state.money = 500; stand(s, 'receptionUpgrade'); advance(s, 4); expect(s.facility('reception').level).toBe(2); expect(s.state.money).toBe(400); s.state.player.x += 2; s.tick(.1); stand(s, 'receptionUpgrade'); advance(s, 2); expect(s.facility('reception').level).toBe(3); expect(s.state.money).toBe(200); });

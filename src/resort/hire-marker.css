@@ -22,9 +22,17 @@
   box-shadow: 0 3px 0 #287c5655, 0 0 0 2px #a4dda8;
 }
 .floor-label.reception-hire svg { display: block; width: 100%; height: 100%; }
+.floor-label.reception-hire.locked { background:#96aa91; border-color:#eff1dc; box-shadow:0 3px 0 #66775b55,0 0 0 2px #b7c1a2 }
 .floor-label.upgrade-marker { width:50px; height:50px; min-width:50px; padding:9px; border:3px solid #fffbed; border-radius:50%; background:#e2ae4f; color:white; box-shadow:0 3px 0 #9d702f55,0 0 0 2px #f3d88d }
 .floor-label.upgrade-marker svg { display:block; width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round }
 .floor-label.upgrade-marker .hire-price { position:absolute; left:50%; bottom:-12px; transform:translateX(-50%); padding:2px 7px; border:2px solid #fffbed; border-radius:9px; background:#a87831; color:white; font-size:10px; font-weight:800; white-space:nowrap }
+.floor-label.upgrade-marker.locked { background:#96aa91; border-color:#eff1dc; box-shadow:0 3px 0 #66775b55,0 0 0 2px #b7c1a2 }
+.floor-label.upgrade-marker.locked .hire-price { background:#667b68 }
+.floor-label.purchase-marker { width:50px; height:50px; min-width:50px; padding:8px; border:3px solid #fffbed; border-radius:50%; background:#48ad78; color:white; box-shadow:0 3px 0 #287c5655,0 0 0 2px #a4dda8 }
+.floor-label.purchase-marker svg { display:block; width:100%; height:100% }
+.floor-label.purchase-marker .purchase-price { position:absolute; left:50%; bottom:-12px; transform:translateX(-50%); padding:2px 7px; border:2px solid #fffbed; border-radius:9px; background:#327c54; color:white; font-size:10px; font-weight:800; white-space:nowrap }
+.floor-label.purchase-marker.locked { background:#96aa91; color:white; border-color:#eff1dc; box-shadow:0 3px 0 #66775b55,0 0 0 2px #b7c1a2 }
+.floor-label.purchase-marker.locked .purchase-price { background:#667b68 }
 .floor-label.reception-hire .hire-price {
   position: absolute;
   left: 50%;
@@ -39,6 +47,25 @@
   font-weight: 800;
   white-space: nowrap;
 }
+.floor-label.office-marker {
+  width:48px; height:48px; min-width:48px; padding:7px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border:3px solid #fffbed; border-radius:50%; background:#e2ae4f; color:#fff;
+  box-shadow:0 3px 0 #9d702f55,0 0 0 2px #f3d88d;
+}
+.floor-label.office-marker svg { display:block; width:25px; height:25px; flex:none; }
+.floor-label.office-marker .office-caption {
+  position:absolute; top:calc(100% + 5px); left:50%; transform:translateX(-50%);
+  padding:3px 6px; border:1px solid #fffbed; border-radius:7px;
+  background:#fffbeded; color:#725b2d; font-size:7px; font-weight:900;
+  line-height:1.15; letter-spacing:.35px; white-space:nowrap;
+  box-shadow:0 2px 0 #476d5524;
+}
+.floor-label.office-marker:hover,.floor-label.office-marker:focus-visible { background:#f0bd56; }
 @media (max-width: 620px) {
   .floor-label.reception-hire { width: 43px; height: 43px; min-width: 43px; padding: 6px; }
+  .floor-label.purchase-marker { width:43px; height:43px; min-width:43px; padding:6px; }
+  .floor-label.purchase-marker .purchase-price { font-size:8px; bottom:-11px; }
+  .floor-label.office-marker { width:44px; height:44px; min-width:44px; padding:6px; }
+  .floor-label.office-marker svg { width:23px; height:23px; }
 }

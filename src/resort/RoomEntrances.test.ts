@@ -17,6 +17,20 @@ describe('promenade-facing bungalow entrances', () => {
     const purchase = new ResortSimulation().area(`${r.id}Buy`);
     if (purchase) expect({ x: purchase.x, y: purchase.y }).toEqual(approach);
   });
+  it('keeps the passage on both sides of the level-one bed open in left and right bungalows', () => {
+    const s = new ResortSimulation(initialResort(true), true);
+    for (const r of ROOM_DEFS) {
+      const door = ROOM_DOOR(r), nearSide = { x: r.x + 2, y: r.y + 3 }, farSide = { x: r.x + 7, y: r.y + 3 };
+      expect(s.isWalkable(nearSide.x, nearSide.y), `${r.id} near side`).toBe(true);
+      expect(s.isWalkable(farSide.x, farSide.y), `${r.id} far side`).toBe(true);
+      expect(s.isWalkable(r.x + 4, r.y + 3), `${r.id} bed west footprint`).toBe(false);
+      expect(s.isWalkable(r.x + 5, r.y + 3), `${r.id} bed east footprint`).toBe(false);
+      expect(s.isWalkable(r.x + 3, r.y + 3), `${r.id} clear beside bed`).toBe(true);
+      expect(s.path(door, nearSide).length, `${r.id} to near side`).toBeGreaterThan(0);
+      expect(s.path(door, farSide).length, `${r.id} to far side`).toBeGreaterThan(0);
+      expect(s.path(nearSide, farSide).length, `${r.id} across room`).toBeGreaterThan(0);
+    }
+  });
   it('repairs saved player, worker and guest routes through old entrances without losing inventory or jobs', () => {
     const state = initialResort(), r = ROOM_DEFS[0], oldDoor = { x: r.x + 5, y: r.y + 7 };
     state.player.x = oldDoor.x; state.player.y = oldDoor.y; state.player.bag.clean = 2;

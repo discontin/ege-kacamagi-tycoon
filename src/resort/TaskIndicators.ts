@@ -1,5 +1,6 @@
 import { BAR_CASH, BAR_WORK, POOL_CLEAN, poolDirtyRack, poolTowelRack, wantsDrink } from './PoolServices';
-import { areasFor, CLEAN_TAKE, DIRTY_BASKET, DIRTY_DROP, LAUNDRY_MACHINE, LAUNDRY_TRASH, POOL_GATE, RECEPTION, ROOM_DEFS, SEAT_DEFS, TOWEL_RACK } from './data';
+import { areasFor, CLEAN_TAKE, DIRTY_BASKET, DIRTY_DROP, LAUNDRY_MACHINE, LAUNDRY_TRASH, machineCapacityForLevel, POOL_GATE, RECEPTION, ROOM_DEFS, SEAT_DEFS, TOWEL_RACK } from './data';
+import { carryingCapacity, towelLimit } from './Office';
 import type { Point, ResortGameState, TaskKind } from './types';
 import { serviceGuestReady } from './CustomerService';
 import { workAreaContains } from './WorkAreas';
@@ -30,17 +31,18 @@ export function taskIndicators(s: ResortGameState): TaskIndicator[] {
   if (s.guests.some(g => g.phase === 'queue') && (readyRoom || s.tasks.some(t => t.kind === 'checkin'))) add('receptionGuest', 'checkin', 'guest', 'Resepsiyon: misafir karşıla', RECEPTION.x + 1.7, 43.5, 2.6, 'reception', 'checkin');
   const reception = s.facilities.find(f => f.id === 'reception')!;
   if (reception.cash > 0) add('receptionMoney', 'receptionCash', 'cash', `${reception.cash} para topla`, 23, 46, 1.5);
-  if (dirtyLinenCount(s.player.bag) > 0) add('laundryDirty', 'dirtyDrop', 'dirty', 'Kirli havlu ve çarşafları sepete bırak', DIRTY_BASKET.x, DIRTY_BASKET.y, 1.9, 'laundry', 'dirtyDrop');
-  const towelsNeeded = s.facilities.some(f => f.kind === 'room' && f.open && !f.guest && (f.towels === 0 || f.needsSheet)) || pool.open && pool.towels < 4;
-  if (towelsNeeded && (s.laundry.clean > 0 && s.player.bag.clean < 4 || (s.laundry.cleanSheets ?? 0) > 0 && (s.player.bag.cleanSheets ?? 0) < 2 && s.facilities.some(f => f.needsSheet))) add('laundryClean', 'cleanTake', 'towel', 'Temiz havlu ve çarşaf al', TOWEL_RACK.x, TOWEL_RACK.y, 2.7, 'laundry', 'cleanTake');
+  if (dirtyLinenCount(s.player.bag) > 0) add('laundryDirty', 'dirtyDrop', 'dirty', 'Kirli havlu ve çarşafları sepete bırak', DIRTY_DROP.x, DIRTY_DROP.y, 1.9, 'laundry', 'dirtyDrop');
+  if (s.tasks.some(t => t.owner === 'player' && t.target === 'laundry' && t.kind === 'cleanTake')) add('laundryClean', 'cleanTake', 'towel', 'Temiz havlu ve çarşaf al', TOWEL_RACK.x, TOWEL_RACK.y, 2.7, 'laundry', 'cleanTake');
   if (s.laundry.remaining !== null) {
     const done = s.laundry.remaining === 0;
-    add('laundryWash', done ? 'machineUnload' : 'machineLoad', 'wash', done ? 'Yıkanan çamaşırı makineden al' : 'Makine çamaşırları yıkıyor', LAUNDRY_MACHINE.x, LAUNDRY_MACHINE.y, 2.5);
+    add('laundryWash', done ? 'machineUnload' : 'machineLoad', 'wash', done ? 'Makineyi boşalt · temizler rafa eklenir' : 'Makine çamaşırları yıkıyor', LAUNDRY_MACHINE.x, LAUNDRY_MACHINE.y, 2.5);
     out.at(-1)!.state = s.settings.paused ? 'waiting' : done ? 'todo' : 'working';
   }
-  if (s.laundry.remaining !== 0 && (s.laundry.washingTowels ?? 0) + (s.laundry.washingSheets ?? 0) < 3 + 2 * (s.facilities.find(f => f.id === 'laundry')!.level - 1) && dirtyLinenCount(s.player.bag) > 0) add('laundryLoad', 'machineLoad', 'wash', 'Kirli çamaşırı makineye koy', LAUNDRY_MACHINE.x, LAUNDRY_MACHINE.y, 2.5, 'laundry', 'machineLoad');
-  if (s.laundry.dirty + (s.laundry.dirtySheets ?? 0) > 0 && !dirtyLinenCount(s.player.bag)) add('laundryPickup', 'laundryDirtyTake', 'dirty', 'Kirli raftan çamaşır al', DIRTY_BASKET.x, DIRTY_BASKET.y, 2.3, 'laundry', 'laundryDirtyTake');
-  if (s.player.carryingWashed) add('laundryPutClean', 'laundryCleanDrop', 'towel', 'Yıkanan çamaşırı temiz rafa koy', TOWEL_RACK.x, TOWEL_RACK.y, 2.7, 'laundry', 'laundryCleanDrop');
+  if (s.laundry.remaining !== 0 && (s.laundry.washingTowels ?? 0) + (s.laundry.washingSheets ?? 0) < machineCapacityForLevel(s.facilities.find(f => f.id === 'laundry')!.level) && dirtyLinenCount(s.player.bag) > 0) add('laundryLoad', 'machineLoad', 'wash', 'Kirli çamaşırı makineye koy', LAUNDRY_MACHINE.x, LAUNDRY_MACHINE.y, 2.5, 'laundry', 'machineLoad');
+  const bagSpace = carryingCapacity(s.player) - linenCount(s.player.bag);
+  const canTakeDirtyTowel = s.laundry.dirty > 0 && s.player.bag.clean + s.player.bag.dirty < towelLimit(s.player);
+  const canTakeDirtySheet = (s.laundry.dirtySheets ?? 0) > 0;
+  if (bagSpace > 0 && (canTakeDirtyTowel || canTakeDirtySheet)) add('laundryPickup', 'laundryDirtyTake', 'dirty', 'Kirli raftan çamaşır al', DIRTY_BASKET.x, DIRTY_BASKET.y, 2.3, 'laundry', 'laundryDirtyTake');
   if (linenCount(s.player.bag) > 0 || s.player.drink) add('laundryTrash', 'laundryTrash', 'trash', 'Elindekini çöpe at', LAUNDRY_TRASH.x, LAUNDRY_TRASH.y, 1.8, 'laundry', 'discardItem');
   if (pool.open) {
     const dirtyRack = poolDirtyRack(pool.level), cleanRack = poolTowelRack(pool.level);

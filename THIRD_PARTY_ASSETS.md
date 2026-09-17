@@ -10,14 +10,15 @@ Tatil köyü; Kenney modellerini, havuz için OpenGameArt dokusunu ve 3DAssets.d
 
 | Paket | Kullanım | Arşiv sürümü | Lisans |
 | --- | --- | --- | --- |
+| [UI Pack](https://kenney.nl/assets/ui-pack) | İşletme ofisindeki yükseltme düğmesi | 2.0 | CC0 |
 | [Mini Characters](https://kenney.nl/assets/mini-characters) | Oyuncu, dört meslek görünümü ve on farklı müşteri; iskeletli animasyonlar | 1.0 | CC0 |
 | [Factory Kit](https://kenney.nl/assets/factory-kit) | Üretim makineleri, bantlar, robot kolu, borular, kasalar, zemin düğmeleri | 3.0 | CC0 |
 | [Nature Kit](https://kenney.nl/assets/nature-kit) | Farklı palmiye ağaçları, çalılar, kayalar ve renkli çiçekler | 2.1 | CC0 |
-| [Furniture Kit](https://kenney.nl/assets/furniture-kit) | Yataklar, pencere, ofis masası/sandalyesi, raflar, mobilyalar ve saksılar | 2.0 | CC0 |
+| [Furniture Kit](https://kenney.nl/assets/furniture-kit) | Yataklar, pencere, ofis masası/sandalyesi, ofis halısı, raflar, mobilyalar ve saksılar | 2.0 | CC0 |
 | [Blue Pool Tiles](https://opengameart.org/content/blue-pool-tiles) | Havuz içi mozaik albedo ve normal dokuları | 1.0 | CC0 |
 | [Hotel and Resort Operations](https://3dassets.dev/packs/hotel-and-resort-operations) | Yeni oda yatakları (ikiz ve king) ile havuz kenarı şezlongu | v1 | CC0 |
 | [Laundromat and Cleaning Services](https://3dassets.dev/packs/laundrette-and-cleaning) | Üst üste makine ve tekerlekli çöp kutusu | v1 | CC0 |
-| [Home Appliances and Utility Room](https://3dassets.dev/packs/home-appliances-and-utility) | Kapak animasyonlu, tamburu görünen önden yüklemeli çamaşır makinesi | v1 | CC0 |
+| [Home Appliances and Utility Room](https://3dassets.dev/packs/home-appliances-and-utility) | Açık ve kapalı durum görünümleri için önden yüklemeli çamaşır makinesi | v1 | CC0 |
 | [Pavement 05](https://polyhaven.com/a/pavement_05) | Orta yürüyüş yolunun taş kaplama dokusu | 1K | CC0 |
 
 Her kaynağın `License.txt` dosyası kendi `public/assets/...` klasöründe korunur ve build çıktısına kopyalanır. Bu dosyalar kişisel ve ticari kullanıma izin verir; atıf zorunlu değildir. Kenney için isteğe bağlı kredi: “3D assets by Kenney (kenney.nl)”. [CC0 metni](https://creativecommons.org/publicdomain/zero/1.0/).
@@ -26,7 +27,9 @@ GLB dosyaları değiştirilmeden kopyalanmıştır. Ölçek, yerleşim ve bazı 
 
 Blue Pool Tiles dosyaları 15 Eylül 2026'da OpenGameArt kaynağından indirilmiştir. Yeni oda yatakları, Poolside Sun Lounger, ticari çamaşır makineleri ve tekerlekli çöp kutusu aynı tarihte 3DAssets.dev CDN'inden alınmıştır; kaynak sayfaları modellerin CC0 olduğunu ve atıf gerektirmediğini belirtir. Pavement 05'in 1K diffuse haritası Poly Haven'ın resmî indirme sunucusundan alınmıştır.
 
-Önden yüklemeli yeni çamaşır makinesi 16 Eylül 2026'da Home Appliances and Utility Room paketinden alınmıştır. Kaynak modelin ayrı `door-open` ve `door-close` animasyon klipleri ile tambur iç geometrisi vardır; model sayfası CC0 1.0 olarak lisanslandığını belirtir.
+Çamaşır makinesi modelleri 16 Eylül 2026'da Home Appliances and Utility Room paketinden alınmıştır. Açık varyant kapı dışarı alınmış ve tamburu görünür durumda gelir; kapalı varyantın `door-open` ve `door-close` animasyon klipleri vardır. Kaynak sayfaları CC0 1.0 olarak lisanslandıklarını belirtir.
+
+Kenney UI Pack 2.0'ın yeşil, derinlikli dikdörtgen düğme sprite'ı işletme ofisindeki yükseltme düğmelerinde kullanılır. Paket ve lisans metni `.asset-cache/kenney/ui-pack` içinde; kullanılan tek sprite ve lisans kopyası `public/assets/kenney/ui-pack` içindedir.
 
 ## İndirme doğrulamaları
 

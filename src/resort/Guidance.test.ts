@@ -14,6 +14,18 @@ describe('guided, satisfying first session', () => {
   it('routes a full bag to laundry before cleaning', () => { const s = initialResort(); s.stats.welcomed = 1; s.stats.stays = 1; s.stats.earned = 40; s.facilities.find(f => f.id === 'room1')!.dirty = true; s.player.bag = { clean: 4, dirty: 4 }; expect(resortGoal(s).area).toBe('dirtyDrop'); });
   it('prioritizes making a cleaned room ready even when another room is dirty', () => { const s = initialResort(); s.stats.welcomed = s.stats.stays = s.stats.cleaned = 1; s.stats.earned = 40; s.facilities.find(f => f.id === 'room1')!.towels = 0; const second = s.facilities.find(f => f.id === 'room2')!; second.open = second.dirty = true; expect(resortGoal(s).area).toBe('cleanTake'); s.player.bag.clean = 1; expect(resortGoal(s).area).toBe('room1Work'); });
   it('does not leave the washing quest stuck at an empty dirty-drop square', () => { const s = initialResort(); s.stats.welcomed = s.stats.stays = s.stats.cleaned = 1; s.stats.earned = 40; s.laundry.remaining = 3; expect(resortGoal(s).area).toBe('checkin'); s.laundry.remaining = null; s.stats.washed = 1; s.xp = 15; expect(resortGoal(s).area).toBe('room2Buy'); });
+  it('guides through all six rooms before unlocking the pool', () => {
+    const sim = new ResortSimulation();
+    sim.hire('rooms');
+    sim.state.stats.welcomed = sim.state.stats.stays = sim.state.stats.cleaned = sim.state.stats.washed = sim.state.stats.earned = 1;
+    sim.state.xp = 280;
+    for (const id of ['room2', 'room3', 'room4', 'room5']) sim.facility(id).open = true;
+    expect(sim.area('poolBuy')).toBeDefined();
+    expect(sim.areas.some(a => a.id.startsWith('pool') && a.id !== 'poolBuy')).toBe(false);
+    expect(resortGoal(sim.state).area).toBe('room6Buy');
+    sim.facility('room6').open = true;
+    expect(resortGoal(sim.state).area).toBe('poolBuy');
+  });
   it('describes measurable upgrade benefits', () => { expect(upgradeBenefit('room1', 1)).toContain('50 ₺'); expect(upgradeBenefit('room1', 2)).toBe('En yüksek oda seviyesi'); expect(upgradeBenefit('laundry', 2)).toContain('7 parça'); });
   it('clamps visual cleaning progress without modifying tasks', () => { expect(cleaningProgress(3, 6)).toBe(.5); expect(cleaningProgress(-1, 6)).toBe(1); expect(cleaningProgress(10, 6)).toBe(0); expect(cleaningProgress(0, 0)).toBe(0); });
   it('generates transient feedback without changing saved resources', () => { const s = new ResortSimulation(); s.facility('reception').cash = 40; Object.assign(s.state.player, s.area('receptionCash')); s.tick(.1); expect(s.state.money).toBe(40); expect(s.feedback.some(e => e.kind === 'cash' && e.text === '+40 ₺')).toBe(true); expect(JSON.stringify(s.state)).not.toContain('feedback'); const resumed = new ResortSimulation(structuredClone(s.state)); expect(resumed.feedback).toHaveLength(0); });

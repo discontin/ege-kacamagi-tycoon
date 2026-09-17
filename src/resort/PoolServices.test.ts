@@ -6,7 +6,7 @@ import { ResortSaveService, validResort } from './SaveService';
 import { taskIndicators } from './TaskIndicators';
 
 const advance = (s: ResortSimulation, seconds: number) => { for (let i = 0; i < seconds * 10; i++) s.tick(.1); };
-const setup = () => { const s = new ResortSimulation(); s.facility('pool').open = true; s.facility('pool').towels = 4; s.state.seats.slice(0, 2).forEach(r => r.open = true); s.state.spawnTimer = -100; return s; };
+const setup = () => { const s = new ResortSimulation(); s.facility('pool').open = true; s.facility('pool').towels = 4; s.state.seats.slice(0, 4).forEach(r => r.open = true); s.state.spawnTimer = -100; return s; };
 const stand = (s: ResortSimulation, id: string) => { const a = s.area(id)!; Object.assign(s.state.player, { x: a.x, y: a.y, path: [] }); };
 const swimmer = (s: ResortSimulation, remaining = POOL_STAY_SECONDS, id = 'pool-test', seatIndex = 0) => {
   const seat = s.state.seats[seatIndex]; seat.guest = id;

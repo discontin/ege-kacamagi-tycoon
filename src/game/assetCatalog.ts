@@ -75,6 +75,7 @@ export const ASSET_CATALOG = {
   barStool: ['furniture-kit', 'stoolBar'],
   barCounter: ['furniture-kit', 'kitchenBar'],
   washer: ['3dassets/home-appliances-and-utility', 'washer-front-load-600'],
+  washerOpen: ['3dassets/home-appliances-and-utility', 'washer-open-drum-600'],
   washerStacked: ['3dassets/laundrette-and-cleaning', 'stacked-washer-dryer-700'],
   iceCream: ['food-kit', 'ice-cream'],
   sunLounger: ['3dassets/hotel-resort', 'poolside-sun-lounger'],

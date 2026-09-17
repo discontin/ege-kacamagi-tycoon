@@ -8,15 +8,19 @@ describe('laundry trash bin', () => {
     const s = new ResortSimulation(), area = s.area('laundryTrash')!;
     s.state.player.bag = { clean: 1, dirty: 2, cleanSheets: 1, dirtySheets: 1 };
     Object.assign(s.state.player, { x: area.x, y: area.y, path: [] });
-    advance(s, .6); expect(s.state.player.bag).toEqual({ clean: 1, dirty: 1, cleanSheets: 1, dirtySheets: 1 });
-    advance(s, .6); expect(s.state.player.bag).toEqual({ clean: 1, dirty: 0, cleanSheets: 1, dirtySheets: 1 });
-    advance(s, .6); expect(s.state.player.bag).toEqual({ clean: 1, dirty: 0, cleanSheets: 1, dirtySheets: 0 });
+    advance(s, .6); expect(s.state.player.bag).toEqual({ clean: 1, dirty: 2, cleanSheets: 1, dirtySheets: 1 });
+    advance(s, .5); expect(s.state.player.bag).toEqual({ clean: 1, dirty: 1, cleanSheets: 1, dirtySheets: 1 });
+    advance(s, 1.2); expect(s.state.player.bag).toEqual({ clean: 1, dirty: 0, cleanSheets: 1, dirtySheets: 1 });
+    advance(s, 1.2); expect(s.state.player.bag).toEqual({ clean: 1, dirty: 0, cleanSheets: 1, dirtySheets: 0 });
   });
 
-  it('is reachable, refuses empty hands and is never assigned to staff', () => {
+  it('is reachable, refuses empty hands and permits room cleaners to discard carried items', () => {
     const s = new ResortSimulation(), area = s.area('laundryTrash')!;
     expect(s.path(s.state.player, area).length).toBeGreaterThan(0);
     Object.assign(s.state.player, { x: area.x, y: area.y, path: [] }); expect(s.startTask(area)).toBe(false);
-    s.hire('rooms'); expect(s.startTask(area, s.state.workers[0].id)).toBe(false);
+    s.hire('rooms'); const cleaner = s.state.workers[0]; cleaner.bag.cleanSheets = 1;
+    expect(s.startTask(area, cleaner.id)).toBe(true);
+    s.hire('hauling'); const hauler = s.state.workers[1]; hauler.bag.cleanSheets = 1;
+    expect(s.startTask(area, hauler.id)).toBe(false);
   });
 });

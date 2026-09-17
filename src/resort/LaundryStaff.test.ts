@@ -4,16 +4,27 @@ import { validResort } from './SaveService';
 const advance = (s: ResortSimulation, seconds: number) => { for (let i = 0; i < seconds * 10; i++) s.tick(.1); };
 const setup = () => { const s = new ResortSimulation(); s.state.spawnTimer = -1000; s.state.money = 1000; s.hire('hauling'); return s; };
 describe('staffed laundry and pool delivery', () => {
-  it('carries dirty stock to the machine and carries washed output to the clean shelf', () => {
+  it('lets laundry staff return washed items in test mode even when the infinite shelf is at its display cap', () => {
+    const s = new ResortSimulation(undefined, true); s.state.spawnTimer = -1000; s.hire('hauling');
+    s.state.laundry.remaining = 0; s.state.laundry.washingTowels = 1; s.state.laundry.washingSheets = 0;
+    advance(s, 60);
+    const w = s.state.workers[0];
+    expect(s.state.laundry.clean).toBe(999);
+    expect(w.bag.clean).toBe(0); expect(w.carryingWashed).toBeFalsy();
+    expect(s.state.stats.washed).toBe(1);
+  });
+
+  it('carries dirty stock to the machine and unloads washed output directly to the clean shelf', () => {
     const s = setup(); s.state.laundry.dirty = 1; s.state.laundry.dirtySheets = 1;
-    let carriedDirty = false, carriedWashed = false;
+    let carriedDirty = false;
     for (let i = 0; i < 1200; i++) {
       s.tick(.1); const w = s.state.workers[0];
-      carriedDirty ||= w.bag.dirty > 0 || (w.bag.dirtySheets ?? 0) > 0; carriedWashed ||= !!w.carryingWashed;
+      carriedDirty ||= w.bag.dirty > 0 || (w.bag.dirtySheets ?? 0) > 0;
     }
-    expect(carriedDirty).toBe(true); expect(carriedWashed).toBe(true);
+    expect(carriedDirty).toBe(true);
     expect(s.state.laundry.clean).toBe(9); expect(s.state.laundry.cleanSheets).toBe(9);
-    expect(s.state.stats.washed).toBe(2); s.state.spawnTimer = 0; expect(validResort(s.state)).toBe(true);
+    expect(s.state.stats.washed).toBe(2); expect(s.state.workers[0].bag.clean).toBe(0); expect(s.state.workers[0].carryingWashed).toBeFalsy();
+    s.state.spawnTimer = 0; expect(validResort(s.state)).toBe(true);
   });
   it('collects pool dirty towels and supplies its clean shelf', () => {
     const s = setup(); s.facility('pool').open = true; s.facility('pool').dirtyTowels = 2; s.facility('pool').towels = 0;

@@ -13,7 +13,7 @@ describe('separate room maintenance jobs', () => {
     const s = new ResortSimulation(), f = s.facility('room1'); f.dirty = f.floorDirty = true; f.towels = 0;
     const icons = taskIndicators(s.state); expect(icons.find(n => n.id === 'room1Clean')!.icon).toBe('bed'); expect(icons.find(n => n.id === 'room1FloorClean')!.icon).toBe('clean');
     stand(s, 'room1Work'); advance(s, 6.2); expect(f.dirty).toBe(false); expect(f.floorDirty).toBe(true);
-    s.state.player.bag.clean = 1; s.state.player.bag.cleanSheets = 1; advance(s, 1); expect(f.towels).toBe(1);
+    s.state.player.bag.clean = 1; s.state.player.bag.cleanSheets = 1; advance(s, 3); expect(f.towels).toBe(1);
     s.state.guests.push({ id: 'guest1', ...receptionQueuePoint(0), path: [], phase: 'queue', remaining: 0 });
     stand(s, 'checkin'); advance(s, 3.2); expect(s.state.stats.welcomed).toBe(0);
     stand(s, 'room1Floor'); advance(s, 4.2); expect(f.floorDirty).toBe(false); expect(s.state.player.bag.dirty).toBe(1);

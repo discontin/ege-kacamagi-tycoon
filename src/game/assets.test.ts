@@ -7,7 +7,7 @@ import { ASSET_CATALOG, assetPath, type AssetKey } from './assetCatalog';
 import { AssetLibrary } from './AssetLibrary';
 
 const keys = Object.keys(ASSET_CATALOG) as AssetKey[];
-interface GlbMetadata { asset: { version: string }; images?: { uri?: string }[]; buffers?: { uri?: string }[]; skins?: unknown[]; nodes?: { name?: string }[]; animations?: { name: string; channels?: { target: { node: number; path: string } }[] }[] }
+interface GlbMetadata { asset: { version: string }; images?: { uri?: string }[]; buffers?: { uri?: string }[]; skins?: unknown[]; nodes?: { name?: string; translation?: number[] }[]; animations?: { name: string; channels?: { target: { node: number; path: string } }[] }[] }
 function metadata(key: AssetKey): GlbMetadata {
   const file = resolve('public', assetPath(key)), bytes = readFileSync(file);
   expect(bytes.toString('ascii', 0, 4), key).toBe('glTF');
@@ -19,7 +19,7 @@ function metadata(key: AssetKey): GlbMetadata {
 
 describe('shipped CC0 assets', () => {
   it('ships every catalog entry as a valid local GLB, including referenced textures', () => {
-    expect(keys).toHaveLength(78);
+    expect(keys).toHaveLength(79);
     for (const key of keys) {
       const json = metadata(key);
       expect(json.asset.version).toBe('2.0');
@@ -63,6 +63,13 @@ describe('shipped CC0 assets', () => {
     const license = readFileSync(resolve('public/assets/3dassets/home-appliances-and-utility/License.txt'), 'utf8');
     expect(license).toContain('CC0 1.0'); expect(license).toContain('commercial');
   });
+  it('ships a washer-open variant with the door visibly swung away from the drum', () => {
+    const json = metadata('washerOpen');
+    expect(json.nodes?.[0]?.name).toBe('washing-machine-open-drum-door');
+    const doorPieces = json.nodes?.filter(node => node.name === 'door-drum' && node.translation);
+    expect(doorPieces).toHaveLength(4);
+    expect(doorPieces?.some(node => (node.translation?.[0] ?? 0) < -.25)).toBe(true);
+  });
 });
 
 function fixture(): GLTF {
@@ -82,8 +89,8 @@ describe('model loading and instance isolation', () => {
     vi.stubGlobal('document', { baseURI: 'http://localhost:5173/' });
     const source = fixture(); vi.spyOn(GLTFLoader.prototype, 'loadAsync').mockResolvedValue(source);
     const library = new AssetLibrary(), progress = vi.fn(); await library.load(progress);
-    expect(library.loaded).toBe(78); expect(library.failed).toEqual([]);
-    expect(progress).toHaveBeenLastCalledWith(78, 78);
+    expect(library.loaded).toBe(79); expect(library.failed).toEqual([]);
+    expect(progress).toHaveBeenLastCalledWith(79, 79);
     const a = library.instantiate('player', { height: 1.65 })!, b = library.instantiate('worker', { height: 1.65 })!;
     const bounds = new T.Box3().setFromObject(a.root);
     expect(bounds.min.y).toBeCloseTo(0); expect(bounds.getSize(new T.Vector3()).y).toBeCloseTo(1.65);
@@ -103,9 +110,9 @@ describe('model loading and instance isolation', () => {
       if (url.endsWith(assetPath('machine'))) throw new Error('missing model'); return source;
     });
     const library = new AssetLibrary(), progress = vi.fn(); await library.load(progress);
-    expect(library.loaded).toBe(77); expect(library.failed).toEqual(['machine']);
+    expect(library.loaded).toBe(78); expect(library.failed).toEqual(['machine']);
     expect(library.has('machine')).toBe(false); expect(library.instantiate('machine')).toBeUndefined();
-    expect(library.has('player')).toBe(true); expect(progress).toHaveBeenLastCalledWith(78, 78);
+    expect(library.has('player')).toBe(true); expect(progress).toHaveBeenLastCalledWith(79, 79);
     library.dispose();
   });
 });

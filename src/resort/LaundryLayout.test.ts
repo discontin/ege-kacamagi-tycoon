@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ResortSimulation } from './Simulation';
-import { CLEAN_TAKE, DIRTY_BASKET, initialResort, LAUNDRY_MACHINE, LAUNDRY_RIGHT_EDGE, TOWEL_RACK } from './data';
+import { CLEAN_TAKE, DIRTY_BASKET, DIRTY_DROP, DIRTY_TAKE, initialResort, LAUNDRY_FRONT_EDGE, LAUNDRY_MACHINE, LAUNDRY_MACHINE_AREA, LAUNDRY_RIGHT_EDGE, LAUNDRY_TRASH, TOWEL_RACK } from './data';
 import { linenCount } from './Linen';
 
 const advance = (s: ResortSimulation, seconds: number) => {
@@ -10,14 +10,27 @@ const advance = (s: ResortSimulation, seconds: number) => {
 describe('visible laundry layout and carrying limits', () => {
   it.each([1, 2, 3])('keeps the open entrance and empty floor accessible at level %i', level => {
     const s = new ResortSimulation(); s.facility('laundry').level = level;
-    for (const p of [{ x: 4, y: 45 }, { x: 8, y: 44 }, { x: 10, y: 46 }, { x: 12, y: 44 }, { x: 14, y: 46 }]) {
+    for (const p of [LAUNDRY_MACHINE_AREA, DIRTY_DROP, DIRTY_TAKE, CLEAN_TAKE, LAUNDRY_TRASH, ...[49, 50].map(y => ({ x: 7, y })), { x: 12, y: 44 }, { x: 14, y: 46 }]) {
       expect(s.isWalkable(p.x, p.y)).toBe(true);
       expect(s.path(s.state.player, p).length, JSON.stringify(p)).toBeGreaterThan(0);
     }
-    for (const p of [{ x: 7, y: 42 }, { x: 2, y: 45 }, { x: LAUNDRY_RIGHT_EDGE, y: 43 }, { x: LAUNDRY_RIGHT_EDGE, y: 47 }, { x: 12, y: 43 }, { x: 12, y: 47 }, { x: 7, y: 48 }, { x: LAUNDRY_MACHINE.x, y: LAUNDRY_MACHINE.y }, { x: TOWEL_RACK.x, y: TOWEL_RACK.y }, { x: DIRTY_BASKET.x, y: DIRTY_BASKET.y }]) {
+    for (const p of [{ x: 7, y: 42 }, { x: 2, y: 45 }, { x: LAUNDRY_RIGHT_EDGE, y: 43 }, { x: LAUNDRY_RIGHT_EDGE, y: 47 }, { x: 12, y: 43 }, { x: 12, y: 47 }, { x: 7, y: LAUNDRY_FRONT_EDGE }, { x: 12, y: 51 }, { x: LAUNDRY_MACHINE.x, y: LAUNDRY_MACHINE.y }, { x: TOWEL_RACK.x, y: TOWEL_RACK.y }, { x: DIRTY_BASKET.x, y: DIRTY_BASKET.y }]) {
       expect(s.isWalkable(p.x, p.y)).toBe(false);
     }
     expect(s.isWalkable(LAUNDRY_RIGHT_EDGE, 45)).toBe(true);
+  });
+
+  it('keeps the washer by the left wall and leaves separated, reachable laundry interaction squares', () => {
+    const s = new ResortSimulation();
+    expect(LAUNDRY_MACHINE.x).toBeLessThan(DIRTY_BASKET.x - 2);
+    expect(LAUNDRY_MACHINE_AREA.x).toBeGreaterThan(LAUNDRY_MACHINE.x);
+    expect(LAUNDRY_MACHINE_AREA.y).toBe(LAUNDRY_MACHINE.y);
+    expect(TOWEL_RACK.x - DIRTY_BASKET.x).toBeGreaterThanOrEqual(3);
+    const areas = [LAUNDRY_MACHINE_AREA, DIRTY_DROP, DIRTY_TAKE, CLEAN_TAKE, LAUNDRY_TRASH];
+    for (let i = 0; i < areas.length; i++) for (let j = i + 1; j < areas.length; j++) {
+      expect(Math.hypot(areas[i].x - areas[j].x, areas[i].y - areas[j].y)).toBeGreaterThan(1.5);
+    }
+    for (const area of areas) expect(s.isWalkable(Math.round(area.x), Math.round(area.y))).toBe(true);
   });
 
   it('leaves a continuous two-cell walkway to the left of reception', () => {

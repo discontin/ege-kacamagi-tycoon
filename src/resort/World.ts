@@ -7,7 +7,7 @@ import { staffIconSvg, staffRole } from './StaffHiring';
 import * as T from 'three';
 import { AssetLibrary, type AssetInstance } from '../game/AssetLibrary';
 import type { AssetKey } from '../game/assetCatalog';
-import { HEIGHT, LAUNDRY_ORIGIN, LAUNDRY_TRASH, MAP_MAX_X, MAP_MIN_X, RECEPTION, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, DIRTY_BASKET, TOWEL_RACK, WIDTH } from './data';
+import { HEIGHT, LAUNDRY_FRONT_EDGE, LAUNDRY_ORIGIN, LAUNDRY_TRASH, MAP_MAX_X, MAP_MIN_X, RECEPTION, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, DIRTY_BASKET, TOWEL_RACK, WIDTH } from './data';
 import { ResortSimulation } from './Simulation';
 import type { Actor, Area, Point, Towels } from './types';
 import { taskIndicators, taskIconSvg, type TaskIndicator } from './TaskIndicators';
@@ -26,6 +26,15 @@ interface Character { root: T.Group; load: T.Group; broom: T.Group; tray: T.Grou
 const HIDDEN_RECEPTION_MARKERS = new Set(['receptionCash', 'receptionUpgrade']);
 const RECEPTION_VISUAL_X = RECEPTION.x - 1;
 const world = (p: Point) => new T.Vector3(p.x - 19, 0, p.y - 27);
+const purchaseIconSvg = (kind: 'bed' | 'pool' | 'lock') => {
+  const paths = {
+    bed: '<path d="M3 18v3m18-3v3M3 10V5h3m-3 5h18v8H3v-8Z"/><rect x="6" y="6" width="5" height="4" rx="1"/><rect x="12" y="6" width="5" height="4" rx="1"/>',
+    pool: '<path d="M4 13V7h16v6M7 7V4m5 3V4m5 3V4M3 14c2 0 2 2 5 2s3-2 5-2 2 2 5 2 3-2 5-2M3 19c2 0 2 2 5 2s3-2 5-2 2 2 5 2 3-2 5-2"/>',
+    lock: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3m-5 4v3"/>',
+  };
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths[kind]}</svg>`;
+};
+const officeDevelopmentIconSvg = () => '<svg viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="9" r="4"/><path d="M3 25v-3a7 7 0 0 1 14 0v3m7 0V7m-5 5 5-5 5 5"/></svg>';
 export class ResortWorld {
   private scene = new T.Scene();
   private camera = new T.PerspectiveCamera(43, 1, .1, 200);
@@ -45,6 +54,7 @@ export class ResortWorld {
   private bathroomDoors = new Map<string, T.Group>();
   private stockModels = new Map<string, T.Mesh[]>();
   private washerDoors: { root: T.Object3D; mixer: T.AnimationMixer; open: T.AnimationAction; close: T.AnimationAction; closed: boolean }[] = [];
+  private washerStates: { open: T.Object3D; closed: T.Object3D }[] = [];
   private poolLeaves: T.Mesh[] = [];
   private drums: T.Mesh[] = [];
   private feel: ResortGameFeel;
@@ -148,9 +158,18 @@ export class ResortWorld {
     for (const x of [-2.5, 2.5]) this.box(office, 0xf7edcf, x, .5, 3, 3, .8, .2);
     // Close the former front opening; the existing left-side doorway remains.
     this.box(office, 0xf7edcf, 0, .5, 3, 2, .8, .2);
-    this.prop(office, 'officeDesk', 0, .18, -1, { height: .98 });
-    this.prop(office, 'officeChair', 0, .18, .25, { height: 1.08 }, Math.PI);
-    this.prop(office, 'officeLaptop', .32, 1.18, -1.05, { width: .72 }, Math.PI);
+    this.prop(office, 'roomRug', 0, .18, -.25, { width: 3.2 });
+    this.prop(office, 'officeDesk', 0, .18, -1, { height: 1.2 });
+    this.prop(office, 'officeChair', 0, .18, .25, { height: 1.2 }, Math.PI);
+    this.prop(office, 'officeLaptop', .32, 1.4, -1.05, { width: .85 });
+    const picture = new T.Group(); picture.position.set(2, 1.9, -2.84); office.add(picture);
+    this.box(picture, 0x765039, 0, 0, 0, 1.45, .98, .12);
+    this.box(picture, 0xf3e6c3, 0, 0, .067, 1.31, .84, .025);
+    this.box(picture, 0x86c8c0, 0, .12, .083, 1.24, .56, .015);
+    this.box(picture, 0x4f9aa0, 0, -.24, .092, 1.24, .16, .015);
+    this.sphere(picture, 0xf1c464, -.34, .26, .105, .12, 1, 1, .18);
+    const shore = this.box(picture, 0xe3aa72, .32, -.12, .105, .58, .12, .02); shore.rotation.z = -.12;
+    this.prop(office, 'bedsideTable', 3.05, .18, -2.25, { height: .86 });
     this.prop(office, 'plantSmallA', -3, .1, -2, { height: 1.25 });
     const ground = this.group({ x: 19, y: 25 }, this.scene); this.box(ground, 0xeeddb4, 0, -.22, 0, 44, .4, 60);
     const grass = this.group({ x: 18, y: 27 }, this.scene); this.box(grass, 0xa3c98c, 0, -.03, 0, 38, .08, 46);
@@ -233,10 +252,12 @@ export class ResortWorld {
     this.box(g, 0xfff8e8, bedX, .82, -.5, bedWidth - .15, .28, bedDepth - .2);
     const linen = new BedLinen(bedColor, color => this.material(color), { single: singleRoom, centerX: bedX }); linen.update(f.dirty ? 0 : 1); g.add(linen.root); this.bedLinen.set(r.id, linen);
     if (!bed) this.box(g, singleRoom ? 0xac7359 : 0x8f5d4a, bedX, singleRoom ? 1.1 : 1.25, -2.45, bedWidth + .1, singleRoom ? 1.25 : 1.55, .2);
-    const tipPile = new T.Group(); tipPile.position.set(2.5, 1.8, -2); g.add(tipPile);
+    // Sit the visible tip stack on the writing-table surface instead of floating above it.
+    const tipPile = new T.Group(); tipPile.position.set(2.5, 1, -2); g.add(tipPile);
     for (let i = 0; i < 3; i++) { const note = this.box(tipPile, i % 2 ? 0x92d85d : 0x3f9c58, .03 * i, i * .07, 0, .55, .045, .3); note.rotation.y = (i - 1) * .12; this.box(note, 0xffed9b, 0, .025, 0, .11, .012, .17); }
     this.tipModels.set(r.id, tipPile);
-    this.prop(g, 'bedsideTable', singleRoom ? 1.45 : -.05, .2, -2.25, { height: .85 }); this.prop(g, 'tableLamp', singleRoom ? 1.45 : -.05, .85, -2.25, { height: .62 }); this.prop(g, 'plant', -3.5, .2, -2.6, { height: 1 });
+    if (singleRoom) { this.prop(g, 'bedsideTable', 1.45, .2, -2.25, { height: .85 }); this.prop(g, 'tableLamp', 1.45, .85, -2.25, { height: .62 }); }
+    this.prop(g, 'plant', -3.5, .2, -2.6, { height: 1 });
     // Level one uses the future bathroom corner as a compact writing area, so the
     // room feels furnished before that space is replaced by the bathroom upgrade.
     if (singleRoom) { this.prop(g, 'table', 2.75, .2, -1.9, { width: 1.65 }); this.prop(g, 'chair', 2.75, .2, -.75, { height: 1.15 }, Math.PI); this.prop(g, 'plant', 3.75, .2, -2.65, { height: .9 }); }
@@ -287,32 +308,44 @@ export class ResortWorld {
       const geometry = new T.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 6 }); geometry.rotateX(-Math.PI / 2); geometry.userData.generated = true;
       const mesh = new T.Mesh(geometry, this.material(color)); mesh.position.y = y; mesh.castShadow = true; mesh.receiveShadow = true; g.add(mesh);
     };
-    rounded(5, 1.5, 1, .25, f.level === 3 ? 0xb07a57 : 0xc58e69);
-    rounded(5.35, 1.85, .18, 1.25, 0xffe4bc);
-    this.box(g, 0x388c7c, 0, .78, .78, 3.8, .66, .06);
-    for (const x of [-2.12, 2.12]) this.box(g, 0xffe3af, x, .8, .73, .12, .88, .08);
+    rounded(5, 1.5, .78, .25, f.level === 3 ? 0xb07a57 : 0xc58e69);
+    rounded(5.35, 1.85, .18, 1.03, 0xffe4bc);
+    this.box(g, 0x388c7c, 0, .65, .78, 3.8, .5, .06);
+    for (const x of [-2.12, 2.12]) this.box(g, 0xffe3af, x, .65, .73, .12, .78, .08);
     const emblemGeometry = new T.TorusGeometry(.17, .045, 8, 20); emblemGeometry.userData.generated = true;
-    const emblem = new T.Mesh(emblemGeometry, this.material(0xffdd87)); emblem.position.set(-.13, .8, .85); g.add(emblem);
-    this.box(g, 0xffdd87, .15, .8, .85, .35, .075, .08); this.box(g, 0xffdd87, .29, .72, .85, .075, .15, .08);
+    const emblem = new T.Mesh(emblemGeometry, this.material(0xffdd87)); emblem.position.set(-.13, .65, .85); g.add(emblem);
+    this.box(g, 0xffdd87, .15, .65, .85, .35, .075, .08); this.box(g, 0xffdd87, .29, .57, .85, .075, .15, .08);
     // Bell and guest ledger on top; upgraded desks gain a small terminal.
-    this.sphere(g, 0xe5b963, -1.7, 1.48, .2, .16, 1, .6, 1);
-    this.box(g, 0x549c97, .8, 1.45, -.08, .65, .045, .45); this.box(g, 0xfffbed, .8, 1.48, -.08, .57, .025, .4);
-    if (f.level >= 2) { this.box(g, 0x365d60, 1.65, 1.48, -.3, .55, .07, .45); const screen = this.box(g, 0x365d60, 1.65, 1.74, -.4, .55, .44, .08); screen.rotation.x = -.15; }
+    this.sphere(g, 0xe5b963, -1.7, 1.26, .2, .16, 1, .6, 1);
+    this.box(g, 0x549c97, .8, 1.23, -.08, .65, .045, .45); this.box(g, 0xfffbed, .8, 1.26, -.08, .57, .025, .4);
+    if (f.level >= 2) { this.box(g, 0x365d60, 1.65, 1.26, -.3, .55, .07, .45); const screen = this.box(g, 0x365d60, 1.65, 1.52, -.4, .55, .44, .08); screen.rotation.x = -.15; }
     this.prop(g, 'plant', -3.3, .2, 1.1, { height: 1.4 }); this.prop(g, 'plant', 3.3, .2, 1.1, { height: 1.4 });
     if (f.level >= 2) this.prop(g, 'bench', -5, .12, 1, { width: 2.5 }, Math.PI / 2);
     if (f.level === 3) this.prop(g, 'bench', 5, .12, 1, { width: 2.5 }, -Math.PI / 2);
   }
   private laundry() {
     const f = this.sim.facility('laundry'), g = this.group(LAUNDRY_ORIGIN);
-    // Keep the left edge in place and trim the right edge to the bungalow line.
-    this.box(g, 0xf6eacb, -.2, .08, .4, 9.6, .16, 7.8);
+    // Extend the laundry floor toward the front while keeping its rear edge fixed.
+    const floorFront = LAUNDRY_FRONT_EDGE - LAUNDRY_ORIGIN.y;
+    const floorBack = 41.5 - LAUNDRY_ORIGIN.y;
+    this.box(g, 0xf6eacb, -.2, .08, (floorFront + floorBack) / 2, 9.6, .16, floorFront - floorBack);
     for (const wall of LAUNDRY_WALLS) { this.box(g, 0x99c9cd, wall.x - LAUNDRY_ORIGIN.x, .15 + wall.height / 2, wall.y - LAUNDRY_ORIGIN.y, wall.width, wall.height, wall.depth); this.box(g, 0xffe9bf, wall.x - LAUNDRY_ORIGIN.x, .19 + wall.height, wall.y - LAUNDRY_ORIGIN.y, wall.width + .1, .12, wall.depth + .1); }
-    for (let z = -3.5; z <= 3.5; z++) this.box(g, 0xe6d7b9, -.2, .17, z, 8.9, .015, .035);
+    for (let z = -3.5; z <= floorFront - .5; z++) this.box(g, 0xe6d7b9, -.2, .17, z, 8.9, .015, .035);
     for (const machine of laundryMachines(f.level)) {
       const x = machine.x - LAUNDRY_ORIGIN.x, stacked = f.level >= 2;
-      const appliance = this.prop(g, stacked ? 'washerStacked' : 'washer', x, .2, machine.y - LAUNDRY_ORIGIN.y, { height: stacked ? 2.25 : 1.62 });
-      if (appliance) this.setupWasherDoor(appliance);
-      if (!appliance) this.box(g, 0xfff9e8, x, 1, 0, machine.width, 1.8, machine.depth);
+      const z = machine.y - LAUNDRY_ORIGIN.y;
+      if (stacked) {
+        const appliance = this.prop(g, 'washerStacked', x, .2, z, { height: 2.25 }, Math.PI / 2);
+        if (appliance) this.setupWasherDoor(appliance);
+        else this.box(g, 0xfff9e8, x, 1, z, machine.width, 1.8, machine.depth);
+      } else {
+        const closed = this.prop(g, 'washer', x, .2, z, { height: 1.62 }, Math.PI / 2);
+        const open = this.prop(g, 'washerOpen', x, .2, z, { height: 1.62 }, Math.PI / 2);
+        if (closed && open) {
+          closed.root.visible = false;
+          this.washerStates.push({ open: open.root, closed: closed.root });
+        } else if (!closed && !open) this.box(g, 0xfff9e8, x, 1, z, machine.width, 1.8, machine.depth);
+      }
     }
     this.prop(g, 'rack', TOWEL_RACK.x - LAUNDRY_ORIGIN.x, .1, TOWEL_RACK.y - LAUNDRY_ORIGIN.y, { height: 2.2 });
     const rack = new TowelShelf(color => this.material(color), 2.2, false, false); rack.root.position.set(TOWEL_RACK.x - LAUNDRY_ORIGIN.x, .1, TOWEL_RACK.y - LAUNDRY_ORIGIN.y); g.add(rack.root);
@@ -324,7 +357,7 @@ export class ResortWorld {
     this.stockModels.set('laundryClean', rack.towels.slice(0, 8)); this.stockModels.set('laundryDirty', dirty);
     rack.towels.slice(8).forEach(towel => towel.visible = false);
     const sheets: T.Mesh[] = []; for (let i = 0; i < 4; i++) { const sheet = this.box(rack.root, 0xfff2dc, i % 2 ? .46 : -.46, 1.75 + Math.floor(i / 2) * .13, 0, .85, .12, .76); this.box(sheet, 0x73c4d1, 0, 0, .39, .8, .04, .01); sheets.push(sheet); } this.stockModels.set('laundrySheets', sheets);
-    this.prop(g, 'bin', LAUNDRY_TRASH.x - LAUNDRY_ORIGIN.x, .2, 2.35, { height: 1.2 });
+    this.prop(g, 'bin', LAUNDRY_TRASH.x - LAUNDRY_ORIGIN.x, .2, LAUNDRY_TRASH.y - LAUNDRY_ORIGIN.y, { height: 1.2 });
   }
   private setupWasherDoor(appliance: AssetInstance) {
     const clips = appliance.clips.map(clip => new T.AnimationClip(clip.name, clip.duration, clip.tracks.filter(track => /door-(?:drum|washer)\.quaternion$/.test(track.name)))).filter(clip => clip.tracks.length);
@@ -397,25 +430,31 @@ export class ResortWorld {
     if (f.level >= 2) { this.sphere(g, 0xffb473, 2.7, .5, -1, .6, 1, .2, 1); this.prop(g, 'plant', -5.8, .1, -3.7, { height: 1.5 }); }
     if (f.level === 3) { this.prop(g, 'plant', 5.8, .1, -3.7, { height: 1.5 }); this.box(g, 0xf2d16e, 0, .4, -3.2, 5, .05, .2); }
   }
-  private clearStructures() { this.structures.traverse(o => { if (o instanceof T.Mesh && o.geometry.userData.generated) o.geometry.dispose(); }); this.structures.clear(); for (const washer of this.washerDoors) { washer.mixer.stopAllAction(); washer.mixer.uncacheRoot(washer.root); } this.washerDoors = []; for (const p of this.pads.values()) { p.label.remove(); (p.outline.material as T.Material).dispose(); (p.fill.material as T.Material).dispose(); } this.pads.clear(); for (const l of this.facilityLabels.values()) l.remove(); this.facilityLabels.clear(); this.tipModels.clear(); this.moneyModels.clear(); this.dirtModels.clear(); this.bedLinen.clear(); this.bathroomDoors.clear(); this.stockModels.clear(); this.drums = []; this.poolLeaves = []; }
+  private clearStructures() { this.structures.traverse(o => { if (o instanceof T.Mesh && o.geometry.userData.generated) o.geometry.dispose(); }); this.structures.clear(); for (const washer of this.washerDoors) { washer.mixer.stopAllAction(); washer.mixer.uncacheRoot(washer.root); } this.washerDoors = []; this.washerStates = []; for (const p of this.pads.values()) { p.label.remove(); (p.outline.material as T.Material).dispose(); (p.fill.material as T.Material).dispose(); } this.pads.clear(); for (const l of this.facilityLabels.values()) l.remove(); this.facilityLabels.clear(); this.tipModels.clear(); this.moneyModels.clear(); this.dirtModels.clear(); this.bedLinen.clear(); this.bathroomDoors.clear(); this.stockModels.clear(); this.drums = []; this.poolLeaves = []; }
   private rebuild() {
-    const key = JSON.stringify([!!this.sim.state.bar?.open, !!this.sim.facility('pool').dirt, this.sim.state.guests.filter(wantsDrink).map(g => [g.id, g.orderProduct]), this.sim.state.workers.map(w => w.role), this.sim.state.workers.length,this.sim.state.facilities.map(f => [f.id, f.open, f.level, f.dirty, !!f.floorDirty, !!f.bathroomDirty, !!f.needsSheet, !!f.towels]), this.sim.state.seats.map(s => [s.open, s.dirty, !!s.towel, !!s.guest])]);
+    const key = JSON.stringify([!!this.sim.state.bar?.open, !!this.sim.facility('pool').dirt, this.sim.state.guests.filter(wantsDrink).map(g => [g.id, g.orderProduct]), this.sim.state.workers.map(w => w.role), this.sim.state.workers.length,this.sim.state.facilities.map(f => [f.id, f.open, f.level, f.dirty, !!f.floorDirty, !!f.bathroomDirty, !!f.needsSheet, !!f.towels]), this.sim.state.laundry.remaining === 0, this.sim.state.seats.map(s => [s.open, s.dirty, !!s.towel, !!s.guest])]);
     if (key === this.layoutKey) return; this.layoutKey = key; this.clearStructures(); ROOM_DEFS.forEach(r => this.bungalow(r)); this.reception(); this.laundry(); this.pool(); this.poolBar();
+    const machineAreaId = this.sim.state.laundry.remaining === 0 ? 'machineUnload' : 'machineLoad';
     for (const a of this.sim.areas) {
-      if (a.taskKind === 'cleanTake' || a.taskKind === 'dirtyDrop') continue;
-      const root = this.group(a), color = a.mode === 'buy' ? 0x72c891 : a.mode === 'upgrade' ? 0xf1c762 : a.mode === 'cash' ? 0x9eca86 : 0xffffff;
+      if (a.taskKind === 'cleanTake' || a.taskKind === 'dirtyDrop' || a.taskKind === 'laundryDirtyTake') continue;
+      if ((a.id === 'machineLoad' || a.id === 'machineUnload') && a.id !== machineAreaId) continue;
+      const root = this.group(a), color = a.mode === 'buy' ? 0x72c891 : a.mode === 'upgrade' ? 0xd8c99c : a.mode === 'cash' ? 0x9eca86 : 0xffffff;
       const room = a.mode === 'work' && (a.taskKind === 'cleanRoom' || a.taskKind === 'restockRoom') ? ROOM_DEFS.find(r => r.id === a.target) : undefined;
       const rectangle = (w: number, d: number, holeW: number, holeD: number, holeZ = 0) => {
         const shape = new T.Shape(); shape.moveTo(-w, -d); shape.lineTo(w, -d); shape.lineTo(w, d); shape.lineTo(-w, d); shape.closePath();
         const hole = new T.Path(); hole.moveTo(-holeW, holeZ - holeD); hole.lineTo(-holeW, holeZ + holeD); hole.lineTo(holeW, holeZ + holeD); hole.lineTo(holeW, holeZ - holeD); hole.closePath(); shape.holes.push(hole); return shape;
       };
+      const wideLaundryArea = a.target === 'laundry' && a.mode === 'work' && ['machineLoad', 'machineUnload', 'laundryTrash'].includes(a.id);
       let fill: T.Mesh;
       if (room) {
         root.position.copy(world({ x: room.x + 3, y: room.y + 3.2 }));
         const geometry = new T.ShapeGeometry(rectangle(2.4, 2.6, 1.4, 1.9, .2)); geometry.userData.generated = true;
         fill = new T.Mesh(geometry, new T.MeshBasicMaterial({ color, transparent: true, opacity: .12, side: T.DoubleSide })); fill.rotation.x = -Math.PI / 2; fill.position.y = .13; root.add(fill);
-      } else { fill = this.box(root, color, 0, .13, 0, 1.12, .025, 1.12); fill.material = new T.MeshBasicMaterial({ color, transparent: true, opacity: a.mode === 'work' ? .12 : .55 }); }
-      const shape = room ? rectangle(2.4, 2.6, 2.34, 2.54) : rectangle(.62, .62, .55, .55);
+      } else {
+        fill = this.box(root, color, 0, .13, 0, wideLaundryArea ? 1.5 : 1.12, .025, wideLaundryArea ? 1.5 : 1.12); fill.material = new T.MeshBasicMaterial({ color, transparent: true, opacity: a.mode === 'work' ? .12 : a.mode === 'upgrade' ? .18 : .55 });
+      }
+      const half = wideLaundryArea ? .82 : .62;
+      const shape = room ? rectangle(2.4, 2.6, 2.34, 2.54) : rectangle(half, half, half - .07, half - .07);
       const geometry = new T.ShapeGeometry(shape); geometry.userData.generated = true;
       if (a.id === 'office') {
         fill.scale.set(2, 1, 2); (fill.material as T.MeshBasicMaterial).color.setHex(0xefc568);
@@ -423,12 +462,12 @@ export class ResortWorld {
         const ring = new T.Mesh(ringGeometry, new T.MeshBasicMaterial({ color: 0xffdf83, side: T.DoubleSide }));
         ring.rotation.x = -Math.PI / 2; ring.position.y = .18; root.add(ring);
       }
-      const outline = new T.Mesh(geometry, new T.MeshBasicMaterial({ color, side: T.DoubleSide })); outline.rotation.x = -Math.PI / 2; outline.position.y = .17; root.add(outline);
-      const label = document.createElement('button'); label.className = `floor-label ${a.mode}`; label.setAttribute('aria-label', `${a.label} alanına yürü`); label.addEventListener('click', () => { this.sim.goToArea(a.id); this.follow = true; }, { signal: this.abort.signal }); this.labels.append(label); this.pads.set(a.id, { root, outline, fill, label, area: a });
+      const outline = new T.Mesh(geometry, new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: a.mode === 'upgrade', opacity: a.mode === 'upgrade' ? .42 : 1 })); outline.rotation.x = -Math.PI / 2; outline.position.y = .17; root.add(outline);
+      const label = document.createElement('button'); label.className = `floor-label ${a.mode}${a.id === 'office' ? ' office-marker' : ''}`; label.setAttribute('aria-label', a.id === 'office' ? 'Personel geliştirme ofisine git' : `${a.label} alanına yürü`); if (a.id === 'office') label.title = 'Personel geliştirme ofisi'; label.addEventListener('click', () => { this.sim.goToArea(a.id); this.follow = true; }, { signal: this.abort.signal }); this.labels.append(label); this.pads.set(a.id, { root, outline, fill, label, area: a });
       if (a.mode === 'cash') { const pile = new T.Group(); for (let i = 0; i < 4; i++) this.box(pile, i % 2 ? 0x9ad364 : 0x60a957, 0, .25 + i * .12, 0, .8, .1, .4); root.add(pile); this.moneyModels.set(a.target, pile); }
       if (HIDDEN_RECEPTION_MARKERS.has(a.id)) { fill.visible = false; outline.visible = false; label.style.display = 'none'; }
     }
-    for (const f of this.sim.state.facilities) { if (f.kind === 'room' || f.kind === 'reception' || f.id === 'laundry') continue; const l = document.createElement('div'); l.className = 'facility-label'; l.addEventListener('click', () => this.inspect(f.id), { signal: this.abort.signal }); this.labels.append(l); this.facilityLabels.set(f.id, l); }
+    for (const f of this.sim.state.facilities) { if (f.kind === 'room' || f.kind === 'reception' || f.id === 'laundry' || f.id === 'pool') continue; const l = document.createElement('div'); l.className = 'facility-label'; l.addEventListener('click', () => this.inspect(f.id), { signal: this.abort.signal }); this.labels.append(l); this.facilityLabels.set(f.id, l); }
   }
   private character(a: Actor, worker: boolean) {
     const root = this.group(a, this.scene), load = new T.Group(); load.position.set(0, .85, .65); root.add(load);
@@ -516,6 +555,7 @@ export class ResortWorld {
     if (Math.hypot(dx, dy) > .05) { this.sim.movePlayer(dx, dy, dt); this.follow = true; }
     this.sim.tick(dt); this.rebuild(); const s = this.sim.state;
     const washerRunning = s.laundry.remaining !== null && s.laundry.remaining > 0;
+    for (const washer of this.washerStates) { washer.open.visible = !washerRunning; washer.closed.visible = washerRunning; }
     for (const washer of this.washerDoors) {
       if (washer.closed !== washerRunning) {
         const previous = washer.closed ? washer.close : washer.open;
@@ -601,26 +641,38 @@ export class ResortWorld {
       }
       const task = s.tasks.find(t => t.target === a.target && (a.taskKind === t.kind || a.id === `${t.target}Work` && (t.kind === 'cleanRoom' || t.kind === 'restockRoom'))), near = this.sim.inside(s.player, a);
       const progress = task ? 1 - task.remaining / task.total : near ? .3 : 0;
-      (p.outline.material as T.MeshBasicMaterial).color.set(near ? 0xb7ef8d : a.mode === 'buy' ? this.sim.level >= this.sim.requiredLevel(a) ? 0x92e6a3 : 0xb3b7a0 : a.mode === 'upgrade' ? 0xffd675 : 0xffffff);
-      (p.fill.material as T.MeshBasicMaterial).opacity = a.mode === 'work' ? .1 + progress * .4 : .55;
-      p.label.classList.toggle('goal', a.id === goal.area); p.label.classList.toggle('locked', !this.sim.testMode && a.mode === 'buy' && this.sim.level < this.sim.requiredLevel(a));
+      const poolGateLocked = a.mode === 'buy' && a.target === 'pool' && !this.sim.facility('pool').open && !this.sim.poolRoomsUnlocked();
+      const buyLocked = !this.sim.testMode && a.mode === 'buy' && (poolGateLocked || this.sim.level < this.sim.requiredLevel(a));
+      const unaffordable = !this.sim.testMode && (a.mode === 'buy' || a.mode === 'upgrade') && s.money < this.sim.cost(a);
+      (p.outline.material as T.MeshBasicMaterial).color.set(near ? a.mode === 'upgrade' ? 0xd8d0b5 : 0xb7ef8d : a.mode === 'buy' ? buyLocked ? 0xb3b7a0 : 0x92e6a3 : a.mode === 'upgrade' ? 0xc8bb99 : 0xffffff);
+      (p.outline.material as T.MeshBasicMaterial).opacity = a.mode === 'upgrade' ? near ? .58 : .42 : 1;
+      (p.fill.material as T.MeshBasicMaterial).opacity = a.mode === 'work' ? .1 + progress * .4 : a.mode === 'upgrade' ? .18 : .55;
+      p.label.classList.toggle('goal', a.id === goal.area); p.label.classList.toggle('locked', buyLocked || unaffordable);
       p.label.classList.toggle('reception-hire', !!staffRole(a.target));
       p.label.classList.toggle('upgrade-marker', a.mode === 'upgrade');
+      const roomPurchase = a.mode === 'buy' && a.target.startsWith('room');
+      const poolPurchase = a.mode === 'buy' && a.target === 'pool';
+      p.label.classList.toggle('purchase-marker', roomPurchase || poolPurchase);
       if (!!staffRole(a.target)) p.label.title = `${a.label} · ${this.sim.testMode ? 'Ücretsiz test' : this.sim.cost(a) + ' ₺'}`;
-      const text = !!staffRole(a.target) ? `${staffIconSvg(staffRole(a.target)!)}<span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : a.mode === 'buy' ? `${this.sim.level < this.sim.requiredLevel(a) && !this.sim.testMode ? '🔒' : '＋'} ${a.label}<small>Sv. ${this.sim.requiredLevel(a)} · ${this.sim.testMode ? 'ÜCRETSİZ' : this.sim.cost(a) + ' ₺'}</small>` : a.mode === 'upgrade' ? `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27V7m-7 8 7-8 7 8M7 27h18"/></svg><span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : a.mode === 'cash' ? `💵 ${(a.target === 'bar' ? s.bar! : this.sim.facility(a.target)).cash} ₺` : `${a.taskKind === 'cleanTake' ? '☀' : a.taskKind === 'dirtyDrop' ? '♺' : '▢'} ${a.label}${task ? '<small>' + Math.round(progress * 100) + '%</small>' : ''}`;
+      const purchasePrice = this.sim.testMode ? '∞' : roomPurchase || poolPurchase ? `${this.sim.cost(a).toLocaleString('tr-TR')} ₺` : '';
+      const purchaseText = poolPurchase && poolGateLocked
+        ? purchaseIconSvg('lock')
+        : roomPurchase ? `${purchaseIconSvg('bed')}<span class="purchase-price">${purchasePrice}</span>`
+          : poolPurchase ? `${purchaseIconSvg('pool')}<span class="purchase-price">${purchasePrice}</span>` : '';
+      const text = a.id === 'office' ? `${officeDevelopmentIconSvg()}<span class="office-caption">Personel<br>geliştir</span>` : !!staffRole(a.target) ? `${staffIconSvg(staffRole(a.target)!)}<span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : roomPurchase || poolPurchase ? purchaseText : a.mode === 'buy' ? `${this.sim.level < this.sim.requiredLevel(a) && !this.sim.testMode ? '🔒' : '＋'} ${a.label}<small>Sv. ${this.sim.requiredLevel(a)} · ${this.sim.testMode ? 'ÜCRETSİZ' : this.sim.cost(a) + ' ₺'}</small>` : a.mode === 'upgrade' ? `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27V7m-7 8 7-8 7 8M7 27h18"/></svg><span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : a.mode === 'cash' ? `💵 ${(a.target === 'bar' ? s.bar! : this.sim.facility(a.target)).cash} ₺` : `${a.taskKind === 'cleanTake' ? '☀' : a.taskKind === 'dirtyDrop' ? '♺' : '▢'} ${a.label}${task ? '<small>' + Math.round(progress * 100) + '%</small>' : ''}`;
       const purchaseProgress = this.sim.purchaseProgress(a);
       const labelText = text + (purchaseProgress === undefined ? '' : '<span class="purchase-progress" aria-hidden="true"></span>');
       if (p.label.innerHTML !== labelText) p.label.innerHTML = labelText;
       p.label.style.setProperty('--purchase-progress', `${Math.round((purchaseProgress ?? 0) * 100)}%`);
-      if (a.mode === 'buy') p.label.setAttribute('aria-label', `${a.label} · ${this.sim.cost(a)} ₺${purchaseProgress === undefined ? '' : ' · %' + Math.round(purchaseProgress * 100)}`);
+      if (a.mode === 'buy') p.label.setAttribute('aria-label', poolPurchase && poolGateLocked ? 'Havuz kilitli · İlk 6 odayı aç' : `${a.label} · ${this.sim.cost(a)} ₺${purchaseProgress === undefined ? '' : ' · %' + Math.round(purchaseProgress * 100)}`);
       this.project(p.label, p.root.position.clone().add(new T.Vector3(0, .38, !!staffRole(a.target) ? 0 : .5)));
       const featuredTestUpgrade = this.sim.testMode && a.mode === 'upgrade' && (a.target.startsWith('room') || a.target === 'pool');
-      if (a.mode === 'work' && !near && distance(s.player, a) > 6 || a.mode === 'upgrade' && !featuredTestUpgrade && distance(s.player, a) > 6 || !this.follow && a.mode === 'work') p.label.style.display = 'none';
+      if (a.id !== 'office' && (a.mode === 'work' && !near && distance(s.player, a) > 6 || a.mode === 'upgrade' && !featuredTestUpgrade && distance(s.player, a) > 6 || !this.follow && a.mode === 'work')) p.label.style.display = 'none';
       if (a.mode === 'work' && noticeAreas.has(a.id)) p.label.style.display = 'none';
       if (!near && a.id !== goal.area && a.mode === 'buy' && !this.sim.testMode && this.sim.requiredLevel(a) > this.sim.level + 1 && a.target !== 'pool') p.label.style.display = 'none';
       if (a.mode === 'work' && a.target.startsWith('room') && a.taskKind !== 'cleanFloor' && !this.sim.facility(a.target).dirty && this.sim.facility(a.target).towels && !near) { p.label.style.display = 'none'; p.root.visible = false; } else p.root.visible = true;
       if (a.mode === 'cash') { const cash = a.target === 'bar' ? s.bar!.cash : this.sim.facility(a.target).cash; this.moneyModels.get(a.target)!.visible = cash > 0; if (!cash) p.label.style.display = 'none'; }
-      if (a.mode === 'work' || a.mode === 'upgrade' && a.target !== 'laundry' && !featuredTestUpgrade) p.label.style.display = 'none';
+      if (a.id !== 'office' && (a.mode === 'work' || a.mode === 'upgrade' && a.target !== 'laundry' && !featuredTestUpgrade)) p.label.style.display = 'none';
     }
     for (const [id, l] of this.facilityLabels) {
       const f = this.sim.facility(id), r = ROOM_DEFS.find(r => r.id === id), pos = r ? world({ x: r.x + 4.5, y: r.y + 1 }) : world(id === 'reception' ? { x: RECEPTION_VISUAL_X, y: 43 } : id === 'laundry' ? { x: 8, y: 44 } : { x: 28, y: 2 });

@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { areasFor, initialResort, ROOM_WORK, ROOM_DEFS } from './data';
+import { areasFor, DIRTY_BASKET, DIRTY_DROP, initialResort, ROOM_WORK, ROOM_DEFS } from './data';
 import { taskIndicators, taskIconSvg } from './TaskIndicators';
 
 describe('floating task notices', () => {
   it('does not mark a clean, stocked room as needing work', () => { expect(taskIndicators(initialResort()).some(n => n.id.startsWith('room'))).toBe(false); });
+  it('shows the clean-linen pickup hint only while the player is taking clean linen', () => {
+    const s = initialResort();
+    expect(taskIndicators(s).some(n => n.id === 'laundryClean')).toBe(false);
+    Object.assign(s.player, { x: 10.2, y: 44 });
+    s.tasks.push({ id: 'take-clean', owner: 'player', target: 'laundry', kind: 'cleanTake', total: 1.8, remaining: 1.8 });
+    expect(taskIndicators(s).find(n => n.id === 'laundryClean')?.icon).toBe('towel');
+    s.tasks = [];
+    expect(taskIndicators(s).some(n => n.id === 'laundryClean')).toBe(false);
+  });
   it('marks the dirty bed with a cleaning icon linked to the real room work square', () => {
     const s = initialResort(), r = s.facilities.find(f => f.id === 'room1')!; r.dirty = true; r.towels = 0;
     const n = taskIndicators(s).find(n => n.id === 'room1Clean')!;
@@ -33,8 +42,13 @@ describe('floating task notices', () => {
     s.seats[0].dirty = false; expect(taskIndicators(s).some(n => n.id === 'seat1Clean')).toBe(false);
   });
   it('marks laundry deposit, clean pickup and automatic washing distinctly', () => {
-    const s = initialResort(); s.player.bag.dirty = 1; s.facilities.find(f => f.id === 'room1')!.towels = 0; s.laundry.remaining = 2;
-    const ns = taskIndicators(s); expect(ns.find(n => n.id === 'laundryDirty')!.icon).toBe('dirty'); expect(ns.find(n => n.id === 'laundryClean')!.icon).toBe('towel'); expect(ns.find(n => n.id === 'laundryWash')!.state).toBe('working');
+    const s = initialResort(); s.player.bag.dirty = 1; s.facilities.find(f => f.id === 'room1')!.towels = 0; s.laundry.dirty = 2; s.laundry.remaining = 2;
+    s.tasks.push({ id: 'take-clean', owner: 'player', target: 'laundry', kind: 'cleanTake', total: 1.8, remaining: 1.8 });
+    const ns = taskIndicators(s), deposit = ns.find(n => n.id === 'laundryDirty')!, pickup = ns.find(n => n.id === 'laundryPickup')!;
+    expect(deposit.icon).toBe('dirty'); expect(deposit.x).toBe(DIRTY_DROP.x); expect(deposit.y).toBe(DIRTY_DROP.y);
+    expect(pickup.x).toBe(DIRTY_BASKET.x); expect(pickup.y).toBe(DIRTY_BASKET.y);
+    expect(Math.hypot(deposit.x - pickup.x, deposit.y - pickup.y)).toBeGreaterThan(1);
+    expect(ns.find(n => n.id === 'laundryClean')!.icon).toBe('towel'); expect(ns.find(n => n.id === 'laundryWash')!.state).toBe('working');
   });
   it('marks waiting guests only when check-in can use a ready room', () => {
     const s = initialResort(); s.guests.push({ id: 'g1', x: 19, y: 46, path: [], phase: 'queue', remaining: 0 });

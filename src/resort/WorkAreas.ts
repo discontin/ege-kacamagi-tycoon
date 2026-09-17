@@ -1,6 +1,11 @@
 import { staffRole } from './StaffHiring';
-import { DIRTY_BASKET, LAUNDRY_CLEAN_DROP, LAUNDRY_RIGHT_EDGE, ROOM_DEFS, TOWEL_RACK } from './data';
+import { DIRTY_BASKET, LAUNDRY_RIGHT_EDGE, ROOM_DEFS, TOWEL_RACK } from './data';
 import type { Area, Point } from './types';
+
+function besideShelf(p: Point, center: Point, halfWidth: number, halfDepth: number, reach: number) {
+  const dx = Math.abs(p.x - center.x) - halfWidth, dy = Math.abs(p.y - center.y) - halfDepth;
+  return !(dx < 0 && dy < 0) && Math.hypot(Math.max(0, dx), Math.max(0, dy)) <= reach;
+}
 
 /** Shared by automatic jobs, progress indicators and floor highlights. */
 export function workAreaContains(p: Point, a: Point | Area): boolean {
@@ -10,17 +15,21 @@ export function workAreaContains(p: Point, a: Point | Area): boolean {
     // Reach the guest from either side or end of the visible lounger.
     return Math.hypot(Math.max(0, Math.abs(p.x - a.x) - .7), Math.max(0, Math.abs(p.y - (a.y - .6)) - 1.2)) <= 1.1;
   }
+  if ('mode' in a && a.mode === 'work' && a.target === 'laundry' && ['machineLoad', 'machineUnload', 'discardItem'].includes(a.taskKind ?? '')) {
+    return Math.abs(p.x - a.x) <= .7 && Math.abs(p.y - a.y) <= .7;
+  }
   if ('mode' in a && !!staffRole(a.target)) return Math.abs(p.x - a.x) <= .85 && Math.abs(p.y - a.y) <= .85;
+  if ('mode' in a && a.mode === 'work' && a.taskKind === 'laundryDirtyTake') {
+    // Pick up from the shelf's right-hand approach side; deposits use the left
+    // side so a just-deposited bundle is not immediately picked back up.
+    return p.x > DIRTY_BASKET.x && besideShelf(p, DIRTY_BASKET, .6, .55, 1.35);
+  }
   if ('mode' in a && a.mode === 'work' && (a.taskKind === 'cleanTake' || a.taskKind === 'dirtyDrop')) {
-    // Keep the pickup side separate so standing still cannot undo a transfer.
-    if (a.taskKind === 'dirtyDrop' && Math.abs(p.x - (DIRTY_BASKET.x - 2)) <= .5 && Math.abs(p.y - DIRTY_BASKET.y) <= .5) return false;
-    if (a.taskKind === 'dirtyDrop' && Math.abs(p.x - Math.round(a.x + 1)) <= .2 && Math.abs(p.y - Math.round(a.y)) <= .2) return false;
-    if (a.taskKind === 'cleanTake' && Math.abs(p.x - LAUNDRY_CLEAN_DROP.x) <= .5 && Math.abs(p.y - LAUNDRY_CLEAN_DROP.y) <= .5) return false;
-    if (a.taskKind === 'cleanTake' && p.x >= LAUNDRY_RIGHT_EDGE) return false;
     const rack = a.taskKind === 'cleanTake', center = rack ? TOWEL_RACK : DIRTY_BASKET;
-    const dx = Math.abs(p.x - center.x) - (rack ? 1 : .6), dy = Math.abs(p.y - center.y) - (rack ? .5 : .55);
-    // Work within arm's reach of any edge, never from inside the shelf/basket itself.
-    return !(dx < 0 && dy < 0) && Math.hypot(Math.max(0, dx), Math.max(0, dy)) <= 1.1;
+    if (a.taskKind === 'cleanTake' && p.x >= LAUNDRY_RIGHT_EDGE) return false;
+    if (a.taskKind === 'dirtyDrop' && p.x > center.x) return false;
+    // Pick up or deposit from near the shelf; don't require a marked floor tile.
+    return besideShelf(p, center, rack ? 1 : .6, rack ? .5 : .55, rack ? 1.4 : 1.35);
   }
   if ('mode' in a && a.mode === 'work' && (a.taskKind === 'cleanRoom' || a.taskKind === 'restockRoom')) {
     const r = ROOM_DEFS.find(r => r.id === a.target);

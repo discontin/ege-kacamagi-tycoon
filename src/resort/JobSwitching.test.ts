@@ -28,11 +28,13 @@ describe('switching between field jobs', () => {
     expect(t.remaining).toBe(remaining); stand(s, 'room1Work'); advance(s, 5.1);
     expect(s.facility('room1').dirty).toBe(false);
   });
-  it('opens the pool with clean loungers and four towels split between seats and shelf', () => {
-    const s = setup(); s.state.xp = 100; s.state.money = 400; stand(s, 'poolBuy'); advance(s, 1.4);
+  it('opens the pool with four clean loungers and six towels split between seats and shelf', () => {
+    const s = setup(); s.state.xp = 280; s.state.money = 400;
+    for (const id of ['room2', 'room3', 'room4', 'room5', 'room6']) s.facility(id).open = true;
+    stand(s, 'poolBuy'); advance(s, 1.4);
     const seats = s.state.seats.filter(seat => seat.open);
-    expect(seats).toHaveLength(2); expect(seats.every(seat => !seat.dirty && seat.towel)).toBe(true);
-    expect(s.facility('pool').towels + seats.filter(seat => seat.towel).length).toBe(4);
+    expect(seats).toHaveLength(4); expect(seats.every(seat => !seat.dirty && seat.towel)).toBe(true);
+    expect(s.facility('pool').towels + seats.filter(seat => seat.towel).length).toBe(6);
     expect(s.areas.some(a => a.taskKind === 'restockSeat')).toBe(false);
   });
 });

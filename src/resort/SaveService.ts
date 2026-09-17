@@ -1,4 +1,4 @@
-import { initialResort, ROOM_DEFS, SEAT_DEFS } from './data';
+import { initialResort, machineCapacityForLevel, ROOM_DEFS, SEAT_DEFS } from './data';
 import type { ResortGameState } from './types';
 import { linenCount } from './Linen';
 export const RESORT_SAVE_KEY = 'ege-kacamagi-save-v1';
@@ -25,7 +25,7 @@ export function validResort(v: any): v is ResortGameState {
   if (v.guests.some((g: any) => ['toRoom', 'staying'].includes(g.phase) && (!g.room || !v.facilities.some((f: any) => f.id === g.room && f.open && f.guest === g.id)) || ['toSeat', 'swimming'].includes(g.phase) && (!g.seat || !v.seats.some((s: any) => s.id === g.seat && s.open && s.guest === g.id)))) return false;
   if (!Array.isArray(v.workers) || v.workers.length > 5 || !v.workers.every((w: any) => actor(w) && typeof w.name === 'string' && typeof w.status === 'string' && roles.includes(w.role) && level(w.level) && (w.moveLevel === undefined || level(w.moveLevel)) && (w.carryLevel === undefined || level(w.carryLevel)) && bag(w.bag) && linenCount(w.bag) <= 8 + 4 * ((w.carryLevel ?? 1) - 1))) return false;
   if (!v.laundry || !optionalCount(v.laundry.cleanSheets) || !optionalCount(v.laundry.dirtySheets) || ![undefined, 'sheet', 'towel'].includes(v.laundry.washingKind) || v.laundry.washingKind && v.laundry.remaining === null || !num(v.laundry.clean) || !num(v.laundry.dirty) || !(v.laundry.remaining === null || num(v.laundry.remaining))) return false;
-  if (!optionalCount(v.laundry.washingTowels) || !optionalCount(v.laundry.washingSheets) || (v.laundry.washingTowels ?? 0) + (v.laundry.washingSheets ?? 0) > 3 + 2 * (v.facilities.find((f: any) => f.id === 'laundry').level - 1) || v.laundry.remaining === null && ((v.laundry.washingTowels ?? 0) + (v.laundry.washingSheets ?? 0) > 0)) return false;
+  if (!optionalCount(v.laundry.washingTowels) || !optionalCount(v.laundry.washingSheets) || (v.laundry.washingTowels ?? 0) + (v.laundry.washingSheets ?? 0) > machineCapacityForLevel(v.facilities.find((f: any) => f.id === 'laundry').level) || v.laundry.remaining === null && ((v.laundry.washingTowels ?? 0) + (v.laundry.washingSheets ?? 0) > 0)) return false;
   const cap = [24, 36, 48][v.facilities.find((f: any) => f.id === 'laundry').level - 1];
   if (v.laundry.clean > cap || v.laundry.dirty + (v.laundry.dirtySheets ?? 0) > cap || (v.laundry.cleanSheets ?? 0) > cap || v.facilities.some((f: any) => f.kind === 'room' && f.towels > 1 || f.kind === 'pool' && f.towels > cap)) return false;
   const actors = [v.player, ...v.workers], ids = new Set(actors.map((a: any) => a.id)), guests = new Set(v.guests.map((g: any) => g.id));

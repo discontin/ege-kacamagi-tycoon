@@ -5,7 +5,7 @@ import { taskIndicators } from './TaskIndicators';
 import { workAreaContains } from './WorkAreas';
 
 const advance = (s: ResortSimulation, seconds: number) => { for (let i = 0; i < seconds * 10; i++) s.tick(.1); };
-const sides = [{ x: 1, y: 3 }, { x: 5, y: 3 }, { x: 3, y: 1 }, { x: 3, y: 5 }, { x: 5.2, y: 4.8 }];
+const sides = [{ x: 1, y: 3 }, { x: 5, y: 5 }, { x: 3, y: 1 }, { x: 3, y: 5 }, { x: 5.2, y: 4.8 }];
 
 describe('bedside work region', () => {
   it.each(sides)('automatically cleans from accessible bedside position %j in every bungalow', offset => {
