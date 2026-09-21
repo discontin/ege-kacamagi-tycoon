@@ -15,11 +15,11 @@ export const LAUNDRY_RIGHT_EDGE = 11.5;
 export const LAUNDRY_FRONT_EDGE = 51;
 // Keep the washer close to the left wall and face it toward the side entrance.
 // The shelves stay along the rear wall with a clear gap between them.
-export const LAUNDRY_MACHINE = { x: 3, y: 45 };
-export const LAUNDRY_MACHINE_AREA = { x: 4.2, y: 45 };
-export const TOWEL_RACK = { x: 9, y: 42.7 }, DIRTY_BASKET = { x: 5.5, y: 42.7 };
+export const LAUNDRY_MACHINE = { x: 2.8, y: 45 };
+export const LAUNDRY_MACHINE_AREA = { x: 4, y: 45 };
+export const TOWEL_RACK = { x: 9.5, y: 42.7 }, DIRTY_BASKET = { x: 5, y: 42.7 };
 export const LAUNDRY_TRASH = { x: 5.4, y: 49 };
-export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 4.3, y: 43.4 }, DIRTY_TAKE = { x: 6.6, y: 43.4 }, CLEAN_TAKE = { x: 10, y: 44 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
+export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 3.9, y: 43.4 }, DIRTY_TAKE = { x: 6.3, y: 43.4 }, CLEAN_TAKE = { x: 10, y: 44 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
 export const receptionQueuePoint = (index: number): Point => ({ x: RECEPTION.x, y: 46 + index });
 export const SEAT_DEFS = [24, 27, 30, 33].map((x, i) => ({ id: `seat${i + 1}`, x, y: 10 })).concat([{ id: 'seat5', x: 25.5, y: 13 }, { id: 'seat6', x: 31.5, y: 13 }]);
 export const poolSeatCount = (level: number) => level < 2 ? 4 : 6;

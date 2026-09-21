@@ -14,9 +14,11 @@ export function resortGoal(s: ResortGameState, testMode = false): ResortGoal {
   if (!s.stats.earned && cash) return goal('İlk kazancını topla', `${cash} para kasada! Para yığınına yaklaş.`, 'receptionCash');
   if ((s.facilities.find(f => f.id === 'pool')!.dirt ?? 0) >= 4) return goal('Havuzu yeniden aç', 'Kepçeyle yaprakları temizle; yeni misafirler bakım bitince kabul edilir.', 'poolClean');
   if (!s.stats.stays && !empty && !dirty) return goal('Misafirin dinleniyor', 'Konaklama ücretini girişte aldın; oda boşalınca bakımını yapabilirsin.', '');
+  // After collecting dirty linen from a room, put it on the dirty shelf before
+  // asking the player to collect fresh linen for that room.
+  if (dirtyLinenCount(s.player.bag)) return goal('Kirli çamaşırı bırak', 'Kirli havlu ve çarşafları önce kirli rafına bırak.', 'dirtyDrop');
   if (empty) return s.player.bag.clean && (!empty.needsSheet || (s.player.bag.cleanSheets ?? 0)) ? goal('Temiz çamaşırı bırak', 'Temiz çarşafı ser ve havluyu yenile; oda yeniden hazır olsun.', empty.id + 'Work') : goal('Temiz çamaşır getir', 'Raftan temiz havlu ve çarşaf al, odaya taşı.', 'cleanTake');
   if (dirty && (!s.stats.cleaned || !rooms.some(f => !f.dirty && !f.floorDirty && !f.guest && f.towels))) {
-    if (!testMode && linenCount(s.player.bag) + 2 > 8 && dirtyLinenCount(s.player.bag)) return goal('Çantanda yer aç', 'Kirli havluları çamaşırhaneye bırak.', 'dirtyDrop');
     return dirty.dirty ? goal('Yatağı toparla', 'Yatağın herhangi bir kenarında dur; çarşafı düzelt ve kirli havluyu al.', dirty.id + 'Work') : goal('Zemini süpür', 'Süpürge simgesinin altındaki alana yürü; yerdeki çöpleri temizle.', dirty.id + 'Floor');
   }
   if (!s.stats.washed) {
