@@ -15,8 +15,8 @@ describe('physical sheet laundry cycle', () => {
     stand(s, 'laundryDirtyTake'); advance(s, 2.8);
     for (let i = 0; i < 2; i++) { stand(s, 'machineLoad'); advance(s, 11); stand(s, 'machineUnload'); advance(s, .7); }
     expect(s.state.player.bag.dirtySheets).toBe(0); expect(s.state.laundry.cleanSheets).toBe(cleanSheets + 1); expect(s.state.stats.washed).toBe(2);
-    stand(s, 'cleanTake'); advance(s, 2); expect(s.state.player.bag.cleanSheets).toBe(2); expect(linenCount(s.state.player.bag)).toBe(3);
-    stand(s, 'room1Work'); advance(s, 3); expect(room.needsSheet).toBe(false); expect(s.state.player.bag.cleanSheets).toBe(1); expect(room.towels).toBe(1);
+    stand(s, 'cleanTake'); advance(s, 2); expect(s.state.player.bag.cleanSheets).toBe(1); expect(linenCount(s.state.player.bag)).toBe(2);
+    stand(s, 'room1Work'); advance(s, 3); expect(room.needsSheet).toBe(false); expect(s.state.player.bag.cleanSheets).toBe(0); expect(s.state.player.bag.clean).toBe(0); expect(room.towels).toBe(1);
   });
   it('takes longer to spread a clean sheet than to leave a towel', () => {
     const sheetSim = new ResortSimulation(), sheetRoom = sheetSim.facility('room1');

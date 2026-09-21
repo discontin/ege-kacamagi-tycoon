@@ -53,20 +53,20 @@ describe('visible laundry layout and carrying limits', () => {
     expect(s.state.tasks).toHaveLength(0);
   });
 
-  it('limits fresh sheets to two and towels to two even with infinite test stock', () => {
+  it('takes only one needed sheet while keeping the two-towel limit with infinite test stock', () => {
     const s = new ResortSimulation(initialResort(), true); s.facility('room1').dirty = true;
     Object.assign(s.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); advance(s, 20);
     expect(s.state.player.bag.clean).toBe(2);
-    expect(s.state.player.bag.cleanSheets).toBe(2);
-    expect(linenCount(s.state.player.bag)).toBe(4);
+    expect(s.state.player.bag.cleanSheets).toBe(1);
+    expect(linenCount(s.state.player.bag)).toBe(3);
     expect(s.state.tasks).toHaveLength(0);
   });
 
   it('counts dirty laundry toward the eight-piece test-mode bag capacity', () => {
     const s = new ResortSimulation(initialResort(), true); s.facility('room1').dirty = true;
-    Object.assign(s.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); s.state.player.bag.dirty = 6; advance(s, 20);
+    Object.assign(s.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); s.state.player.bag.dirty = 7; advance(s, 20);
     expect(linenCount(s.state.player.bag)).toBe(8);
-    expect(s.state.player.bag.cleanSheets).toBe(2);
+    expect(s.state.player.bag.cleanSheets).toBe(1);
     expect(s.state.player.bag.clean).toBe(0);
     expect(s.state.tasks).toHaveLength(0);
   });
