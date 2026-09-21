@@ -26,10 +26,11 @@ interface Character { root: T.Group; load: T.Group; broom: T.Group; tray: T.Grou
 const HIDDEN_RECEPTION_MARKERS = new Set(['receptionCash', 'receptionUpgrade']);
 const RECEPTION_VISUAL_X = RECEPTION.x - 1;
 const world = (p: Point) => new T.Vector3(p.x - 19, 0, p.y - 27);
-const purchaseIconSvg = (kind: 'bed' | 'pool' | 'lock') => {
+const purchaseIconSvg = (kind: 'bed' | 'pool' | 'bar' | 'lock') => {
   const paths = {
     bed: '<path d="M3 18v3m18-3v3M3 10V5h3m-3 5h18v8H3v-8Z"/><rect x="6" y="6" width="5" height="4" rx="1"/><rect x="12" y="6" width="5" height="4" rx="1"/>',
     pool: '<path d="M4 13V7h16v6M7 7V4m5 3V4m5 3V4M3 14c2 0 2 2 5 2s3-2 5-2 2 2 5 2 3-2 5-2M3 19c2 0 2 2 5 2s3-2 5-2 2 2 5 2 3-2 5-2"/>',
+    bar: '<path d="M6 7h12l-1 14H7L6 7Z"/><path d="M9 3h6m-3 4V3m4 4 3-3"/>',
     lock: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3m-5 4v3"/>',
   };
   return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths[kind]}</svg>`;
@@ -655,14 +656,16 @@ export class ResortWorld {
       p.label.classList.toggle('upgrade-marker', a.mode === 'upgrade');
       const roomPurchase = a.mode === 'buy' && a.target.startsWith('room');
       const poolPurchase = a.mode === 'buy' && a.target === 'pool';
-      p.label.classList.toggle('purchase-marker', roomPurchase || poolPurchase);
+      const barPurchase = a.mode === 'buy' && a.target === 'bar';
+      p.label.classList.toggle('purchase-marker', roomPurchase || poolPurchase || barPurchase);
       if (!!staffRole(a.target)) p.label.title = `${a.label} · ${this.sim.testMode ? 'Ücretsiz test' : this.sim.cost(a) + ' ₺'}`;
-      const purchasePrice = this.sim.testMode ? '∞' : roomPurchase || poolPurchase ? `${this.sim.cost(a).toLocaleString('tr-TR')} ₺` : '';
+      const purchasePrice = this.sim.testMode ? '∞' : roomPurchase || poolPurchase || barPurchase ? `${this.sim.cost(a).toLocaleString('tr-TR')} ₺` : '';
       const purchaseText = poolPurchase && poolGateLocked
         ? purchaseIconSvg('lock')
         : roomPurchase ? `${purchaseIconSvg('bed')}<span class="purchase-price">${purchasePrice}</span>`
-          : poolPurchase ? `${purchaseIconSvg('pool')}<span class="purchase-price">${purchasePrice}</span>` : '';
-      const text = a.id === 'office' ? `${officeDevelopmentIconSvg()}<span class="office-caption">Personel<br>geliştir</span>` : !!staffRole(a.target) ? `${staffIconSvg(staffRole(a.target)!)}<span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : roomPurchase || poolPurchase ? purchaseText : a.mode === 'buy' ? `${this.sim.level < this.sim.requiredLevel(a) && !this.sim.testMode ? '🔒' : '＋'} ${a.label}<small>Sv. ${this.sim.requiredLevel(a)} · ${this.sim.testMode ? 'ÜCRETSİZ' : this.sim.cost(a) + ' ₺'}</small>` : a.mode === 'upgrade' ? `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27V7m-7 8 7-8 7 8M7 27h18"/></svg><span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : a.mode === 'cash' ? `💵 ${(a.target === 'bar' ? s.bar! : this.sim.facility(a.target)).cash} ₺` : `${a.taskKind === 'cleanTake' ? '☀' : a.taskKind === 'dirtyDrop' ? '♺' : '▢'} ${a.label}${task ? '<small>' + Math.round(progress * 100) + '%</small>' : ''}`;
+          : poolPurchase ? `${purchaseIconSvg('pool')}<span class="purchase-price">${purchasePrice}</span>`
+            : barPurchase ? `${purchaseIconSvg('bar')}<span class="purchase-price">${purchasePrice}</span>` : '';
+      const text = a.id === 'office' ? `${officeDevelopmentIconSvg()}<span class="office-caption">Personel<br>geliştir</span>` : !!staffRole(a.target) ? `${staffIconSvg(staffRole(a.target)!)}<span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : roomPurchase || poolPurchase || barPurchase ? purchaseText : a.mode === 'buy' ? `${this.sim.level < this.sim.requiredLevel(a) && !this.sim.testMode ? '🔒' : '＋'} ${a.label}<small>Sv. ${this.sim.requiredLevel(a)} · ${this.sim.testMode ? 'ÜCRETSİZ' : this.sim.cost(a) + ' ₺'}</small>` : a.mode === 'upgrade' ? `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27V7m-7 8 7-8 7 8M7 27h18"/></svg><span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : a.mode === 'cash' ? `💵 ${(a.target === 'bar' ? s.bar! : this.sim.facility(a.target)).cash} ₺` : `${a.taskKind === 'cleanTake' ? '☀' : a.taskKind === 'dirtyDrop' ? '♺' : '▢'} ${a.label}${task ? '<small>' + Math.round(progress * 100) + '%</small>' : ''}`;
       const purchaseProgress = this.sim.purchaseProgress(a);
       const labelText = text + (purchaseProgress === undefined ? '' : '<span class="purchase-progress" aria-hidden="true"></span>');
       if (p.label.innerHTML !== labelText) p.label.innerHTML = labelText;
