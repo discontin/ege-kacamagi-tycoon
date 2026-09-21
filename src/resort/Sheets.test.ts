@@ -6,14 +6,14 @@ const advance = (s: ResortSimulation, seconds: number) => { for (let i = 0; i < 
 const stand = (s: ResortSimulation, id: string) => { const a = s.area(id)!; Object.assign(s.state.player, { x: a.x, y: a.y, path: [] }); };
 
 describe('physical sheet laundry cycle', () => {
-  it('collects dirty sheet and towel, washes both, and consumes a clean sheet when remaking the bed', () => {
+  it('collects one dirty sheet, washes it, and consumes a clean sheet when remaking the bed', () => {
     const s = new ResortSimulation(), room = s.facility('room1'); room.dirty = true; room.towels = 0;
     stand(s, 'room1Work'); advance(s, 6.2);
-    expect(s.state.player.bag.dirtySheets).toBe(1); expect(s.state.player.bag.dirty).toBe(1); expect(room.needsSheet).toBe(true); expect(linenCount(s.state.player.bag)).toBe(2);
+    expect(s.state.player.bag.dirtySheets).toBe(1); expect(s.state.player.bag.dirty).toBe(0); expect(room.needsSheet).toBe(true); expect(linenCount(s.state.player.bag)).toBe(1);
     const cleanSheets = s.state.laundry.cleanSheets!; stand(s, 'dirtyDrop'); advance(s, 9);
     expect(s.state.laundry.remaining).toBeNull(); expect(s.state.stats.washed).toBe(0);
     stand(s, 'laundryDirtyTake'); advance(s, 2.8);
-    for (let i = 0; i < 2; i++) { stand(s, 'machineLoad'); advance(s, 11); stand(s, 'machineUnload'); advance(s, .7); }
+    stand(s, 'machineLoad'); advance(s, 11); stand(s, 'machineUnload'); advance(s, .7);
     expect(s.state.player.bag.dirtySheets).toBe(0); expect(s.state.laundry.cleanSheets).toBe(cleanSheets + 1); expect(s.state.stats.washed).toBe(2);
     stand(s, 'cleanTake'); advance(s, 2); expect(s.state.player.bag.cleanSheets).toBe(1); expect(linenCount(s.state.player.bag)).toBe(2);
     stand(s, 'room1Work'); advance(s, 3); expect(room.needsSheet).toBe(false); expect(s.state.player.bag.cleanSheets).toBe(0); expect(s.state.player.bag.clean).toBe(0); expect(room.towels).toBe(1);
@@ -42,7 +42,7 @@ describe('physical sheet laundry cycle', () => {
     const s = new ResortSimulation(), l = s.state.laundry; l.cleanSheets = 23; s.state.player.bag.dirtySheets = 1; stand(s, 'machineLoad'); advance(s, .7);
     expect(l.washingKind).toBe('sheet'); Object.assign(s.state.player, { x: 19, y: 48 }); l.cleanSheets = 24; advance(s, 11); expect(l.remaining).toBe(0); expect(l.cleanSheets).toBe(24);
     stand(s, 'machineUnload'); advance(s, .7); expect(s.state.player.bag.cleanSheets ?? 0).toBe(0); expect(l.cleanSheets).toBe(24);
-    l.cleanSheets = 23; advance(s, .7); expect(l.cleanSheets).toBe(24); expect(l.remaining).toBeNull(); expect(s.state.stats.washed).toBe(1);
+    l.cleanSheets = 23; advance(s, .7); expect(l.cleanSheets).toBe(24); expect(l.clean).toBe(9); expect(l.remaining).toBeNull(); expect(s.state.stats.washed).toBe(2);
   });
   it('respects shared dirty-basket capacity when depositing mixed linen', () => {
     const s = new ResortSimulation(); s.state.laundry.dirty = 23; s.state.laundry.clean = 24; s.state.laundry.cleanSheets = 24;

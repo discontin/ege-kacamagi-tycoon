@@ -22,8 +22,8 @@ describe('staffed laundry and pool delivery', () => {
       carriedDirty ||= w.bag.dirty > 0 || (w.bag.dirtySheets ?? 0) > 0;
     }
     expect(carriedDirty).toBe(true);
-    expect(s.state.laundry.clean).toBe(9); expect(s.state.laundry.cleanSheets).toBe(9);
-    expect(s.state.stats.washed).toBe(2); expect(s.state.workers[0].bag.clean).toBe(0); expect(s.state.workers[0].carryingWashed).toBeFalsy();
+    expect(s.state.laundry.clean).toBe(10); expect(s.state.laundry.cleanSheets).toBe(9);
+    expect(s.state.stats.washed).toBe(3); expect(s.state.workers[0].bag.clean).toBe(0); expect(s.state.workers[0].carryingWashed).toBeFalsy();
     s.state.spawnTimer = 0; expect(validResort(s.state)).toBe(true);
   });
   it('collects pool dirty towels and supplies its clean shelf', () => {

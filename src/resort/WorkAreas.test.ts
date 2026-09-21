@@ -13,7 +13,7 @@ describe('bedside work region', () => {
       const s = new ResortSimulation(initialResort(true), true), f = s.facility(r.id); f.dirty = true; f.towels = 0;
       Object.assign(s.state.player, { x: r.x + offset.x, y: r.y + offset.y });
       expect(s.isWalkable(Math.round(s.state.player.x), Math.round(s.state.player.y))).toBe(true);
-      advance(s, 6.2); expect(f.dirty).toBe(false); expect(s.state.stats.cleaned).toBe(1); expect(s.state.player.bag.dirty).toBe(1);
+      advance(s, 6.2); expect(f.dirty).toBe(false); expect(s.state.stats.cleaned).toBe(1); expect(s.state.player.bag.dirty).toBe(0); expect(s.state.player.bag.dirtySheets).toBe(1);
     }
   });
   it('continues the same job and indicator on another side, pauses outside and resumes after load', () => {

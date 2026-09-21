@@ -45,7 +45,7 @@ describe('staff upgrade office', () => {
     expect(w.bag.dirty).toBe(3);
     s.state.settings.paused = true; s.upgradeWorker(w.id); expect(w.level).toBe(1);
   });
-  it('sends an overloaded room cleaner to discard only one item per trip until room-care space is free', () => {
+  it('sends an overloaded room cleaner to discard one item before the one-piece room-care pickup', () => {
     const s = new ResortSimulation(); s.hire('rooms'); const cleaner = s.state.workers[0];
     const trash = s.area('laundryTrash')!; s.facility('room1').dirty = true; s.facility('room1').towels = 0;
     cleaner.bag.dirtySheets = carryingCapacity(cleaner); s.state.laundry.dirty = 24;
@@ -55,6 +55,7 @@ describe('staff upgrade office', () => {
     for (let i = 0; i < 16; i++) s.tick(.1);
     expect(cleaner.bag.dirtySheets).toBe(carryingCapacity(cleaner) - 1);
     for (let i = 0; i < 16; i++) s.tick(.1);
-    expect(cleaner.bag.dirtySheets).toBe(carryingCapacity(cleaner) - 2);
+    expect(cleaner.bag.dirtySheets).toBe(carryingCapacity(cleaner) - 1);
+    expect(s.state.tasks.find(t => t.owner === cleaner.id)?.kind).not.toBe('discardItem');
   });
 });

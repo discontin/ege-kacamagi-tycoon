@@ -15,7 +15,7 @@ describe('machine batches and towel limits', () => {
     expect(s.state.laundry.remaining).toBe(0); expect(s.state.laundry.clean).toBe(8); expect(validResort(s.state)).toBe(true);
     Object.assign(s.state.player, { ...LAUNDRY_MACHINE_AREA }); advance(s,2.1);
     expect(s.state.player.bag.clean).toBe(0); expect(s.state.player.bag.cleanSheets ?? 0).toBe(0);
-    expect(s.state.laundry.clean).toBe(11); expect(s.state.laundry.cleanSheets).toBe(10); expect(s.state.stats.washed).toBe(5);
+    expect(s.state.laundry.clean).toBe(13); expect(s.state.laundry.cleanSheets).toBe(10); expect(s.state.stats.washed).toBe(7);
     expect(s.state.laundry.remaining).toBeNull();
   });
   it('moves machine capacity upgrades into the office', () => {

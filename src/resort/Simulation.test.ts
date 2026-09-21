@@ -23,10 +23,10 @@ describe('resort guest and towel cycle', () => {
     advance(s, 100); expect(s.state.stats.stays).toBe(1); expect(s.facility('room1').dirty).toBe(true); expect(s.facility('reception').cash).toBe(40); expect(s.state.money).toBe(0);
     stand(s, 'receptionCash'); s.tick(.1); expect(s.state.money).toBe(40); expect(s.facility('reception').cash).toBe(0);
   });
-  it('cleans, physically carries a dirty towel, washes it and restocks a room', () => {
+  it('cleans, carries one dirty sheet, washes it and restocks a room', () => {
     const s = new ResortSimulation(), r = s.facility('room1'); r.dirty = true; r.towels = 0;
-    stand(s, 'room1Work'); advance(s, 6.2); expect(r.dirty).toBe(false); expect(s.state.player.bag.dirty).toBe(1); expect(r.towels).toBe(0);
-    stand(s, 'dirtyDrop'); advance(s, 5.5); expect(s.state.player.bag.dirty).toBe(0); expect(s.state.stats.washed).toBe(0);
+    stand(s, 'room1Work'); advance(s, 6.2); expect(r.dirty).toBe(false); expect(s.state.player.bag.dirty).toBe(0); expect(s.state.player.bag.dirtySheets).toBe(1); expect(r.towels).toBe(0);
+    stand(s, 'dirtyDrop'); advance(s, 5.5); expect(s.state.player.bag.dirtySheets).toBe(0); expect(s.state.stats.washed).toBe(0);
     stand(s, 'laundryDirtyTake'); advance(s, 2.8); stand(s, 'machineLoad'); advance(s, 11); stand(s, 'machineUnload'); advance(s, 1.4);
     expect(s.state.stats.washed).toBe(2); expect(s.state.laundry.clean).toBe(9); expect(s.state.laundry.cleanSheets).toBe(9);
     stand(s, 'cleanTake'); advance(s, 2); expect(s.state.player.bag.clean).toBe(1); expect(s.state.laundry.clean).toBe(8);
@@ -113,7 +113,7 @@ describe('workers, reservations and time', () => {
     const s = new ResortSimulation(); s.state.xp = 280; s.state.money = 10000; s.state.facilities.forEach(f => f.open = true); s.facility('pool').towels = 4; s.state.seats.forEach(seat => seat.open = true);
     for (const role of ['reception', 'rooms', 'pool', 'hauling'] as const) { s.hire(); s.assign(s.state.workers.at(-1)!.id, role); }
     advance(s, 600); expect(s.state.stats.stays).toBeGreaterThan(5); expect(s.state.stats.poolVisits).toBeGreaterThan(2); expect(s.state.stats.washed).toBeGreaterThan(5); expect(validResort(s.state)).toBe(true);
-    const towels = s.state.laundry.clean + s.state.laundry.dirty + (s.state.laundry.washingTowels ?? 0) + s.state.player.bag.clean + s.state.player.bag.dirty + s.state.workers.reduce((n, w) => n + w.bag.clean + w.bag.dirty, 0) + s.state.facilities.filter(f => f.kind === 'room').reduce((n, f) => n + f.towels + Number(f.dirty) + Number(!!f.guest && s.state.guests.some(g => g.id === f.guest && ['toRoom', 'staying'].includes(g.phase))), 0) + s.facility('pool').towels + (s.facility('pool').dirtyTowels ?? 0) + s.state.seats.filter(seat => seat.towel).length + s.state.seats.reduce((n, seat) => n + Number(seat.dirty) + Number(!!seat.guest && s.state.guests.some(g => g.id === seat.guest && ['toSeat', 'swimming'].includes(g.phase))), 0);
+    const towels = s.state.laundry.clean + s.state.laundry.dirty + (s.state.laundry.dirtySheets ?? 0) + (s.state.laundry.washingTowels ?? 0) + (s.state.laundry.washingSheets ?? 0) + s.state.player.bag.clean + s.state.player.bag.dirty + (s.state.player.bag.dirtySheets ?? 0) + s.state.workers.reduce((n, w) => n + w.bag.clean + w.bag.dirty + (w.bag.dirtySheets ?? 0), 0) + s.state.facilities.filter(f => f.kind === 'room').reduce((n, f) => n + f.towels + Number(f.dirty) + Number(!!f.guest && s.state.guests.some(g => g.id === f.guest && ['toRoom', 'staying'].includes(g.phase))), 0) + s.facility('pool').towels + (s.facility('pool').dirtyTowels ?? 0) + s.state.seats.filter(seat => seat.towel).length + s.state.seats.reduce((n, seat) => n + Number(seat.dirty) + Number(!!seat.guest && s.state.guests.some(g => g.id === seat.guest && ['toSeat', 'swimming'].includes(g.phase))), 0);
     expect(towels).toBe(18);
   });
   it('lets a worker carry, clean and restock without teleporting towels', () => {

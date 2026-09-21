@@ -16,7 +16,7 @@ describe('separate room maintenance jobs', () => {
     s.state.player.bag.clean = 1; s.state.player.bag.cleanSheets = 1; advance(s, 3); expect(f.towels).toBe(1);
     s.state.guests.push({ id: 'guest1', ...receptionQueuePoint(0), path: [], phase: 'queue', remaining: 0 });
     stand(s, 'checkin'); advance(s, 3.2); expect(s.state.stats.welcomed).toBe(0);
-    stand(s, 'room1Floor'); advance(s, 4.2); expect(f.floorDirty).toBe(false); expect(s.state.player.bag.dirty).toBe(1);
+    stand(s, 'room1Floor'); advance(s, 4.2); expect(f.floorDirty).toBe(false); expect(s.state.player.bag.dirty).toBe(0); expect(s.state.player.bag.dirtySheets).toBe(1);
     stand(s, 'checkin'); advance(s, 3.2); expect(s.state.stats.welcomed).toBe(1);
   });
   it('checkout creates both jobs; a worker completes them and delivers towels', () => {

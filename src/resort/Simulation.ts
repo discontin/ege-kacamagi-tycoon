@@ -259,7 +259,7 @@ export class ResortSimulation {
       case 'prepareDrink': return !this.state.bar?.open ? 'Bar kapalı' : actor.drink ? 'Elindeki siparişi teslim et' : !this.state.guests.some(g => wantsDrink(g) && !this.state.tasks.some(t => t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink'))) ? 'Sipariş bekleniyor' : null;
       case 'deliverDrink': { const g = this.state.guests.find(g => `drink:${g.id}` === a.target); return !actor.drink ? 'Bardan siparişi al' : !g || (actor.heldProduct ?? 'lemonade') !== (g.orderProduct ?? 'lemonade') || !wantsDrink(g) || this.state.tasks.some(t => t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink')) ? 'Sipariş başka birine ait veya bitmiş' : null; }
       case 'checkin': return !this.state.guests.some(g => g.phase === 'queue') ? 'Misafir bekleniyor' : !serviceGuestReady(this.state, 'checkin') ? 'Misafirin bankoya gelmesi bekleniyor' : !this.availableRoom() ? 'Hazır oda yok · temizle ve havlu bırak' : null;
-      case 'cleanRoom': return actor.bag.clean + actor.bag.dirty >= this.actorTowelLimit(actor) || bagCount(actor) + 2 > this.actorCapacity(actor) ? 'Çanta dolu. Yatağı temizlemek için önce elindekileri bırak.' : null;
+      case 'cleanRoom': return bagCount(actor) + 1 > this.actorCapacity(actor) ? 'Çanta dolu. Yatağı temizlemek için önce elindekileri bırak.' : null;
       case 'cleanFloor': return !room!.floorDirty ? 'Zemin temiz' : null;
       case 'cleanBathroom': return !room!.bathroomDirty ? 'Banyo temiz' : null;
       case 'restockRoom': return room!.towels > 0 && !room!.needsSheet ? 'Oda hazır' : room!.needsSheet && !(actor.bag.cleanSheets ?? 0) && room!.towels > 0 ? 'Raftan temiz çarşaf getir' : room!.towels === 0 && actor.bag.clean <= 0 ? 'Çamaşırhaneden temiz havlu getir' : null;
@@ -324,7 +324,7 @@ export class ResortSimulation {
       case 'checkin': {
         if (!g) break; const r = this.facility(t.destination!); r.towels--; this.facility('reception').cash += Math.round(40 * incomeFactor(r.level)); g.room = r.id; g.phase = 'toRoom'; g.queueWait = 0; g.path = this.path(g, ROOM_WORK(ROOM_DEFS.find(d => d.id === r.id)!)); this.state.stats.welcomed++; this.notify('Misafir karşılandı! Bungalovuna gidiyor.'); break;
       }
-      case 'cleanRoom': { const r = this.facility(t.target); if (actor.bag.clean + actor.bag.dirty >= this.actorTowelLimit(actor) || bagCount(actor) + 2 > this.actorCapacity(actor)) return; r.dirty = false; r.needsSheet = true; actor.bag.dirty++; actor.bag.dirtySheets = (actor.bag.dirtySheets ?? 0) + 1; this.state.stats.cleaned++; this.earnXp(5); this.notify('Kirli çarşaf ve havlu çantana alındı. Sepete götür, temiz çarşafı geri getir.'); break; }
+      case 'cleanRoom': { const r = this.facility(t.target); if (bagCount(actor) + 1 > this.actorCapacity(actor)) return; r.dirty = false; r.needsSheet = true; actor.bag.dirtySheets = (actor.bag.dirtySheets ?? 0) + 1; this.state.stats.cleaned++; this.earnXp(5); this.notify('Yataktan bir kirli çarşaf aldın. Sepete götür, temiz çarşafı geri getir.'); break; }
       case 'cleanFloor': { this.facility(t.target).floorDirty = false; break; }
       case 'cleanBathroom': { this.facility(t.target).bathroomDirty = false; this.earnXp(3); break; }
       case 'restockRoom': { const r = this.facility(t.target), canSheet = !!r.needsSheet && !!(actor.bag.cleanSheets ?? 0), canTowel = r.towels === 0 && actor.bag.clean > 0; if (!canSheet && !canTowel) return; if (canSheet) { actor.bag.cleanSheets!--; r.needsSheet = false; } if (canTowel) { r.towels = 1; actor.bag.clean--; } break; }
@@ -366,12 +366,16 @@ export class ResortSimulation {
         const l = this.state.laundry;
         if (l.remaining !== 0) { this.cancelTask(t.id); return; }
         const towels = l.washingTowels ?? 0, sheets = l.washingSheets ?? 0;
-        const cleanTowels = Math.min(towels, this.testMode ? towels : Math.max(0, this.shelfCapacity - l.clean));
-        const cleanSheets = Math.min(sheets, this.testMode ? sheets : Math.max(0, this.shelfCapacity - (l.cleanSheets ?? 0)));
+        const towelSpace = this.testMode ? towels + sheets : Math.max(0, this.shelfCapacity - l.clean);
+        const cleanTowels = Math.min(towels, towelSpace);
+        // One dirty room-linen bundle represents the sheet and towel removed
+        // from a bed. It travels as one carried item, then restores both clean
+        // stocks after washing so the resort never leaks linen over time.
+        const cleanSheets = Math.min(sheets, this.testMode ? sheets : Math.max(0, this.shelfCapacity - (l.cleanSheets ?? 0)), towelSpace - cleanTowels);
         if (!cleanTowels && !cleanSheets) { this.cancelTask(t.id); return; }
         l.washingTowels = towels - cleanTowels; l.washingSheets = sheets - cleanSheets;
-        if (!this.testMode) { l.clean += cleanTowels; l.cleanSheets = (l.cleanSheets ?? 0) + cleanSheets; }
-        this.state.stats.washed += cleanTowels + cleanSheets;
+        if (!this.testMode) { l.clean += cleanTowels + cleanSheets; l.cleanSheets = (l.cleanSheets ?? 0) + cleanSheets; }
+        this.state.stats.washed += cleanTowels + cleanSheets * 2;
         if (!(l.washingTowels || l.washingSheets)) { l.remaining = null; l.washingKind = undefined; }
         else { l.remaining = 0; l.washingKind = l.washingTowels ? 'towel' : 'sheet'; }
         break;
