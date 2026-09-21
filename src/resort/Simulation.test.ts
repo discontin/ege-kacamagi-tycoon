@@ -122,9 +122,10 @@ describe('workers, reservations and time', () => {
     const s = new ResortSimulation(); s.state.xp = 20; s.state.money = 1000; s.hire(); s.hire('hauling'); const r = s.facility('room1'); r.dirty = true; r.towels = 0; advance(s, 160);
     expect(r.dirty).toBe(false); expect(r.needsSheet).toBe(false); expect(r.towels).toBe(1); expect(s.state.stats.cleaned).toBe(1); expect(s.state.stats.washed).toBe(2); expect(s.state.workers[0].x).not.toBe(18);
   });
-  it('prevents two actors from claiming the same job and releases a cancelled reservation', () => {
+  it('lets the player take over a cleaner reservation and releases it normally', () => {
     const s = new ResortSimulation(); s.state.xp = 20; s.hire(); s.facility('room1').dirty = true; const a = s.area('room1Work')!;
-    expect(s.startTask(a, s.state.workers[0].id)).toBe(true); stand(s, 'room1Work'); expect(s.startTask(a)).toBe(false); s.cancelTask(s.state.workers[0].task!); expect(s.startTask(a)).toBe(true);
+    expect(s.startTask(a, s.state.workers[0].id)).toBe(true); stand(s, 'room1Work'); expect(s.startTask(a)).toBe(true);
+    expect(s.state.workers[0].task).toBeUndefined(); s.cancelTask(s.state.player.task!); expect(s.startTask(a)).toBe(true);
   });
   it('reserves a customer and room exclusively during check-in', () => { const s = new ResortSimulation(); guest(s); stand(s, 'checkin'); s.startTask(s.area('checkin')!); expect(s.facility('room1').guest).toBeDefined(); expect(s.facility('reception').cash).toBe(0); s.cancelTask(s.state.player.task!); expect(s.facility('room1').guest).toBeUndefined(); expect(s.state.guests[0].phase).toBe('queue'); });
   it('pauses all clocks, applies 2x and does not stack boosts', () => {

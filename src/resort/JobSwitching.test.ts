@@ -6,6 +6,25 @@ const stand = (s: ResortSimulation, id: string) => Object.assign(s.state.player,
 const setup = () => { const s = new ResortSimulation(); s.state.spawnTimer = -1000; return s; };
 
 describe('switching between field jobs', () => {
+  it('lets the player take a cleaning task away from an assigned cleaner', () => {
+    const s = setup(); s.hire('rooms'); const worker = s.state.workers[0];
+    s.facility('room1').dirty = true;
+    expect(s.startTask(s.area('room1Work')!, worker.id)).toBe(true);
+    stand(s, 'room1Work'); s.tick(.1);
+    expect(s.state.player.task).toBeDefined();
+    expect(worker.task).toBeUndefined();
+    expect(s.state.tasks.filter(t => t.target === 'room1')).toHaveLength(1);
+    expect(s.state.tasks.find(t => t.target === 'room1')?.owner).toBe('player');
+  });
+
+  it('sends the cleaner to another room after the player takes over', () => {
+    const s = setup(); s.hire('rooms'); const worker = s.state.workers[0];
+    s.facility('room1').dirty = true; s.facility('room2').open = true; s.facility('room2').dirty = true;
+    expect(s.startTask(s.area('room1Work')!, worker.id)).toBe(true);
+    stand(s, 'room1Work'); s.tick(.1);
+    expect(s.state.tasks.find(t => t.owner === worker.id)?.target).toBe('room2');
+  });
+
   it('lets a paused floor task yield to bedside cleaning', () => {
     const s = setup(); const room = s.facility('room1'); room.dirty = true; room.floorDirty = true;
     stand(s, 'room1Floor'); advance(s, .5); const old = s.state.player.task;

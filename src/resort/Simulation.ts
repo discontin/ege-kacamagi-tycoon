@@ -21,6 +21,9 @@ const ROOM_CLEANER_PATROL: Point[] = [
   { x: 15, y: 39 }, { x: 21, y: 39 }, { x: 21, y: 29 },
   { x: 15, y: 29 }, { x: 15, y: 19 }, { x: 21, y: 19 },
 ];
+const PLAYER_TAKEOVER_TASKS: TaskKind[] = [
+  'cleanRoom', 'cleanFloor', 'cleanBathroom', 'restockRoom', 'cleanSeat', 'cleanPool',
+];
 export class ResortSimulation {
   /** Transient presentation events; never persisted or replayed after loading. */
   feedback: { kind: 'cash' | 'clean' | 'towel' | 'build' | 'level' | 'welcome' | 'wash'; x: number; y: number; text: string }[] = [];
@@ -257,7 +260,10 @@ export class ResortSimulation {
   private availableSeat() { return this.state.seats.filter(s => s.open && !s.dirty && !s.guest && !this.state.tasks.some(t => t.target === s.id)).sort((a, b) => Number(!!b.towel) - Number(!!a.towel))[0]; }
   private reason(a: Area, actor: PlayerState | WorkerState): string | null {
     if (a.mode !== 'work' || !a.taskKind) return 'Çalışma alanı değil';
-    if (this.state.tasks.some(t => t.owner !== actor.id && t.target === a.target && (a.target !== 'laundry' || t.kind === a.taskKind))) return 'Bu iş başka birine ait';
+    const canPlayerTakeOver = actor.id === 'player' && PLAYER_TAKEOVER_TASKS.includes(a.taskKind);
+    const conflict = this.state.tasks.some(t => t.owner !== actor.id && t.target === a.target && (a.target !== 'laundry' || t.kind === a.taskKind));
+    const onlyCleaningConflicts = this.state.tasks.filter(t => t.owner !== actor.id && t.target === a.target).every(t => PLAYER_TAKEOVER_TASKS.includes(t.kind));
+    if (!canPlayerTakeOver || !onlyCleaningConflicts) if (conflict) return 'Bu iş başka birine ait';
     const room = a.target.startsWith('room') ? this.facility(a.target) : undefined;
     if (room?.guest) return 'Misafir odada · konaklaması bekleniyor';
     switch (a.taskKind) {
@@ -298,8 +304,12 @@ export class ResortSimulation {
     }
   }
   startTask(a: Area, owner = 'player'): boolean {
-    const actor = this.actor(owner); if (!actor || actor.task || !a.taskKind || this.reason(a, actor)) return false;
+    const actor = this.actor(owner); if (!actor || actor.task || !a.taskKind) return false;
     if (owner === 'player' && (!this.inside(actor, a) || actor.path.length)) return false;
+    if (owner === 'player' && PLAYER_TAKEOVER_TASKS.includes(a.taskKind)) {
+      for (const task of this.state.tasks.filter(t => t.owner !== owner && t.target === a.target && PLAYER_TAKEOVER_TASKS.includes(t.kind))) this.cancelTask(task.id);
+    }
+    if (this.reason(a, actor)) return false;
     const seconds: Record<TaskKind, number> = { checkin: 3, cleanRoom: 6, cleanFloor: 4, cleanBathroom: 5, restockRoom: .6, dirtyDrop: .6, cleanTake: 5, poolCheckin: 3, cleanSeat: 4, poolStock: .6, cleanPool: 8, prepareDrink: 3, deliverDrink: 1, poolDirtyDrop: .6, poolDirtyTake: .6, poolCleanTake: .6, restockSeat: 1, laundryDirtyTake: 1.2, machineLoad: .6, machineUnload: .6, laundryCleanDrop: .6, discardItem: 1 };
     const f = this.facility(a.target.startsWith('seat') || a.target.startsWith('drink:') || a.target === 'bar' || a.target === 'poolDirty' || a.target === 'poolClean' ? 'pool' : a.target);
     const makingBed = a.taskKind === 'restockRoom' && f.needsSheet && (actor.bag.cleanSheets ?? 0) > 0;

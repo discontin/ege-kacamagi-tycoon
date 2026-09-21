@@ -63,6 +63,7 @@ describe('bedside work region', () => {
     const messageId = s.messageId; advance(s, 1); expect(s.messageId).toBe(messageId);
     s.state.player.bag = { clean: 0, dirty: 0 }; s.state.xp = 20; s.hire();
     expect(s.startTask(s.area('room1Work')!, s.state.workers[0].id)).toBe(true);
-    expect(s.startTask(s.area('room1Work')!)).toBe(false);
+    expect(s.startTask(s.area('room1Work')!)).toBe(true);
+    expect(s.state.workers[0].task).toBeUndefined();
   });
 });
