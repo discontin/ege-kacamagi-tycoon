@@ -7,7 +7,7 @@ import { staffIconSvg, staffRole } from './StaffHiring';
 import * as T from 'three';
 import { AssetLibrary, type AssetInstance } from '../game/AssetLibrary';
 import type { AssetKey } from '../game/assetCatalog';
-import { HEIGHT, LAUNDRY_FRONT_EDGE, LAUNDRY_ORIGIN, LAUNDRY_TRASH, MAP_MAX_X, MAP_MIN_X, RECEPTION, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, DIRTY_BASKET, TOWEL_RACK, WIDTH } from './data';
+import { HEIGHT, LAUNDRY_FRONT_EDGE, LAUNDRY_ORIGIN, LAUNDRY_TRASH_PROP, MAP_MAX_X, MAP_MIN_X, RECEPTION, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, DIRTY_BASKET, DIRTY_HAMPER, TOWEL_RACK, WIDTH } from './data';
 import { ResortSimulation } from './Simulation';
 import type { Actor, Area, Point, Towels } from './types';
 import { taskIndicators, taskIconSvg, type TaskIndicator } from './TaskIndicators';
@@ -357,7 +357,10 @@ export class ResortWorld {
     this.stockModels.set('laundryClean', rack.towels.slice(0, 8)); this.stockModels.set('laundryDirty', dirty);
     rack.towels.slice(8).forEach(towel => towel.visible = false);
     const sheets: T.Mesh[] = []; for (let i = 0; i < 4; i++) { const sheet = this.box(rack.root, 0xfff2dc, i % 2 ? .46 : -.46, 1.75 + Math.floor(i / 2) * .13, 0, .85, .12, .76); this.box(sheet, 0x73c4d1, 0, 0, .39, .8, .04, .01); sheets.push(sheet); } this.stockModels.set('laundrySheets', sheets);
-    this.prop(g, 'bin', LAUNDRY_TRASH.x - LAUNDRY_ORIGIN.x, .2, LAUNDRY_TRASH.y - LAUNDRY_ORIGIN.y, { height: 1.2 });
+    const hamper = this.prop(g, 'laundryHamper', DIRTY_HAMPER.x - LAUNDRY_ORIGIN.x, .2, DIRTY_HAMPER.y - LAUNDRY_ORIGIN.y, { height: 1.15 }, Math.PI / 2);
+    const hamperOpen = hamper?.clips.find(clip => clip.name === 'open');
+    if (hamper && hamperOpen) { const mixer = new T.AnimationMixer(hamper.model); mixer.clipAction(hamperOpen).play(); mixer.update(hamperOpen.duration); }
+    this.prop(g, 'bin', LAUNDRY_TRASH_PROP.x - LAUNDRY_ORIGIN.x, .2, LAUNDRY_TRASH_PROP.y - LAUNDRY_ORIGIN.y, { height: 1.2 }, -Math.PI / 2);
   }
   private setupWasherDoor(appliance: AssetInstance) {
     const clips = appliance.clips.map(clip => new T.AnimationClip(clip.name, clip.duration, clip.tracks.filter(track => /door-(?:drum|washer)\.quaternion$/.test(track.name)))).filter(clip => clip.tracks.length);

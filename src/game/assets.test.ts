@@ -19,7 +19,7 @@ function metadata(key: AssetKey): GlbMetadata {
 
 describe('shipped CC0 assets', () => {
   it('ships every catalog entry as a valid local GLB, including referenced textures', () => {
-    expect(keys).toHaveLength(79);
+    expect(keys).toHaveLength(80);
     for (const key of keys) {
       const json = metadata(key);
       expect(json.asset.version).toBe('2.0');
@@ -70,6 +70,10 @@ describe('shipped CC0 assets', () => {
     expect(doorPieces).toHaveLength(4);
     expect(doorPieces?.some(node => (node.translation?.[0] ?? 0) < -.25)).toBe(true);
   });
+  it('ships an animated laundry hamper that can be displayed open', () => {
+    const json = metadata('laundryHamper');
+    expect(json.animations?.map(a => a.name)).toContain('open');
+  });
 });
 
 function fixture(): GLTF {
@@ -89,8 +93,8 @@ describe('model loading and instance isolation', () => {
     vi.stubGlobal('document', { baseURI: 'http://localhost:5173/' });
     const source = fixture(); vi.spyOn(GLTFLoader.prototype, 'loadAsync').mockResolvedValue(source);
     const library = new AssetLibrary(), progress = vi.fn(); await library.load(progress);
-    expect(library.loaded).toBe(79); expect(library.failed).toEqual([]);
-    expect(progress).toHaveBeenLastCalledWith(79, 79);
+    expect(library.loaded).toBe(80); expect(library.failed).toEqual([]);
+    expect(progress).toHaveBeenLastCalledWith(80, 80);
     const a = library.instantiate('player', { height: 1.65 })!, b = library.instantiate('worker', { height: 1.65 })!;
     const bounds = new T.Box3().setFromObject(a.root);
     expect(bounds.min.y).toBeCloseTo(0); expect(bounds.getSize(new T.Vector3()).y).toBeCloseTo(1.65);
@@ -110,9 +114,9 @@ describe('model loading and instance isolation', () => {
       if (url.endsWith(assetPath('machine'))) throw new Error('missing model'); return source;
     });
     const library = new AssetLibrary(), progress = vi.fn(); await library.load(progress);
-    expect(library.loaded).toBe(78); expect(library.failed).toEqual(['machine']);
+    expect(library.loaded).toBe(79); expect(library.failed).toEqual(['machine']);
     expect(library.has('machine')).toBe(false); expect(library.instantiate('machine')).toBeUndefined();
-    expect(library.has('player')).toBe(true); expect(progress).toHaveBeenLastCalledWith(79, 79);
+    expect(library.has('player')).toBe(true); expect(progress).toHaveBeenLastCalledWith(80, 80);
     library.dispose();
   });
 });

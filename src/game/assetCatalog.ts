@@ -60,6 +60,7 @@ export const ASSET_CATALOG = {
   exteriorWindow: ['furniture-kit', 'wallWindowSlide'],
   roomCurtain: ['3dassets/hotel-resort', 'blackout-curtain-track'],
   bin: ['3dassets/laundrette-and-cleaning', 'wheeled-bin-240'],
+  laundryHamper: ['3dassets/laundrette-and-cleaning', 'wheeled-laundry-hamper'],
   bedSingle: ['3dassets/hotel-resort', 'guest-room-bed-twin'],
   bedDouble: ['3dassets/hotel-resort', 'guest-room-bed-king'],
   bedCabinet: ['furniture-kit', 'cabinetBed'],

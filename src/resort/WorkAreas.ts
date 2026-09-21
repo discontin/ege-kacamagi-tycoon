@@ -1,5 +1,5 @@
 import { staffRole } from './StaffHiring';
-import { DIRTY_BASKET, LAUNDRY_RIGHT_EDGE, ROOM_DEFS, TOWEL_RACK } from './data';
+import { DIRTY_BASKET, DIRTY_HAMPER, LAUNDRY_RIGHT_EDGE, ROOM_DEFS, TOWEL_RACK } from './data';
 import type { Area, Point } from './types';
 
 function besideShelf(p: Point, center: Point, halfWidth: number, halfDepth: number, reach: number) {
@@ -20,16 +20,17 @@ export function workAreaContains(p: Point, a: Point | Area): boolean {
   }
   if ('mode' in a && !!staffRole(a.target)) return Math.abs(p.x - a.x) <= .85 && Math.abs(p.y - a.y) <= .85;
   if ('mode' in a && a.mode === 'work' && a.taskKind === 'laundryDirtyTake') {
-    // Pick up from the shelf's right-hand approach side; deposits use the left
-    // side so a just-deposited bundle is not immediately picked back up.
+    // The rear dirty shelf is pickup-only. Deposits have their own hamper.
     return p.x > DIRTY_BASKET.x && besideShelf(p, DIRTY_BASKET, .6, .55, 1.35);
   }
-  if ('mode' in a && a.mode === 'work' && (a.taskKind === 'cleanTake' || a.taskKind === 'dirtyDrop')) {
-    const rack = a.taskKind === 'cleanTake', center = rack ? TOWEL_RACK : DIRTY_BASKET;
-    if (a.taskKind === 'cleanTake' && p.x >= LAUNDRY_RIGHT_EDGE) return false;
-    if (a.taskKind === 'dirtyDrop' && p.x > center.x) return false;
-    // Pick up or deposit from near the shelf; don't require a marked floor tile.
-    return besideShelf(p, center, rack ? 1 : .6, rack ? .5 : .55, rack ? 1.4 : 1.35);
+  if ('mode' in a && a.mode === 'work' && a.taskKind === 'dirtyDrop') {
+    // Drop from any reachable side of the hamper, never at the dirty shelf.
+    return besideShelf(p, DIRTY_HAMPER, .55, .65, 1.1);
+  }
+  if ('mode' in a && a.mode === 'work' && a.taskKind === 'cleanTake') {
+    if (p.x >= LAUNDRY_RIGHT_EDGE) return false;
+    // Pick up near the clean shelf without requiring a marked floor tile.
+    return besideShelf(p, TOWEL_RACK, 1, .5, 1.4);
   }
   if ('mode' in a && a.mode === 'work' && (a.taskKind === 'cleanRoom' || a.taskKind === 'restockRoom')) {
     const r = ROOM_DEFS.find(r => r.id === a.target);

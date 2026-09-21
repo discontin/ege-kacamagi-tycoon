@@ -1,4 +1,4 @@
-import { DIRTY_BASKET, LAUNDRY_FRONT_EDGE, LAUNDRY_MACHINE, LAUNDRY_RIGHT_EDGE, TOWEL_RACK } from './data';
+import { DIRTY_BASKET, DIRTY_HAMPER, LAUNDRY_FRONT_EDGE, LAUNDRY_MACHINE, LAUNDRY_RIGHT_EDGE, LAUNDRY_TRASH_PROP, TOWEL_RACK } from './data';
 import type { Point } from './types';
 export interface LaundryFootprint extends Point { width: number; depth: number }
 export const LAUNDRY_WALLS = [
@@ -14,5 +14,6 @@ export const laundryMachines = (level: number): LaundryFootprint[] => Array.from
 export const laundryObstacles = (level: number): LaundryFootprint[] => [
   ...LAUNDRY_WALLS, ...laundryMachines(level),
   { ...TOWEL_RACK, width: 2, depth: 1 }, { ...DIRTY_BASKET, width: 1.2, depth: 1.1 },
+  { ...DIRTY_HAMPER, width: 1.1, depth: 1.3 }, { ...LAUNDRY_TRASH_PROP, width: 1.1, depth: 1.1 },
 ];
 export const inFootprint = (p: Point, f: LaundryFootprint) => Math.abs(p.x - f.x) <= f.width / 2 && Math.abs(p.y - f.y) <= f.depth / 2;

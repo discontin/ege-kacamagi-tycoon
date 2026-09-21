@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ResortSimulation } from './Simulation';
-import { CLEAN_TAKE, DIRTY_BASKET, DIRTY_DROP, DIRTY_TAKE, initialResort, LAUNDRY_FRONT_EDGE, LAUNDRY_MACHINE, LAUNDRY_MACHINE_AREA, LAUNDRY_RIGHT_EDGE, LAUNDRY_TRASH, TOWEL_RACK } from './data';
+import { CLEAN_TAKE, DIRTY_BASKET, DIRTY_DROP, DIRTY_HAMPER, DIRTY_TAKE, initialResort, LAUNDRY_FRONT_EDGE, LAUNDRY_MACHINE, LAUNDRY_MACHINE_AREA, LAUNDRY_RIGHT_EDGE, LAUNDRY_TRASH, LAUNDRY_TRASH_PROP, TOWEL_RACK } from './data';
 import { linenCount } from './Linen';
 
 const advance = (s: ResortSimulation, seconds: number) => {
@@ -14,7 +14,7 @@ describe('visible laundry layout and carrying limits', () => {
       expect(s.isWalkable(p.x, p.y)).toBe(true);
       expect(s.path(s.state.player, p).length, JSON.stringify(p)).toBeGreaterThan(0);
     }
-    for (const p of [{ x: 7, y: 42 }, { x: 2, y: 45 }, { x: LAUNDRY_RIGHT_EDGE, y: 43 }, { x: LAUNDRY_RIGHT_EDGE, y: 47 }, { x: 12, y: 43 }, { x: 12, y: 47 }, { x: 7, y: LAUNDRY_FRONT_EDGE }, { x: 12, y: 51 }, { x: LAUNDRY_MACHINE.x, y: LAUNDRY_MACHINE.y }, { x: TOWEL_RACK.x, y: TOWEL_RACK.y }, { x: DIRTY_BASKET.x, y: DIRTY_BASKET.y }]) {
+    for (const p of [{ x: 7, y: 42 }, { x: 2, y: 45 }, { x: LAUNDRY_RIGHT_EDGE, y: 43 }, { x: LAUNDRY_RIGHT_EDGE, y: 47 }, { x: 12, y: 43 }, { x: 12, y: 47 }, { x: 7, y: LAUNDRY_FRONT_EDGE }, { x: 12, y: 51 }, { x: LAUNDRY_MACHINE.x, y: LAUNDRY_MACHINE.y }, { x: TOWEL_RACK.x, y: TOWEL_RACK.y }, { x: DIRTY_BASKET.x, y: DIRTY_BASKET.y }, DIRTY_HAMPER, LAUNDRY_TRASH_PROP]) {
       expect(s.isWalkable(p.x, p.y)).toBe(false);
     }
     expect(s.isWalkable(LAUNDRY_RIGHT_EDGE, 45)).toBe(true);
@@ -32,6 +32,9 @@ describe('visible laundry layout and carrying limits', () => {
       expect(Math.hypot(areas[i].x - areas[j].x, areas[i].y - areas[j].y)).toBeGreaterThan(1.5);
     }
     for (const area of areas) expect(s.isWalkable(Math.round(area.x), Math.round(area.y))).toBe(true);
+    expect(DIRTY_HAMPER.x).toBeLessThan(LAUNDRY_TRASH_PROP.x);
+    expect(DIRTY_DROP.x).toBeGreaterThan(DIRTY_HAMPER.x);
+    expect(LAUNDRY_TRASH.x).toBeLessThan(LAUNDRY_TRASH_PROP.x);
   });
 
   it('leaves a continuous two-cell walkway to the left of reception', () => {
