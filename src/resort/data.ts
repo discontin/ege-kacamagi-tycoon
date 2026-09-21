@@ -1,4 +1,4 @@
-import { BAR_CASH, BAR_WORK, POOL_CLEAN, poolDirtyRack, poolTowelRack, wantsDrink } from './PoolServices';
+import { BAR_CASH, BAR_WORK, POOL_CLEAN, poolDirtyBasket, poolTowelRack, wantsDrink } from './PoolServices';
 import { STAFF_AREAS, staffRoleLimit } from './StaffHiring';
 import { OFFICE } from './Office';
 import type { Area, Point, ResortGameState } from './types';
@@ -82,9 +82,9 @@ export function areasFor(s: ResortGameState): Area[] {
   const pool = s.facilities.find(f => f.id === 'pool')!;
   if (!pool.open) areas.push({ id: 'poolBuy', label: 'Havuzu aç', mode: 'buy', target: 'pool', ...POOL_GATE });
   else {
-    const cleanRack = poolTowelRack(pool.level), dirtyRack = poolDirtyRack(pool.level);
-    const cleanWork = { x: cleanRack.x, y: cleanRack.y + 1.5 }, dirtyWork = { x: dirtyRack.x, y: dirtyRack.y + 1.5 };
-    areas.push({ id: 'poolDirtyDrop', label: 'Kirli havluyu havuz sepetine bırak', mode: 'work', target: 'poolDirty', taskKind: 'poolDirtyDrop', ...dirtyWork }, { id: 'poolDirtyTake', label: 'Havuzun kirli havlularını al', mode: 'work', target: 'poolDirty', taskKind: 'poolDirtyTake', ...dirtyWork }, { id: 'poolCleanTake', label: 'Havuz rafından havlu al', mode: 'work', target: 'poolClean', taskKind: 'poolCleanTake', ...cleanWork });
+    const cleanRack = poolTowelRack(pool.level), dirtyBasket = poolDirtyBasket(pool.level);
+    const cleanWork = { x: cleanRack.x, y: cleanRack.y + 1.5 }, dirtyWork = { x: dirtyBasket.x, y: dirtyBasket.y + 1.5 };
+    areas.push({ id: 'poolDirtyDrop', label: 'Kirli havluyu havuz sepetine bırak', mode: 'work', target: 'poolDirty', taskKind: 'poolDirtyDrop', facilityLevel: pool.level, ...dirtyWork }, { id: 'poolDirtyTake', label: 'Havuzun kirli havlularını al', mode: 'work', target: 'poolDirty', taskKind: 'poolDirtyTake', facilityLevel: pool.level, ...dirtyWork }, { id: 'poolCleanTake', label: 'Havuz rafından havlu al', mode: 'work', target: 'poolClean', taskKind: 'poolCleanTake', ...cleanWork });
     areas.push({ id: 'poolCheckin', label: 'Havuz girişi', mode: 'work', target: 'pool', taskKind: 'poolCheckin', ...POOL_GATE }, { id: 'poolStock', label: 'Havuza havlu bırak', mode: 'work', target: 'pool', taskKind: 'poolStock', ...cleanWork }, { id: 'poolCash', label: 'Havuz geliri', mode: 'cash', target: 'pool', x: 18, y: 5 });
     if (!s.bar?.open) areas.push({ id: 'barBuy', label: 'Havuz barı', mode: 'buy', target: 'bar', ...BAR_WORK });
     else {

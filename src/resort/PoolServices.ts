@@ -6,7 +6,7 @@ export const BAR_HIRE = { x: 32, y: -1 };
 export const POOL_TOWEL_RACK = { x: 34.5, y: 0 };
 export const POOL_DIRTY_RACK = { x: 34.5, y: 3 };
 export const poolTowelRack = (level: number): Point => level >= 2 ? { x: 37, y: 0 } : POOL_TOWEL_RACK;
-export const poolDirtyRack = (level: number): Point => level >= 2 ? { x: 37, y: 3 } : POOL_DIRTY_RACK;
+export const poolDirtyBasket = (level: number): Point => level >= 2 ? { x: 37, y: 3 } : POOL_DIRTY_RACK;
 export const POOL_CENTER = { x: 28.5, y: 4.5 };
 export const POOL_STAY_SECONDS = 150;
 export const DRINK_REQUEST_DELAY = 20;

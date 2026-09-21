@@ -1,4 +1,4 @@
-import { BAR_CASH, BAR_WORK, POOL_CENTER, poolDirtyRack, poolTowelRack, wantsDrink } from './PoolServices';
+import { BAR_CASH, BAR_WORK, POOL_CENTER, poolDirtyBasket, poolTowelRack, wantsDrink } from './PoolServices';
 import { areasFor, CLEAN_TAKE, DIRTY_BASKET, DIRTY_DROP, LAUNDRY_MACHINE, LAUNDRY_TRASH, machineCapacityForLevel, POOL_GATE, RECEPTION, ROOM_DEFS, SEAT_DEFS, TOWEL_RACK } from './data';
 import { carryingCapacity, towelLimit } from './Office';
 import type { Point, ResortGameState, TaskKind } from './types';
@@ -47,8 +47,8 @@ export function taskIndicators(s: ResortGameState): TaskIndicator[] {
   if (bagSpace > 0 && (canTakeDirtyTowel || canTakeDirtySheet)) add('laundryPickup', 'laundryDirtyTake', 'dirty', 'Kirli raftan çamaşır al', DIRTY_BASKET.x, DIRTY_BASKET.y, 2.3, 'laundry', 'laundryDirtyTake');
   if (linenCount(s.player.bag) > 0 || s.player.drink) add('laundryTrash', 'laundryTrash', 'trash', 'Elindekini çöpe at', LAUNDRY_TRASH.x, LAUNDRY_TRASH.y, 1.8, 'laundry', 'discardItem');
   if (pool.open) {
-    const dirtyRack = poolDirtyRack(pool.level), cleanRack = poolTowelRack(pool.level);
-    if ((pool.dirtyTowels ?? 0) > 0) add('poolDirtyTowels', 'poolDirtyTake', 'towel', 'Kirli havluları çamaşırhaneye taşı', dirtyRack.x, dirtyRack.y, 2.3, 'poolDirty', 'poolDirtyTake');
+    const dirtyBasket = poolDirtyBasket(pool.level), cleanRack = poolTowelRack(pool.level);
+    if ((pool.dirtyTowels ?? 0) > 0) add('poolDirtyTowels', 'poolDirtyTake', 'towel', 'Kirli havluları çamaşırhaneye taşı', dirtyBasket.x, dirtyBasket.y, 2.3, 'poolDirty', 'poolDirtyTake');
     for (const r of SEAT_DEFS) { const seat = s.seats.find(s => s.id === r.id)!; if (seat.open && !seat.dirty && !seat.guest && !seat.towel) add(`${r.id}Restock`, `${r.id}Towel`, 'towel', 'Şezlonga temiz havlu ser', r.x, r.y - .6, 1.8, r.id, 'restockSeat'); }
     if ((pool.dirt ?? 0) > 0) add('poolMaintenance', 'poolClean', 'net', 'Havuzu kepçeyle temizle', POOL_CENTER.x, POOL_CENTER.y, 2.8, 'pool', 'cleanPool');
     if (s.bar?.open) {

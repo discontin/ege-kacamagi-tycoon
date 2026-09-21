@@ -1,4 +1,4 @@
-import { BAR_CENTER, poolDirtyRack, poolTowelRack, wantsDrink } from './PoolServices';
+import { BAR_CENTER, poolDirtyBasket, poolTowelRack, wantsDrink } from './PoolServices';
 import { guestInWater } from './GuestPreferences';
 import { foldedTowel } from './FoldedTowel';
 import { guestMood } from './GuestMood';
@@ -417,8 +417,7 @@ export class ResortWorld {
     this.box(desk, 0x389c96, 0, 1.28, 0, 3, .16, 1.45);
     this.box(desk, 0xfff7d6, .7, 1.42, 0, .35, .12, .35);
     const shelf = this.group(poolTowelRack(f.level)); this.prop(shelf, 'rack', 0, 0, 0, { height: 1.7 }); const rack = new TowelShelf(color => this.material(color), 1.7, false, false); shelf.add(rack.root); this.stockModels.set('pool', rack.towels);
-    const dirtyShelf = this.group(poolDirtyRack(f.level)); this.prop(dirtyShelf, 'rack', 0, 0, 0, { height: 1.7 }); const dirtyRack = new TowelShelf(color => this.material(color === 0xfffcf0 ? 0x9a897d : color), 1.7, true, false); dirtyShelf.add(dirtyRack.root);
-    dirtyRack.towels.forEach(t => t.material = this.material(0x9a897d)); this.stockModels.set('poolDirty', dirtyRack.towels);
+    const dirtyBasket = this.group(poolDirtyBasket(f.level)); this.prop(dirtyBasket, 'laundryHamper', 0, .2, 0, { height: 1.45 }, Math.PI / 2);
     for (const r of SEAT_DEFS) {
       const seat = this.sim.state.seats.find(s => s.id === r.id)!, p = this.group({ x: r.x, y: r.y - 1 }); if (!seat.open) continue;
       const lounger = this.prop(p, 'sunLounger', 0, .2, 0, { width: 2.05 });
