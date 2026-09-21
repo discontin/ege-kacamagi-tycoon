@@ -654,6 +654,7 @@ export class ResortWorld {
       p.label.classList.toggle('goal', a.id === goal.area); p.label.classList.toggle('locked', buyLocked || unaffordable);
       p.label.classList.toggle('reception-hire', !!staffRole(a.target));
       p.label.classList.toggle('upgrade-marker', a.mode === 'upgrade');
+      p.label.classList.toggle('cash-marker', a.mode === 'cash');
       const roomPurchase = a.mode === 'buy' && a.target.startsWith('room');
       const poolPurchase = a.mode === 'buy' && a.target === 'pool';
       const barPurchase = a.mode === 'buy' && a.target === 'bar';
@@ -665,7 +666,7 @@ export class ResortWorld {
         : roomPurchase ? `${purchaseIconSvg('bed')}<span class="purchase-price">${purchasePrice}</span>`
           : poolPurchase ? `${purchaseIconSvg('pool')}<span class="purchase-price">${purchasePrice}</span>`
             : barPurchase ? `${purchaseIconSvg('bar')}<span class="purchase-price">${purchasePrice}</span>` : '';
-      const text = a.id === 'office' ? `${officeDevelopmentIconSvg()}<span class="office-caption">Personel<br>geliştir</span>` : !!staffRole(a.target) ? `${staffIconSvg(staffRole(a.target)!)}<span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : roomPurchase || poolPurchase || barPurchase ? purchaseText : a.mode === 'buy' ? `${this.sim.level < this.sim.requiredLevel(a) && !this.sim.testMode ? '🔒' : '＋'} ${a.label}<small>Sv. ${this.sim.requiredLevel(a)} · ${this.sim.testMode ? 'ÜCRETSİZ' : this.sim.cost(a) + ' ₺'}</small>` : a.mode === 'upgrade' ? `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27V7m-7 8 7-8 7 8M7 27h18"/></svg><span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : a.mode === 'cash' ? `💵 ${(a.target === 'bar' ? s.bar! : this.sim.facility(a.target)).cash} ₺` : `${a.taskKind === 'cleanTake' ? '☀' : a.taskKind === 'dirtyDrop' ? '♺' : '▢'} ${a.label}${task ? '<small>' + Math.round(progress * 100) + '%</small>' : ''}`;
+      const text = a.id === 'office' ? `${officeDevelopmentIconSvg()}<span class="office-caption">Personel<br>geliştir</span>` : !!staffRole(a.target) ? `${staffIconSvg(staffRole(a.target)!)}<span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : roomPurchase || poolPurchase || barPurchase ? purchaseText : a.mode === 'buy' ? `${this.sim.level < this.sim.requiredLevel(a) && !this.sim.testMode ? '🔒' : '＋'} ${a.label}<small>Sv. ${this.sim.requiredLevel(a)} · ${this.sim.testMode ? 'ÜCRETSİZ' : this.sim.cost(a) + ' ₺'}</small>` : a.mode === 'upgrade' ? `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27V7m-7 8 7-8 7 8M7 27h18"/></svg><span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : a.mode === 'cash' ? '💵' : `${a.taskKind === 'cleanTake' ? '☀' : a.taskKind === 'dirtyDrop' ? '♺' : '▢'} ${a.label}${task ? '<small>' + Math.round(progress * 100) + '%</small>' : ''}`;
       const purchaseProgress = this.sim.purchaseProgress(a);
       const labelText = text + (purchaseProgress === undefined ? '' : '<span class="purchase-progress" aria-hidden="true"></span>');
       if (p.label.innerHTML !== labelText) p.label.innerHTML = labelText;

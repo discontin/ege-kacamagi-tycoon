@@ -33,6 +33,13 @@
 .floor-label.purchase-marker .purchase-price { position:absolute; left:50%; bottom:-12px; transform:translateX(-50%); padding:2px 7px; border:2px solid #fffbed; border-radius:9px; background:#327c54; color:white; font-size:10px; font-weight:800; white-space:nowrap }
 .floor-label.purchase-marker.locked { background:#96aa91; color:white; border-color:#eff1dc; box-shadow:0 3px 0 #66775b55,0 0 0 2px #b7c1a2 }
 .floor-label.purchase-marker.locked .purchase-price { background:#667b68 }
+.floor-label.cash-marker {
+  width:42px; height:42px; min-width:42px; padding:6px;
+  display:grid; place-items:center;
+  border:3px solid #fffbed; border-radius:50%;
+  background:#65b874; color:white; font-size:20px; line-height:1;
+  box-shadow:0 3px 0 #287c5655,0 0 0 2px #a4dda8;
+}
 .floor-label.reception-hire .hire-price {
   position: absolute;
   left: 50%;
@@ -66,6 +73,7 @@
   .floor-label.reception-hire { width: 43px; height: 43px; min-width: 43px; padding: 6px; }
   .floor-label.purchase-marker { width:43px; height:43px; min-width:43px; padding:6px; }
   .floor-label.purchase-marker .purchase-price { font-size:8px; bottom:-11px; }
+  .floor-label.cash-marker { width:38px; height:38px; min-width:38px; padding:5px; font-size:17px; }
   .floor-label.office-marker { width:44px; height:44px; min-width:44px; padding:6px; }
   .floor-label.office-marker svg { width:23px; height:23px; }
 }
