@@ -44,7 +44,7 @@ describe('department-specific hiring', () => {
   });
   it('places the laundry worker marker outside, below the side entrance', () => {
     const s = new ResortSimulation(), area = s.area('haulingHire')!;
-    expect(area.x).toBeGreaterThan(11.5); expect(area.y).toBeGreaterThan(46);
+    expect(area.x).toBe(13); expect(area.y).toBe(50);
     expect(s.isWalkable(area.x, area.y)).toBe(true);
     expect(s.path(s.state.player, area).length).toBeGreaterThan(0);
   });
