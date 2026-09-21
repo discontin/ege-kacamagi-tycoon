@@ -153,7 +153,7 @@ export class ResortUI {
         <article class="office-worker">
           <header class="office-worker-head"><span class="office-avatar">${esc(w.name[0].toUpperCase())}</span><span class="office-worker-name"><b>${esc(w.name)}</b><small>${roles[w.role]}</small></span><span class="office-rank">SV. ${w.level}</span></header>
           <div class="office-skills ${w.role === 'reception' ? 'single' : ''}">
-            ${skill('Hizmet hızı', '%' + [65, 80, 100][w.level - 1] + ' verim', 'staff-speed', w.id, w.level, 120 * w.level, '☀')}
+            ${skill('Hizmet hızı', 'Görevleri daha hızlı tamamlar', 'staff-speed', w.id, w.level, 120 * w.level, '☀')}
             ${w.role !== 'reception' ? skill('Yürüyüş', 'Daha hızlı hareket', 'staff-move', w.id, w.moveLevel ?? 1, 100 * (w.moveLevel ?? 1), '➜') + skill('Taşıma', (w.carryLevel ?? 1) + ' havlu kapasitesi', 'staff-carry', w.id, w.carryLevel ?? 1, 100 * (w.carryLevel ?? 1), '▱') : ''}
           </div>
         </article>`).join('') || '<div class="office-empty"><span>♙</span><b>Ekip henüz kurulmadı</b><p>Önce köydeki yeşil personel simgelerinden bir çalışan al.</p></div>'}
