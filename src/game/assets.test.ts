@@ -70,9 +70,10 @@ describe('shipped CC0 assets', () => {
     expect(doorPieces).toHaveLength(4);
     expect(doorPieces?.some(node => (node.translation?.[0] ?? 0) < -.25)).toBe(true);
   });
-  it('ships an animated laundry hamper that can be displayed open', () => {
+  it('ships an open rolling laundry cart that is distinct from the waste bin', () => {
     const json = metadata('laundryHamper');
-    expect(json.animations?.map(a => a.name)).toContain('open');
+    expect(json.nodes?.map(node => node.name)).toContain('laundry-cart-rolling');
+    expect(assetPath('laundryHamper')).not.toBe(assetPath('bin'));
   });
 });
 

@@ -357,9 +357,9 @@ export class ResortWorld {
     this.stockModels.set('laundryClean', rack.towels.slice(0, 8)); this.stockModels.set('laundryDirty', dirty);
     rack.towels.slice(8).forEach(towel => towel.visible = false);
     const sheets: T.Mesh[] = []; for (let i = 0; i < 4; i++) { const sheet = this.box(rack.root, 0xfff2dc, i % 2 ? .46 : -.46, 1.75 + Math.floor(i / 2) * .13, 0, .85, .12, .76); this.box(sheet, 0x73c4d1, 0, 0, .39, .8, .04, .01); sheets.push(sheet); } this.stockModels.set('laundrySheets', sheets);
-    const hamper = this.prop(g, 'laundryHamper', DIRTY_HAMPER.x - LAUNDRY_ORIGIN.x, .2, DIRTY_HAMPER.y - LAUNDRY_ORIGIN.y, { height: 1.15 }, Math.PI / 2);
-    const hamperOpen = hamper?.clips.find(clip => clip.name === 'open');
-    if (hamper && hamperOpen) { const mixer = new T.AnimationMixer(hamper.model); mixer.clipAction(hamperOpen).play(); mixer.update(hamperOpen.duration); }
+    // Open canvas cart with visible folded linen: larger and visually distinct
+    // from the lidded waste bin in the opposite corner.
+    this.prop(g, 'laundryHamper', DIRTY_HAMPER.x - LAUNDRY_ORIGIN.x, .2, DIRTY_HAMPER.y - LAUNDRY_ORIGIN.y, { height: 1.45 }, Math.PI / 2);
     this.prop(g, 'bin', LAUNDRY_TRASH_PROP.x - LAUNDRY_ORIGIN.x, .2, LAUNDRY_TRASH_PROP.y - LAUNDRY_ORIGIN.y, { height: 1.2 }, -Math.PI / 2);
   }
   private setupWasherDoor(appliance: AssetInstance) {
