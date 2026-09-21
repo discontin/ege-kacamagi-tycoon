@@ -3,6 +3,7 @@
 .task-indicator:hover,.task-indicator:focus-visible{background:linear-gradient(150deg,#7bdcf8,#30aeea);box-shadow:0 3px 0 #177bb8,0 0 0 4px #ffffff66}
 .task-indicator.working{background:linear-gradient(150deg,#6aceab,#319b80);box-shadow:0 3px 0 #277e6b,0 5px 10px #28688d38}
 .task-indicator.waiting{background:linear-gradient(150deg,#75badb,#5c91bc)}
+.task-indicator[data-task-icon="warning"]{background:linear-gradient(150deg,#f6b84a,#e57a35);box-shadow:0 3px 0 #b85a27,0 5px 10px #8d4c2838}
 .task-indicator-progress{position:absolute;inset:-7px;border-radius:50%;background:conic-gradient(#b5ef83 var(--task-progress),#ffffff55 0);mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 0);pointer-events:none}
 .task-indicator-progress[hidden]{display:none}
 .task-indicator-caption{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:6px;padding:3px 6px;background:#fff9eb;color:#246c79;font-size:10px;font-weight:800;letter-spacing:.4px;box-shadow:0 2px 4px #28688d22;pointer-events:none}

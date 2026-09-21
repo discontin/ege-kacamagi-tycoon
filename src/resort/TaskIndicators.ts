@@ -6,7 +6,7 @@ import { serviceGuestReady } from './CustomerService';
 import { workAreaContains } from './WorkAreas';
 import { dirtyLinenCount, linenCount } from './Linen';
 
-export type TaskIcon = 'bed' | 'bath' | 'clean' | 'towel' | 'guest' | 'dirty' | 'wash' | 'cash' | 'drink' | 'icecream' | 'net' | 'trash';
+export type TaskIcon = 'bed' | 'bath' | 'clean' | 'towel' | 'guest' | 'dirty' | 'wash' | 'cash' | 'drink' | 'icecream' | 'net' | 'trash' | 'warning';
 export interface TaskIndicator extends Point { id: string; areaId: string; icon: TaskIcon; label: string; height: number; state: 'todo' | 'working' | 'waiting'; progress?: number }
 /** Presentation-only notices; no new jobs, resource transfers or save fields. */
 export function taskIndicators(s: ResortGameState): TaskIndicator[] {
@@ -32,7 +32,9 @@ export function taskIndicators(s: ResortGameState): TaskIndicator[] {
   const reception = s.facilities.find(f => f.id === 'reception')!;
   if (reception.cash > 0) add('receptionMoney', 'receptionCash', 'cash', `${reception.cash} para topla`, 23, 46, 1.5);
   if (dirtyLinenCount(s.player.bag) > 0) add('laundryDirty', 'dirtyDrop', 'dirty', 'Kirli havlu ve çarşafları sepete bırak', DIRTY_DROP.x, DIRTY_DROP.y, 1.9, 'laundry', 'dirtyDrop');
-  if (s.tasks.some(t => t.owner === 'player' && t.target === 'laundry' && t.kind === 'cleanTake')) add('laundryClean', 'cleanTake', 'towel', 'Temiz havlu ve çarşaf al', TOWEL_RACK.x, TOWEL_RACK.y, 2.7, 'laundry', 'cleanTake');
+  const takingCleanLinen = s.tasks.some(t => t.owner === 'player' && t.target === 'laundry' && t.kind === 'cleanTake');
+  if (s.laundry.clean === 0) add('laundryCleanEmpty', 'cleanTake', 'warning', 'Temiz havlu rafı boş', TOWEL_RACK.x, TOWEL_RACK.y, 2.7);
+  else if (takingCleanLinen) add('laundryClean', 'cleanTake', 'towel', 'Temiz havlu ve çarşaf al', TOWEL_RACK.x, TOWEL_RACK.y, 2.7, 'laundry', 'cleanTake');
   if (s.laundry.remaining !== null) {
     const done = s.laundry.remaining === 0;
     add('laundryWash', done ? 'machineUnload' : 'machineLoad', 'wash', done ? 'Makineyi boşalt · temizler rafa eklenir' : 'Makine çamaşırları yıkıyor', LAUNDRY_MACHINE.x, LAUNDRY_MACHINE.y, 2.5);
@@ -75,6 +77,7 @@ export function taskIconSvg(icon: TaskIcon): string {
     wash: '<rect x="3" y="3" width="18" height="19" rx="3"/><circle cx="12" cy="14" r="5"/><path d="M6 6h2m3 0h7M8 15c3-4 5 3 8-1"/>',
     cash: '<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M5 10v5m14-5v5M6 3h12"/>',
     trash: '<path d="M4 7h16M9 3h6l1 4H8l1-4Zm-3 4 1 14h10l1-14M9 11v6m6-6v6"/>',
+    warning: '<path d="M12 3 2.5 21h19L12 3Z"/><path d="M12 9v5m0 3v.5"/>',
   };
   return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths[icon]}</svg>`;
 }

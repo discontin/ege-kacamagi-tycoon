@@ -13,6 +13,15 @@ describe('floating task notices', () => {
     s.tasks = [];
     expect(taskIndicators(s).some(n => n.id === 'laundryClean')).toBe(false);
   });
+  it('shows a single warning over an empty clean-towel rack and removes it when restocked', () => {
+    const s = initialResort(); s.laundry.clean = 0;
+    let notices = taskIndicators(s), warning = notices.find(n => n.id === 'laundryCleanEmpty')!;
+    expect(warning.icon).toBe('warning'); expect(warning.areaId).toBe('cleanTake');
+    expect(notices.some(n => n.id === 'laundryClean')).toBe(false);
+    s.tasks.push({ id: 'take-sheet', owner: 'player', target: 'laundry', kind: 'cleanTake', total: 5, remaining: 4 });
+    notices = taskIndicators(s); expect(notices.filter(n => n.areaId === 'cleanTake')).toHaveLength(1);
+    s.laundry.clean = 1; expect(taskIndicators(s).some(n => n.id === 'laundryCleanEmpty')).toBe(false);
+  });
   it('marks the dirty bed with a cleaning icon linked to the real room work square', () => {
     const s = initialResort(), r = s.facilities.find(f => f.id === 'room1')!; r.dirty = true; r.towels = 0;
     const n = taskIndicators(s).find(n => n.id === 'room1Clean')!;
@@ -60,6 +69,6 @@ describe('floating task notices', () => {
     const s = initialResort(true); s.facilities.filter(f => f.kind === 'room').forEach(f => { f.dirty = true; f.towels = 0; }); s.seats.forEach(seat => seat.dirty = true); const before = JSON.stringify(s), ns = taskIndicators(s);
     expect(JSON.stringify(s)).toBe(before); expect(new Set(ns.map(n => n.id)).size).toBe(ns.length);
     for (const n of ns) expect(areasFor(s).some(a => a.id === n.areaId)).toBe(true);
-    for (const icon of ['clean', 'towel', 'guest', 'dirty', 'wash', 'cash'] as const) { expect(taskIconSvg(icon)).toContain('viewBox="0 0 24 24"'); expect(taskIconSvg(icon)).toContain('aria-hidden="true"'); }
+    for (const icon of ['clean', 'towel', 'guest', 'dirty', 'wash', 'cash', 'warning'] as const) { expect(taskIconSvg(icon)).toContain('viewBox="0 0 24 24"'); expect(taskIconSvg(icon)).toContain('aria-hidden="true"'); }
   });
 });
