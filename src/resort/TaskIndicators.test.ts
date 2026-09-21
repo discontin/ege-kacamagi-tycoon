@@ -8,7 +8,7 @@ describe('floating task notices', () => {
     const s = initialResort();
     expect(taskIndicators(s).some(n => n.id === 'laundryClean')).toBe(false);
     Object.assign(s.player, { x: 10.2, y: 44 });
-    s.tasks.push({ id: 'take-clean', owner: 'player', target: 'laundry', kind: 'cleanTake', total: 3, remaining: 3 });
+    s.tasks.push({ id: 'take-clean', owner: 'player', target: 'laundry', kind: 'cleanTake', total: 5, remaining: 5 });
     expect(taskIndicators(s).find(n => n.id === 'laundryClean')?.icon).toBe('towel');
     s.tasks = [];
     expect(taskIndicators(s).some(n => n.id === 'laundryClean')).toBe(false);
@@ -43,7 +43,7 @@ describe('floating task notices', () => {
   });
   it('marks laundry deposit, clean pickup and automatic washing distinctly', () => {
     const s = initialResort(); s.player.bag.dirty = 1; s.facilities.find(f => f.id === 'room1')!.towels = 0; s.laundry.dirty = 2; s.laundry.remaining = 2;
-    s.tasks.push({ id: 'take-clean', owner: 'player', target: 'laundry', kind: 'cleanTake', total: 3, remaining: 3 });
+    s.tasks.push({ id: 'take-clean', owner: 'player', target: 'laundry', kind: 'cleanTake', total: 5, remaining: 5 });
     const ns = taskIndicators(s), deposit = ns.find(n => n.id === 'laundryDirty')!, pickup = ns.find(n => n.id === 'laundryPickup')!;
     expect(deposit.icon).toBe('dirty'); expect(deposit.x).toBe(DIRTY_DROP.x); expect(deposit.y).toBe(DIRTY_DROP.y);
     expect(pickup.x).toBe(DIRTY_BASKET.x); expect(pickup.y).toBe(DIRTY_BASKET.y);

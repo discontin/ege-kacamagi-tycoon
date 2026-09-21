@@ -50,7 +50,7 @@ describe('visible laundry layout and carrying limits', () => {
 
   it('stops repeated test-mode pickup at the level-six carrying capacity', () => {
     const s = new ResortSimulation(initialResort(true), true);
-    Object.assign(s.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); advance(s, 20);
+    Object.assign(s.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); advance(s, 40);
     expect(s.state.player.bag.clean).toBe(8);
     expect(linenCount(s.state.player.bag)).toBe(8);
     expect(s.state.tasks).toHaveLength(0);
@@ -58,7 +58,7 @@ describe('visible laundry layout and carrying limits', () => {
 
   it('takes only one needed sheet and fills the remaining level-six capacity with towels', () => {
     const s = new ResortSimulation(initialResort(true), true); s.facility('room1').dirty = true;
-    Object.assign(s.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); advance(s, 20);
+    Object.assign(s.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); advance(s, 40);
     expect(s.state.player.bag.clean).toBe(7);
     expect(s.state.player.bag.cleanSheets).toBe(1);
     expect(linenCount(s.state.player.bag)).toBe(8);

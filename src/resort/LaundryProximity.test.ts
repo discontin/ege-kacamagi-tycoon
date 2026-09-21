@@ -10,7 +10,7 @@ describe('laundry object proximity', () => {
     const s = new ResortSimulation(); Object.assign(s.state.player, p);
     expect(s.isWalkable(p.x, p.y)).toBe(true); advance(s, 1);
     expect(s.state.player.bag.clean).toBe(0);
-    advance(s, 2.2);
+    advance(s, 4.2);
     expect(s.state.player.bag.clean).toBe(1); expect(s.state.laundry.clean).toBe(7);
   });
   it('collects from beside each rack without standing on the old marked squares, at a slower pace', () => {
@@ -25,7 +25,7 @@ describe('laundry object proximity', () => {
     Object.assign(clean.state.player, { ...cleanPosition });
     expect(Math.hypot(cleanPosition.x - cleanArea.x, cleanPosition.y - cleanArea.y)).toBeGreaterThan(.5);
     expect(clean.startTask(cleanArea)).toBe(true);
-    expect(clean.state.tasks[0].remaining).toBe(3);
+    expect(clean.state.tasks[0].remaining).toBe(5);
   });
   it('takes dirty linen one piece per completed pickup action, then continues while there is room', () => {
     const s = new ResortSimulation(); s.state.laundry.dirty = 3;
@@ -79,7 +79,7 @@ describe('laundry object proximity', () => {
     expect(taskIndicators(s.state).find(n => n.id === 'laundryClean')!.state).toBe('working');
     s.state.player.x = 16; advance(s, .2); expect(task.remaining).toBe(remaining);
     expect(taskIndicators(s.state).find(n => n.id === 'laundryClean')!.state).toBe('waiting');
-    const loaded = new ResortSimulation(structuredClone(s.state)); Object.assign(loaded.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); advance(loaded, 3.1);
+    const loaded = new ResortSimulation(structuredClone(s.state)); Object.assign(loaded.state.player, { x: CLEAN_TAKE.x, y: CLEAN_TAKE.y }); advance(loaded, 5.1);
     expect(loaded.state.player.bag.clean).toBe(1); expect(loaded.state.laundry.clean).toBe(7);
   });
   it('preserves full bag, empty stock, full dirty shelf and exclusive transfer rules', () => {
@@ -94,7 +94,7 @@ describe('laundry object proximity', () => {
   });
   it('workers can transfer from the side rather than walking back to the old fixed square', () => {
     const s = new ResortSimulation(initialResort()); s.state.xp = 20; s.hire(); const w = s.state.workers[0];
-    expect(s.startTask(s.area('cleanTake')!, w.id)).toBe(true); Object.assign(w, { x: CLEAN_TAKE.x + .9, y: CLEAN_TAKE.y, path: [] }); advance(s, 4.8);
+    expect(s.startTask(s.area('cleanTake')!, w.id)).toBe(true); Object.assign(w, { x: CLEAN_TAKE.x + .9, y: CLEAN_TAKE.y, path: [] }); advance(s, 7.9);
     expect(w.bag.clean).toBe(1); expect(w.x).toBe(CLEAN_TAKE.x + .9); expect(w.y).toBe(CLEAN_TAKE.y);
   });
 });

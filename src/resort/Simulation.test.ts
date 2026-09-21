@@ -29,7 +29,7 @@ describe('resort guest and towel cycle', () => {
     stand(s, 'dirtyDrop'); advance(s, 5.5); expect(s.state.player.bag.dirtySheets).toBe(0); expect(s.state.stats.washed).toBe(0);
     stand(s, 'laundryDirtyTake'); advance(s, 2.8); stand(s, 'machineLoad'); advance(s, 11); stand(s, 'machineUnload'); advance(s, 1.4);
     expect(s.state.stats.washed).toBe(2); expect(s.state.laundry.clean).toBe(9); expect(s.state.laundry.cleanSheets).toBe(9);
-    stand(s, 'cleanTake'); advance(s, 3.2); expect(s.state.player.bag.clean).toBe(1); expect(s.state.laundry.clean).toBe(8);
+    stand(s, 'cleanTake'); advance(s, 5.2); expect(s.state.player.bag.clean).toBe(1); expect(s.state.laundry.clean).toBe(8);
     stand(s, 'room1Work'); advance(s, 3); expect(r.towels).toBe(1); expect(s.state.player.bag.clean).toBe(0);
   });
   it('does not start outside the bedside region and resumes the same reserved job on return', () => {
