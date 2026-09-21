@@ -32,11 +32,17 @@ describe('physical sheet laundry cycle', () => {
     expect(towelSim.startTask(towelSim.area('room1Work')!)).toBe(true);
     expect(towelSim.state.tasks[0].total).toBeCloseTo(.6);
   });
-  it('can replace the towel before the clean sheet arrives', () => {
+  it('uses a lone clean linen item as a complete bed bundle instead of leaving the mattress stripped', () => {
     const s = new ResortSimulation(), room = s.facility('room1'); room.dirty = true;
     s.state.player.bag = { clean: 4, dirty: 2, dirtySheets: 1 }; stand(s, 'room1Work'); advance(s, 7); expect(room.dirty).toBe(true);
     s.state.player.bag = { clean: 1, dirty: 0 }; room.dirty = false; room.needsSheet = true; room.towels = 0; advance(s, 1);
-    expect(room.needsSheet).toBe(true); expect(room.towels).toBe(1); expect(s.state.player.bag.clean).toBe(0);
+    expect(room.needsSheet).toBe(false); expect(room.towels).toBe(1); expect(s.state.player.bag.clean).toBe(0);
+  });
+  it('puts a carried clean linen bundle onto a dirty bed after collecting its dirty one', () => {
+    const s = new ResortSimulation(), room = s.facility('room1'); room.dirty = true; room.towels = 0;
+    s.state.player.bag.clean = 1; stand(s, 'room1Work'); advance(s, 7);
+    expect(room.dirty).toBe(false); expect(room.needsSheet).toBe(false); expect(room.towels).toBe(1);
+    expect(s.state.player.bag.clean).toBe(0); expect(s.state.player.bag.dirtySheets).toBe(1);
   });
   it('holds a washed sheet when its output shelf fills, without losing or duplicating it', () => {
     const s = new ResortSimulation(), l = s.state.laundry; l.cleanSheets = 23; s.state.player.bag.dirtySheets = 1; stand(s, 'machineLoad'); advance(s, .7);

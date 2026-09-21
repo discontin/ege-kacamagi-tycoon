@@ -327,7 +327,17 @@ export class ResortSimulation {
       case 'cleanRoom': { const r = this.facility(t.target); if (bagCount(actor) + 1 > this.actorCapacity(actor)) return; r.dirty = false; r.needsSheet = true; actor.bag.dirtySheets = (actor.bag.dirtySheets ?? 0) + 1; this.state.stats.cleaned++; this.earnXp(5); this.notify('Yataktan bir kirli çarşaf aldın. Sepete götür, temiz çarşafı geri getir.'); break; }
       case 'cleanFloor': { this.facility(t.target).floorDirty = false; break; }
       case 'cleanBathroom': { this.facility(t.target).bathroomDirty = false; this.earnXp(3); break; }
-      case 'restockRoom': { const r = this.facility(t.target), canSheet = !!r.needsSheet && !!(actor.bag.cleanSheets ?? 0), canTowel = r.towels === 0 && actor.bag.clean > 0; if (!canSheet && !canTowel) return; if (canSheet) { actor.bag.cleanSheets!--; r.needsSheet = false; } if (canTowel) { r.towels = 1; actor.bag.clean--; } break; }
+      case 'restockRoom': {
+        const r = this.facility(t.target), canSheet = !!r.needsSheet && !!(actor.bag.cleanSheets ?? 0), canTowel = r.towels === 0 && actor.bag.clean > 0;
+        if (!canSheet && !canTowel) return;
+        // A lone clean linen item is a complete bed bundle from the player's
+        // point of view. Previously it was consumed as a towel while the bed
+        // stayed visibly stripped, making the completed action look broken.
+        if (r.needsSheet && !canSheet && canTowel) { actor.bag.clean--; r.needsSheet = false; r.towels = 1; break; }
+        if (canSheet) { actor.bag.cleanSheets!--; r.needsSheet = false; }
+        if (canTowel) { r.towels = 1; actor.bag.clean--; }
+        break;
+      }
       case 'dirtyDrop': {
         const l = this.state.laundry, space = this.shelfCapacity - l.dirty - (l.dirtySheets ?? 0);
         if (actor.id !== 'player') {
