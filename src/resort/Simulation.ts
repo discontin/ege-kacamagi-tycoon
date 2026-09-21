@@ -85,7 +85,12 @@ export class ResortSimulation {
   }
   get level() { return LEVELS.filter(n => this.state.xp >= n).length; }
   get boost() { return this.state.boost.remaining > 0 ? this.state.boost.multiplier : 1; }
-  get bagCapacity() { return 8; }
+  /** Gentle automatic player growth tied to the star level in the HUD. */
+  get bagCapacity() { return Math.min(8, 2 + this.level); }
+  get playerMoveSpeed() { return 3.2 * (1 + (this.level - 1) * .03); }
+  get playerWorkEfficiency() { return 1 + (this.level - 1) * .04; }
+  private actorCapacity(actor: PlayerState | WorkerState) { return actor.id === 'player' ? this.bagCapacity : carryingCapacity(actor); }
+  private actorTowelLimit(actor: PlayerState | WorkerState) { return actor.id === 'player' ? this.bagCapacity : towelLimit(actor); }
   get laundryTowelPackSize() { return Math.min(5, Math.max(0, this.shelfCapacity - this.state.laundry.clean)); }
   get laundryTowelPackCost() { return this.laundryTowelPackSize * 10; }
   upgradeLaundry() {
@@ -177,7 +182,7 @@ export class ResortSimulation {
   goToArea(id: string) { const a = this.area(id); if (a) this.goTo(a); }
   movePlayer(dx: number, dy: number, realSeconds: number) {
     if (this.state.settings.paused || (!dx && !dy)) return;
-    const p = this.state.player, l = Math.hypot(dx, dy), d = 3.2 * realSeconds * this.state.settings.speed * this.boost; p.path = [];
+    const p = this.state.player, l = Math.hypot(dx, dy), d = this.playerMoveSpeed * realSeconds * this.state.settings.speed * this.boost; p.path = [];
     const x = p.x + dx / l * d, y = p.y + dy / l * d;
     if (this.isWalkable(Math.round(x), Math.round(p.y))) p.x = x;
     if (this.isWalkable(Math.round(p.x), Math.round(y))) p.y = y;
@@ -254,22 +259,22 @@ export class ResortSimulation {
       case 'prepareDrink': return !this.state.bar?.open ? 'Bar kapalı' : actor.drink ? 'Elindeki siparişi teslim et' : !this.state.guests.some(g => wantsDrink(g) && !this.state.tasks.some(t => t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink'))) ? 'Sipariş bekleniyor' : null;
       case 'deliverDrink': { const g = this.state.guests.find(g => `drink:${g.id}` === a.target); return !actor.drink ? 'Bardan siparişi al' : !g || (actor.heldProduct ?? 'lemonade') !== (g.orderProduct ?? 'lemonade') || !wantsDrink(g) || this.state.tasks.some(t => t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink')) ? 'Sipariş başka birine ait veya bitmiş' : null; }
       case 'checkin': return !this.state.guests.some(g => g.phase === 'queue') ? 'Misafir bekleniyor' : !serviceGuestReady(this.state, 'checkin') ? 'Misafirin bankoya gelmesi bekleniyor' : !this.availableRoom() ? 'Hazır oda yok · temizle ve havlu bırak' : null;
-      case 'cleanRoom': return actor.bag.clean + actor.bag.dirty >= towelLimit(actor) || bagCount(actor) + 2 > carryingCapacity(actor) ? 'Çanta dolu. Yatağı temizlemek için önce elindekileri bırak.' : null;
+      case 'cleanRoom': return actor.bag.clean + actor.bag.dirty >= this.actorTowelLimit(actor) || bagCount(actor) + 2 > this.actorCapacity(actor) ? 'Çanta dolu. Yatağı temizlemek için önce elindekileri bırak.' : null;
       case 'cleanFloor': return !room!.floorDirty ? 'Zemin temiz' : null;
       case 'cleanBathroom': return !room!.bathroomDirty ? 'Banyo temiz' : null;
       case 'restockRoom': return room!.towels > 0 && !room!.needsSheet ? 'Oda hazır' : room!.needsSheet && !(actor.bag.cleanSheets ?? 0) && room!.towels > 0 ? 'Raftan temiz çarşaf getir' : room!.towels === 0 && actor.bag.clean <= 0 ? 'Çamaşırhaneden temiz havlu getir' : null;
       case 'dirtyDrop': return dirtyLinenCount(actor.bag) <= 0 ? 'Kirli çamaşırın yok' : this.state.laundry.dirty + (this.state.laundry.dirtySheets ?? 0) >= this.shelfCapacity ? 'Kirli sepet dolu' : null;
-      case 'cleanTake': return bagCount(actor) >= carryingCapacity(actor) ? 'Çanta dolu' : !((this.testMode || this.state.laundry.clean > 0) && actor.bag.clean + actor.bag.dirty < towelLimit(actor)) && !((this.testMode || (this.state.laundry.cleanSheets ?? 0) > 0) && (actor.bag.cleanSheets ?? 0) < 1 && this.state.facilities.some(f => f.kind === 'room' && (f.dirty || f.needsSheet))) ? 'Alma sınırına ulaştın veya temiz çamaşır bekleniyor' : null;
+      case 'cleanTake': return bagCount(actor) >= this.actorCapacity(actor) ? 'Çanta dolu' : !((this.testMode || this.state.laundry.clean > 0) && actor.bag.clean + actor.bag.dirty < this.actorTowelLimit(actor)) && !((this.testMode || (this.state.laundry.cleanSheets ?? 0) > 0) && (actor.bag.cleanSheets ?? 0) < 1 && this.state.facilities.some(f => f.kind === 'room' && (f.dirty || f.needsSheet))) ? 'Alma sınırına ulaştın veya temiz çamaşır bekleniyor' : null;
       case 'poolCheckin': return (this.facility('pool').dirt ?? 0) >= 4 ? 'Havuz bakım bekliyor' : !this.state.guests.some(g => g.phase === 'poolQueue') ? 'Havuz misafiri bekleniyor' : !serviceGuestReady(this.state, 'poolCheckin') ? 'Misafirin havuz girişine gelmesi bekleniyor' : this.facility('pool').towels <= 0 && !this.availableSeat()?.towel ? 'Havuz rafına temiz havlu getir' : !this.availableSeat() ? 'Boş temiz şezlong yok' : null;
-      case 'cleanSeat': { const seat = this.state.seats.find(s => s.id === a.target)!; return seat.guest ? 'Misafir havuzda' : !seat.dirty ? 'Şezlong temiz' : actor.bag.clean + actor.bag.dirty >= towelLimit(actor) || bagCount(actor) >= carryingCapacity(actor) ? 'Çanta dolu' : null; }
+      case 'cleanSeat': { const seat = this.state.seats.find(s => s.id === a.target)!; return seat.guest ? 'Misafir havuzda' : !seat.dirty ? 'Şezlong temiz' : actor.bag.clean + actor.bag.dirty >= this.actorTowelLimit(actor) || bagCount(actor) >= this.actorCapacity(actor) ? 'Çanta dolu' : null; }
       case 'poolStock': return this.facility('pool').towels >= this.shelfCapacity ? 'Havuz rafı dolu' : actor.bag.clean <= 0 ? 'Temiz havlu getir' : null;
       case 'poolDirtyDrop': return !actor.bag.dirty ? 'Kirli havlun yok' : (this.facility('pool').dirtyTowels ?? 0) >= this.shelfCapacity ? 'Havuz sepeti dolu' : null;
-      case 'poolDirtyTake': return !(this.facility('pool').dirtyTowels ?? 0) ? 'Sepet boş' : actor.bag.clean + actor.bag.dirty >= towelLimit(actor) || bagCount(actor) >= carryingCapacity(actor) ? 'Çanta dolu' : null;
-      case 'poolCleanTake': return !this.facility('pool').towels ? 'Havuz rafı boş' : actor.bag.clean + actor.bag.dirty >= towelLimit(actor) || bagCount(actor) >= carryingCapacity(actor) ? 'Çanta dolu' : null;
+      case 'poolDirtyTake': return !(this.facility('pool').dirtyTowels ?? 0) ? 'Sepet boş' : actor.bag.clean + actor.bag.dirty >= this.actorTowelLimit(actor) || bagCount(actor) >= this.actorCapacity(actor) ? 'Çanta dolu' : null;
+      case 'poolCleanTake': return !this.facility('pool').towels ? 'Havuz rafı boş' : actor.bag.clean + actor.bag.dirty >= this.actorTowelLimit(actor) || bagCount(actor) >= this.actorCapacity(actor) ? 'Çanta dolu' : null;
       case 'restockSeat': { const seat = this.state.seats.find(s => s.id === a.target)!; return seat.guest || seat.dirty || seat.towel ? 'Şezlong uygun değil' : !actor.bag.clean ? 'Havuz rafından havlu al' : null; }
       case 'laundryDirtyTake': {
-        const l = this.state.laundry, hasBagSpace = bagCount(actor) < carryingCapacity(actor);
-        const canTakeTowel = l.dirty > 0 && actor.bag.clean + actor.bag.dirty < towelLimit(actor);
+        const l = this.state.laundry, hasBagSpace = bagCount(actor) < this.actorCapacity(actor);
+        const canTakeTowel = l.dirty > 0 && actor.bag.clean + actor.bag.dirty < this.actorTowelLimit(actor);
         const canTakeSheet = (l.dirtySheets ?? 0) > 0;
         return !l.dirty && !canTakeSheet ? 'Kirli raf boş' : !hasBagSpace || !canTakeTowel && !canTakeSheet ? 'Çanta dolu' : null;
       }
@@ -319,7 +324,7 @@ export class ResortSimulation {
       case 'checkin': {
         if (!g) break; const r = this.facility(t.destination!); r.towels--; this.facility('reception').cash += Math.round(40 * incomeFactor(r.level)); g.room = r.id; g.phase = 'toRoom'; g.queueWait = 0; g.path = this.path(g, ROOM_WORK(ROOM_DEFS.find(d => d.id === r.id)!)); this.state.stats.welcomed++; this.notify('Misafir karşılandı! Bungalovuna gidiyor.'); break;
       }
-      case 'cleanRoom': { const r = this.facility(t.target); if (actor.bag.clean + actor.bag.dirty >= towelLimit(actor) || bagCount(actor) + 2 > carryingCapacity(actor)) return; r.dirty = false; r.needsSheet = true; actor.bag.dirty++; actor.bag.dirtySheets = (actor.bag.dirtySheets ?? 0) + 1; this.state.stats.cleaned++; this.earnXp(5); this.notify('Kirli çarşaf ve havlu çantana alındı. Sepete götür, temiz çarşafı geri getir.'); break; }
+      case 'cleanRoom': { const r = this.facility(t.target); if (actor.bag.clean + actor.bag.dirty >= this.actorTowelLimit(actor) || bagCount(actor) + 2 > this.actorCapacity(actor)) return; r.dirty = false; r.needsSheet = true; actor.bag.dirty++; actor.bag.dirtySheets = (actor.bag.dirtySheets ?? 0) + 1; this.state.stats.cleaned++; this.earnXp(5); this.notify('Kirli çarşaf ve havlu çantana alındı. Sepete götür, temiz çarşafı geri getir.'); break; }
       case 'cleanFloor': { this.facility(t.target).floorDirty = false; break; }
       case 'cleanBathroom': { this.facility(t.target).bathroomDirty = false; this.earnXp(3); break; }
       case 'restockRoom': { const r = this.facility(t.target), canSheet = !!r.needsSheet && !!(actor.bag.cleanSheets ?? 0), canTowel = r.towels === 0 && actor.bag.clean > 0; if (!canSheet && !canTowel) return; if (canSheet) { actor.bag.cleanSheets!--; r.needsSheet = false; } if (canTowel) { r.towels = 1; actor.bag.clean--; } break; }
@@ -333,25 +338,25 @@ export class ResortSimulation {
         else { this.cancelTask(t.id); return; }
         break;
       }
-      case 'cleanTake': { const l = this.state.laundry, needsSheets = this.state.facilities.some(f => f.kind === 'room' && (f.dirty || f.needsSheet)); const sheets = needsSheets ? Math.max(0, Math.min(1 - (actor.bag.cleanSheets ?? 0), carryingCapacity(actor) - bagCount(actor), this.testMode ? 1 : l.cleanSheets ?? 0)) : 0; actor.bag.cleanSheets = (actor.bag.cleanSheets ?? 0) + sheets; if (!this.testMode) l.cleanSheets = (l.cleanSheets ?? 0) - sheets; const n = Math.max(0, Math.min(1, towelLimit(actor) - actor.bag.clean - actor.bag.dirty, carryingCapacity(actor) - bagCount(actor), this.testMode ? 4 : l.clean)); actor.bag.clean += n; if (!this.testMode) l.clean -= n; break; }
+      case 'cleanTake': { const l = this.state.laundry, needsSheets = this.state.facilities.some(f => f.kind === 'room' && (f.dirty || f.needsSheet)); const sheets = needsSheets ? Math.max(0, Math.min(1 - (actor.bag.cleanSheets ?? 0), this.actorCapacity(actor) - bagCount(actor), this.testMode ? 1 : l.cleanSheets ?? 0)) : 0; actor.bag.cleanSheets = (actor.bag.cleanSheets ?? 0) + sheets; if (!this.testMode) l.cleanSheets = (l.cleanSheets ?? 0) - sheets; const n = Math.max(0, Math.min(1, this.actorTowelLimit(actor) - actor.bag.clean - actor.bag.dirty, this.actorCapacity(actor) - bagCount(actor), this.testMode ? 4 : l.clean)); actor.bag.clean += n; if (!this.testMode) l.clean -= n; break; }
       case 'poolStock': { const pool = this.facility('pool'), n = Math.min(actor.bag.clean, this.shelfCapacity - pool.towels); actor.bag.clean -= n; pool.towels += n; break; }
       case 'poolDirtyDrop': { const pool = this.facility('pool'), n = Math.min(actor.bag.dirty, this.shelfCapacity - (pool.dirtyTowels ?? 0)); actor.bag.dirty -= n; pool.dirtyTowels = (pool.dirtyTowels ?? 0) + n; break; }
-      case 'poolDirtyTake': { const pool = this.facility('pool'), n = Math.min(pool.dirtyTowels ?? 0, Math.max(0, Math.min(carryingCapacity(actor) - bagCount(actor), towelLimit(actor) - actor.bag.clean - actor.bag.dirty))); pool.dirtyTowels = (pool.dirtyTowels ?? 0) - n; actor.bag.dirty += n; break; }
-      case 'poolCleanTake': { if (!this.facility('pool').towels || bagCount(actor) >= carryingCapacity(actor) || actor.bag.clean + actor.bag.dirty >= towelLimit(actor)) { this.cancelTask(t.id); return; } actor.bag.clean++; this.facility('pool').towels--; break; }
+      case 'poolDirtyTake': { const pool = this.facility('pool'), n = Math.min(pool.dirtyTowels ?? 0, Math.max(0, Math.min(this.actorCapacity(actor) - bagCount(actor), this.actorTowelLimit(actor) - actor.bag.clean - actor.bag.dirty))); pool.dirtyTowels = (pool.dirtyTowels ?? 0) - n; actor.bag.dirty += n; break; }
+      case 'poolCleanTake': { if (!this.facility('pool').towels || bagCount(actor) >= this.actorCapacity(actor) || actor.bag.clean + actor.bag.dirty >= this.actorTowelLimit(actor)) { this.cancelTask(t.id); return; } actor.bag.clean++; this.facility('pool').towels--; break; }
       case 'restockSeat': { actor.bag.clean--; this.state.seats.find(s => s.id === t.target)!.towel = true; break; }
       case 'laundryDirtyTake': {
         const l = this.state.laundry;
-        if (bagCount(actor) >= carryingCapacity(actor)) { this.cancelTask(t.id); return; }
+        if (bagCount(actor) >= this.actorCapacity(actor)) { this.cancelTask(t.id); return; }
         if (actor.id !== 'player') {
           // Staff keep their bundled pickup behavior; the player collects one
           // visible item per completed interaction.
-          let space = carryingCapacity(actor) - bagCount(actor);
-          const towels = Math.max(0, Math.min(l.dirty, space, towelLimit(actor) - actor.bag.clean - actor.bag.dirty));
+          let space = this.actorCapacity(actor) - bagCount(actor);
+          const towels = Math.max(0, Math.min(l.dirty, space, this.actorTowelLimit(actor) - actor.bag.clean - actor.bag.dirty));
           l.dirty -= towels; actor.bag.dirty += towels; space -= towels;
           const sheets = Math.min(l.dirtySheets ?? 0, space);
           l.dirtySheets = (l.dirtySheets ?? 0) - sheets; actor.bag.dirtySheets = (actor.bag.dirtySheets ?? 0) + sheets;
           if (!towels && !sheets) { this.cancelTask(t.id); return; }
-        } else if (l.dirty > 0 && actor.bag.clean + actor.bag.dirty < towelLimit(actor)) { l.dirty--; actor.bag.dirty++; }
+        } else if (l.dirty > 0 && actor.bag.clean + actor.bag.dirty < this.actorTowelLimit(actor)) { l.dirty--; actor.bag.dirty++; }
         else if ((l.dirtySheets ?? 0) > 0) { l.dirtySheets!--; actor.bag.dirtySheets = (actor.bag.dirtySheets ?? 0) + 1; }
         else { this.cancelTask(t.id); return; }
         break;
@@ -382,7 +387,7 @@ export class ResortSimulation {
         this.notify('Elindeki bir parça çöpe atıldı.'); break;
       }
       case 'poolCheckin': { const seat = this.state.seats.find(s => s.id === t.destination)!; if (!g || !seat.towel && this.facility('pool').towels <= 0 || (this.facility('pool').dirt ?? 0) >= 4) { this.cancelTask(t.id); return; } if (!seat.towel) this.facility('pool').towels--; seat.towel = false; g.seat = t.destination; g.phase = 'toSeat'; g.queueWait = 0; g.path = this.path(g, SEAT_DEFS.find(s => s.id === t.destination)!); break; }
-      case 'cleanSeat': { if (actor.bag.clean + actor.bag.dirty >= towelLimit(actor) || bagCount(actor) >= carryingCapacity(actor)) return; const s = this.state.seats.find(s => s.id === t.target)!; s.dirty = false; actor.bag.dirty++; break; }
+      case 'cleanSeat': { if (actor.bag.clean + actor.bag.dirty >= this.actorTowelLimit(actor) || bagCount(actor) >= this.actorCapacity(actor)) return; const s = this.state.seats.find(s => s.id === t.target)!; s.dirty = false; actor.bag.dirty++; break; }
     }
     const area = this.taskArea(t);
     if (area) this.celebrate(t.kind === 'checkin' || t.kind === 'poolCheckin' ? 'welcome' : ['cleanRoom', 'cleanFloor', 'cleanBathroom', 'cleanSeat'].includes(t.kind) ? 'clean' : 'towel', area, ['cleanRoom', 'cleanFloor', 'cleanBathroom', 'cleanSeat'].includes(t.kind) ? t.kind === 'cleanRoom' ? 'TERTEMİZ! +5 XP' : 'TERTEMİZ!' : t.kind === 'restockRoom' ? 'ODA HAZIR!' : t.kind === 'checkin' ? 'HOŞ GELDİN!' : '✓');
@@ -525,7 +530,7 @@ export class ResortSimulation {
     const dt = Math.min(.25, Math.max(0, realSeconds)) * this.state.settings.speed; this.state.elapsed += dt;
     this.state.boost.remaining = Math.max(0, this.state.boost.remaining - dt);
     if (this.testMode) { this.state.laundry.cleanSheets = Math.max(999, this.state.laundry.cleanSheets ?? 0); this.state.money = 999999; this.state.laundry.clean = Math.max(this.state.laundry.clean, 999); if (this.facility('pool').open) this.facility('pool').towels = Math.max(999, this.facility('pool').towels); }
-    this.follow(this.state.player, 3.2 * this.boost, dt); this.guests(dt);
+    this.follow(this.state.player, this.playerMoveSpeed * this.boost, dt); this.guests(dt);
     for (const a of this.areas.filter(a => a.mode === 'cash')) { const f = a.target === 'bar' ? this.state.bar! : this.facility(a.target); if (f.cash > 0 && distance(this.state.player, a) < 1.2) { const n = f.cash; this.state.money += n; this.state.stats.earned += n; f.cash = 0; this.celebrate('cash', a, `+${n} ₺`); this.notify(`+${n} para topladın!`); } }
     for (const r of ROOM_DEFS) {
       const f = this.facility(r.id), tipPoint = { x: r.x + 7, y: r.y + 1.5 };
@@ -584,7 +589,7 @@ export class ResortSimulation {
     for (const t of [...this.state.tasks]) {
       const actor = this.actor(t.owner), a = this.taskArea(t); if (!actor || !a) { this.cancelTask(t.id); continue; }
       if (!this.isTaskActive(t)) { if (t.owner === 'player' && (t.kind === 'checkin' || t.kind === 'poolCheckin') && !serviceGuestReady(this.state, t.kind, t.guest)) this.status = 'Misafirin hizmet noktasına gelmesi bekleniyor'; continue; }
-      const efficiency = t.owner === 'player' ? 1 : [.65, .8, 1][(actor as WorkerState).level - 1];
+      const efficiency = t.owner === 'player' ? this.playerWorkEfficiency : [.65, .8, 1][(actor as WorkerState).level - 1];
       t.remaining = Math.max(0, t.remaining - dt * efficiency * this.boost);
       if (t.owner === 'player') this.status = `${a.label} · ${Math.round((1 - t.remaining / t.total) * 100)}%`;
       if (t.remaining === 0) this.finishTask(t);

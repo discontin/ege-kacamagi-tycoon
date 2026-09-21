@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ResortSimulation } from './Simulation';
-import { areasFor, initialResort, POOL_GATE, RECEPTION, receptionQueuePoint, ROOM_DEFS, ROOM_WORK } from './data';
+import { areasFor, initialResort, LEVELS, POOL_GATE, RECEPTION, receptionQueuePoint, ROOM_DEFS, ROOM_WORK } from './data';
 import { RESORT_SAVE_KEY, ResortSaveService, validResort } from './SaveService';
 
 const advance = (s: ResortSimulation, seconds: number) => { for (let i = 0; i < seconds * 10; i++) s.tick(.1); };
@@ -130,6 +130,19 @@ describe('workers, reservations and time', () => {
     s.state.settings.paused = true; const before = JSON.stringify(s.state); advance(s, 3); expect(JSON.stringify(s.state)).toBe(before); s.state.settings.paused = false; s.state.settings.speed = 2; advance(s, 1); expect(s.state.elapsed).toBeCloseTo(3); expect(s.state.boost.remaining).toBeCloseTo(117);
   });
   it('test mode removes costs and hiring limits but retains physical bag capacity', () => { const s = new ResortSimulation(initialResort(true), true); s.state.money = 0; for (let i = 0; i < 7; i++) s.hire(); expect(s.state.workers).toHaveLength(7); expect(s.state.money).toBe(0); s.tick(.1); expect(s.state.money).toBe(999999); expect(s.bagCapacity).toBe(8); });
+  it('grows player capacity, walking and work speed gently with every star level', () => {
+    for (let i = 0; i < LEVELS.length; i++) {
+      const s = new ResortSimulation(); s.state.xp = LEVELS[i];
+      expect(s.level).toBe(i + 1);
+      expect(s.bagCapacity).toBe(3 + i);
+      expect(s.playerMoveSpeed).toBeCloseTo(3.2 * (1 + i * .03));
+      expect(s.playerWorkEfficiency).toBeCloseTo(1 + i * .04);
+    }
+    const first = new ResortSimulation(), last = new ResortSimulation(); last.state.xp = LEVELS.at(-1)!;
+    for (const s of [first, last]) { s.state.player.bag.dirty = 1; stand(s, 'dirtyDrop'); expect(s.startTask(s.area('dirtyDrop')!)).toBe(true); s.tick(.1); }
+    expect(first.state.tasks[0].remaining).toBeCloseTo(.5);
+    expect(last.state.tasks[0].remaining).toBeCloseTo(.48);
+  });
 });
 
 describe('isolated resort saves', () => {
