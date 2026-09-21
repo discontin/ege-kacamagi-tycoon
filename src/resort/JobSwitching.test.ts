@@ -29,7 +29,7 @@ describe('switching between field jobs', () => {
     expect(s.facility('room1').dirty).toBe(false);
   });
   it('opens the pool with four clean loungers and six towels split between seats and shelf', () => {
-    const s = setup(); s.state.xp = 280; s.state.money = 400;
+    const s = setup(); s.state.xp = 315; s.state.money = 400;
     for (const id of ['room2', 'room3', 'room4', 'room5', 'room6']) s.facility(id).open = true;
     stand(s, 'poolBuy'); advance(s, 1.4);
     const seats = s.state.seats.filter(seat => seat.open);

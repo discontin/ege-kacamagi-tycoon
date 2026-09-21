@@ -4,7 +4,7 @@ import { ResortSimulation } from './Simulation';
 const advance = (s: ResortSimulation, seconds: number) => { for (let i = 0; i < seconds * 10; i++) s.tick(.1); };
 describe('purchase progress rings', () => {
   it.each(['receptionHire', 'room2Buy', 'poolBuy'])('fills with the actual hold timer for %s', id => {
-    const s = new ResortSimulation(); s.state.xp = id === 'poolBuy' ? 280 : 100; s.state.money = 1000;
+    const s = new ResortSimulation(); s.state.xp = id === 'poolBuy' ? 315 : 100; s.state.money = 1000;
     if (id === 'poolBuy') for (const room of ['room2', 'room3', 'room4', 'room5', 'room6']) s.facility(room).open = true;
     const a = s.area(id)!; Object.assign(s.state.player, { x: a.x, y: a.y, path: [] });
     expect(s.purchaseProgress(a)).toBeUndefined(); advance(s, .6);

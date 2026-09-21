@@ -11,7 +11,7 @@ describe('customer must reach the counter before service', () => {
     expect(s.startTask(s.area('checkin')!)).toBe(false); advance(s, 1);
     expect(s.state.tasks).toHaveLength(0); expect(s.facility('room1').guest).toBeUndefined();
     advance(s, 1.2); expect(s.state.tasks).toHaveLength(1); expect(s.state.tasks[0].remaining).toBeGreaterThan(2.5);
-    advance(s, 3); expect(s.state.stats.welcomed).toBe(1);
+    advance(s, 3); expect(s.state.stats.welcomed).toBe(1); expect(s.state.xp).toBe(10);
   });
   it('does not start worker check-in while the customer is still walking', () => {
     const s = new ResortSimulation(); s.state.xp = 15; s.hire(); const w = s.state.workers[0]; s.assign(w.id, 'reception'); Object.assign(w, RECEPTION);

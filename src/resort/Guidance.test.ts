@@ -19,12 +19,14 @@ describe('guided, satisfying first session', () => {
     const sim = new ResortSimulation();
     sim.hire('rooms');
     sim.state.stats.welcomed = sim.state.stats.stays = sim.state.stats.cleaned = sim.state.stats.washed = sim.state.stats.earned = 1;
-    sim.state.xp = 280;
+    sim.state.xp = 310;
     for (const id of ['room2', 'room3', 'room4', 'room5']) sim.facility(id).open = true;
     expect(sim.area('poolBuy')).toBeDefined();
     expect(sim.areas.some(a => a.id.startsWith('pool') && a.id !== 'poolBuy')).toBe(false);
     expect(resortGoal(sim.state).area).toBe('room6Buy');
     sim.facility('room6').open = true;
+    expect(resortGoal(sim.state).area).toBe('checkin');
+    sim.state.xp = 315;
     expect(resortGoal(sim.state).area).toBe('poolBuy');
   });
   it('describes measurable upgrade benefits', () => { expect(upgradeBenefit('room1', 1)).toContain('50 ₺'); expect(upgradeBenefit('room1', 2)).toBe('En yüksek oda seviyesi'); expect(upgradeBenefit('laundry', 2)).toContain('7 parça'); });

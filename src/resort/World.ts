@@ -644,7 +644,7 @@ export class ResortWorld {
       }
       const task = s.tasks.find(t => t.target === a.target && (a.taskKind === t.kind || a.id === `${t.target}Work` && (t.kind === 'cleanRoom' || t.kind === 'restockRoom'))), near = this.sim.inside(s.player, a);
       const progress = task ? 1 - task.remaining / task.total : near ? .3 : 0;
-      const poolGateLocked = a.mode === 'buy' && a.target === 'pool' && !this.sim.facility('pool').open && !this.sim.poolRoomsUnlocked();
+      const poolGateLocked = a.mode === 'buy' && a.target === 'pool' && !this.sim.facility('pool').open && (!this.sim.poolRoomsUnlocked() || this.sim.level < this.sim.requiredLevel(a));
       const buyLocked = !this.sim.testMode && a.mode === 'buy' && (poolGateLocked || this.sim.level < this.sim.requiredLevel(a));
       const unaffordable = !this.sim.testMode && (a.mode === 'buy' || a.mode === 'upgrade') && s.money < this.sim.cost(a);
       (p.outline.material as T.MeshBasicMaterial).color.set(near ? a.mode === 'upgrade' ? 0xd8d0b5 : 0xb7ef8d : a.mode === 'buy' ? buyLocked ? 0xb3b7a0 : 0x92e6a3 : a.mode === 'upgrade' ? 0xc8bb99 : 0xffffff);
@@ -667,7 +667,7 @@ export class ResortWorld {
       const labelText = text + (purchaseProgress === undefined ? '' : '<span class="purchase-progress" aria-hidden="true"></span>');
       if (p.label.innerHTML !== labelText) p.label.innerHTML = labelText;
       p.label.style.setProperty('--purchase-progress', `${Math.round((purchaseProgress ?? 0) * 100)}%`);
-      if (a.mode === 'buy') p.label.setAttribute('aria-label', poolPurchase && poolGateLocked ? 'Havuz kilitli · İlk 6 odayı aç' : `${a.label} · ${this.sim.cost(a)} ₺${purchaseProgress === undefined ? '' : ' · %' + Math.round(purchaseProgress * 100)}`);
+      if (a.mode === 'buy') p.label.setAttribute('aria-label', poolPurchase && poolGateLocked ? `Havuz kilitli · İlk 6 oda ve Seviye ${this.sim.requiredLevel(a)} gerekli` : `${a.label} · ${this.sim.cost(a)} ₺${purchaseProgress === undefined ? '' : ' · %' + Math.round(purchaseProgress * 100)}`);
       this.project(p.label, p.root.position.clone().add(new T.Vector3(0, .38, !!staffRole(a.target) ? 0 : .5)));
       const featuredTestUpgrade = this.sim.testMode && a.mode === 'upgrade' && (a.target.startsWith('room') || a.target === 'pool');
       if (a.id !== 'office' && (a.mode === 'work' && !near && distance(s.player, a) > 6 || a.mode === 'upgrade' && !featuredTestUpgrade && distance(s.player, a) > 6 || !this.follow && a.mode === 'work')) p.label.style.display = 'none';

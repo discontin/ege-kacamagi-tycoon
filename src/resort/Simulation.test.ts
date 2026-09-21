@@ -66,7 +66,7 @@ describe('pool and expansion', () => {
     s.state.player.x++; s.tick(.1); s.state.xp = 20; stand(s, 'room2Buy'); advance(s, 2); expect(s.facility('room2').open).toBe(true); expect(s.state.money).toBe(0); expect(s.facility('room2').towels).toBe(1); advance(s, 3); expect(s.state.money).toBe(0);
   });
   it('keeps the pool and its hire marker locked until all six rooms are open', () => {
-    const s = new ResortSimulation(); s.state.xp = 280; s.state.money = 1000;
+    const s = new ResortSimulation(); s.state.xp = 310; s.state.money = 1000;
     expect(s.area('poolBuy')).toBeDefined(); expect(s.area('poolHire')).toBeUndefined();
     expect(s.areas.some(a => a.id.startsWith('pool') && a.id !== 'poolBuy')).toBe(false);
     expect(s.purchaseProgress(s.area('poolBuy')!)).toBeUndefined();
@@ -74,13 +74,15 @@ describe('pool and expansion', () => {
     Object.assign(s.state.player, { x: POOL_GATE.x, y: POOL_GATE.y });
     expect(s.purchaseArea(stalePoolArea)).toBe(false); expect(s.facility('pool').open).toBe(false);
     for (const id of ['room2', 'room3', 'room4', 'room5', 'room6']) s.facility(id).open = true;
-    const poolArea = s.area('poolBuy')!; expect(s.requiredLevel(poolArea)).toBe(4);
+    const poolArea = s.area('poolBuy')!; expect(s.requiredLevel(poolArea)).toBe(7);
+    expect(s.purchaseArea(poolArea)).toBe(false); expect(s.facility('pool').open).toBe(false);
+    s.state.xp = 315;
     expect(s.purchaseArea(poolArea)).toBe(true); expect(s.facility('pool').open).toBe(true);
     expect(s.area('poolHire')).toBeDefined();
     expect(s.state.seats.filter(s => s.open)).toHaveLength(4); expect(s.facility('pool').towels).toBe(2); expect(s.state.seats.filter(seat => seat.towel)).toHaveLength(4);
   });
   it('opens the pool with four seats and six towels, then serves and cleans', () => {
-    const s = new ResortSimulation(); s.state.xp = 280; s.state.money = 1000;
+    const s = new ResortSimulation(); s.state.xp = 315; s.state.money = 1000;
     for (const id of ['room2', 'room3', 'room4', 'room5', 'room6']) s.facility(id).open = true;
     stand(s, 'poolBuy'); advance(s, 2); expect(s.facility('pool').open).toBe(true); expect(s.state.seats.filter(s => s.open)).toHaveLength(4); expect(s.facility('pool').towels).toBe(2); expect(s.state.seats.filter(seat => seat.towel)).toHaveLength(4);
     s.state.guests.push({ id: 'poolGuest', x: 21, y: 9, path: [], phase: 'poolQueue', remaining: 0 }); stand(s, 'poolCheckin'); advance(s, 165);
@@ -134,14 +136,14 @@ describe('workers, reservations and time', () => {
     for (let i = 0; i < LEVELS.length; i++) {
       const s = new ResortSimulation(); s.state.xp = LEVELS[i];
       expect(s.level).toBe(i + 1);
-      expect(s.bagCapacity).toBe(3 + i);
+      expect(s.bagCapacity).toBe(Math.min(8, 3 + i));
       expect(s.playerMoveSpeed).toBeCloseTo(3.2 * (1 + i * .03));
       expect(s.playerWorkEfficiency).toBeCloseTo(1 + i * .04);
     }
     const first = new ResortSimulation(), last = new ResortSimulation(); last.state.xp = LEVELS.at(-1)!;
     for (const s of [first, last]) { s.state.player.bag.dirty = 1; stand(s, 'dirtyDrop'); expect(s.startTask(s.area('dirtyDrop')!)).toBe(true); s.tick(.1); }
     expect(first.state.tasks[0].remaining).toBeCloseTo(.5);
-    expect(last.state.tasks[0].remaining).toBeCloseTo(.48);
+    expect(last.state.tasks[0].remaining).toBeCloseTo(.6 - .1 * last.playerWorkEfficiency);
   });
 });
 

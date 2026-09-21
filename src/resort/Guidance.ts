@@ -1,4 +1,4 @@
-import { areasFor, LEVELS, ROOM_DEFS } from './data';
+import { areasFor, LEVELS, POOL_UNLOCK_LEVEL, ROOM_DEFS } from './data';
 import type { ResortGameState } from './types';
 import { dirtyLinenCount, linenCount } from './Linen';
 import { wantsDrink } from './PoolServices';
@@ -39,7 +39,9 @@ export function resortGoal(s: ResortGameState, testMode = false): ResortGoal {
       if (nextRoom && nextRoomArea && level >= nextRoom.unlockLevel) return goal('Önce altı odayı aç', `Havuzdan önce tüm bungalovları aç; sıradaki ${nextRoom.name}.`, nextRoomArea.id);
       return goal('Önce altı odayı aç', `Havuzu açmak için ${ROOM_DEFS.length - rooms.length} oda daha açmalısın. Misafir ağırlayıp Seviye ${nextRoom?.unlockLevel ?? 6} ve gerekli parayı kazan.`, 'checkin');
     }
-    return goal('Büyük hedef: havuz', 'Altı oda hazır! Havuzu aç, dört şezlong ve yeni hizmeti köyüne kat.', 'poolBuy');
+    const level = LEVELS.filter(x => s.xp >= x).length;
+    if (level < POOL_UNLOCK_LEVEL) return goal('Havuz için seviye kazan', `Altı oda hazır. Havuzu açmak için Seviye ${POOL_UNLOCK_LEVEL} ol; müşteri karşılayıp XP kazan.`, 'checkin');
+    return goal('Büyük hedef: havuz', 'Altı oda ve gerekli seviye hazır! Havuzu aç, dört şezlong ve yeni hizmeti köyüne kat.', 'poolBuy');
   }
   if (!s.stats.poolVisits) {
     if (!pool.towels) return goal('Havuz havlu bekliyor', 'Temiz havlu alıp havuz rafına taşı.', s.player.bag.clean ? 'poolStock' : 'cleanTake');

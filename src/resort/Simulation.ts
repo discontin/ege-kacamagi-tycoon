@@ -3,7 +3,7 @@ import { guestTip } from './GuestMood';
 import { atOffice, carryingCapacity, OFFICE, towelLimit, workerMoveSpeed } from './Office';
 import { guestPreferences } from './GuestPreferences';
 import { staffHireCost, staffRequiredLevel, staffRole, staffRoleLimit } from './StaffHiring';
-import { areasFor, CLEAN_TAKE, DIRTY_DROP, EXIT, HEIGHT, incomeFactor, initialResort, LAUNDRY_FRONT_EDGE, LAUNDRY_RIGHT_EDGE, LEVELS, machineCapacityForLevel, MAP_MAX_X, MAP_MIN_X, poolSeatCount, POOL_GATE, receptionQueuePoint, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, taskDuration, upgradeCost, WIDTH } from './data';
+import { areasFor, CLEAN_TAKE, DIRTY_DROP, EXIT, HEIGHT, incomeFactor, initialResort, LAUNDRY_FRONT_EDGE, LAUNDRY_RIGHT_EDGE, LEVELS, machineCapacityForLevel, MAP_MAX_X, MAP_MIN_X, poolSeatCount, POOL_GATE, POOL_UNLOCK_LEVEL, receptionQueuePoint, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, taskDuration, upgradeCost, WIDTH } from './data';
 import type { Actor, Area, GuestState, PlayerState, Point, ResortGameState, Role, TaskKind, TaskState, WorkerState } from './types';
 import { serviceGuestReady } from './CustomerService';
 import { workAreaContains } from './WorkAreas';
@@ -202,7 +202,7 @@ export class ResortSimulation {
     const role = staffRole(a.target);
     if (role) return staffRequiredLevel(role, this.state.workers.filter(w => w.role === role).length);
     if (a.mode === 'upgrade' && a.target.startsWith('room')) return 3;
-    return a.target === 'pool' ? 4 : a.target.startsWith('seat') ? 4 : ROOM_DEFS.find(r => r.id === a.target)?.unlockLevel ?? 1;
+    return a.target === 'pool' ? a.mode === 'buy' ? POOL_UNLOCK_LEVEL : 4 : a.target.startsWith('seat') ? 4 : ROOM_DEFS.find(r => r.id === a.target)?.unlockLevel ?? 1;
   }
   poolRoomsUnlocked() { return this.state.facilities.filter(f => f.kind === 'room' && f.open).length >= ROOM_DEFS.length; }
   purchaseProgress(a: Area): number | undefined {
@@ -328,7 +328,7 @@ export class ResortSimulation {
       case 'prepareDrink': { actor.drink = true; actor.heldProduct = g?.orderProduct ?? 'lemonade'; break; }
       case 'deliverDrink': { if (!g || !wantsDrink(g) || !actor.drink || (actor.heldProduct ?? 'lemonade') !== (g.orderProduct ?? 'lemonade')) { this.cancelTask(t.id); return; } actor.drink = false; actor.heldProduct = undefined; g.drinkServed = true; const price = g.orderProduct === 'icecream' ? 22 : 15; this.state.bar!.cash += price; this.notify(`${g.orderProduct === 'icecream' ? 'Dondurma' : 'Limonata'} teslim edildi! +${price} ₺ bar kasasında.`); break; }
       case 'checkin': {
-        if (!g) break; const r = this.facility(t.destination!); r.towels--; this.facility('reception').cash += Math.round(40 * incomeFactor(r.level)); g.room = r.id; g.phase = 'toRoom'; g.queueWait = 0; g.path = this.path(g, ROOM_WORK(ROOM_DEFS.find(d => d.id === r.id)!)); this.state.stats.welcomed++; this.notify('Misafir karşılandı! Bungalovuna gidiyor.'); break;
+        if (!g) break; const r = this.facility(t.destination!); r.towels--; this.facility('reception').cash += Math.round(40 * incomeFactor(r.level)); g.room = r.id; g.phase = 'toRoom'; g.queueWait = 0; g.path = this.path(g, ROOM_WORK(ROOM_DEFS.find(d => d.id === r.id)!)); this.state.stats.welcomed++; this.earnXp(10); this.notify('Misafir karşılandı! +10 XP · Bungalovuna gidiyor.'); break;
       }
       case 'cleanRoom': { const r = this.facility(t.target); if (bagCount(actor) + 1 > this.actorCapacity(actor)) return; r.dirty = false; r.needsSheet = true; actor.bag.dirtySheets = (actor.bag.dirtySheets ?? 0) + 1; this.state.stats.cleaned++; this.earnXp(5); this.notify('Yataktan bir kirli çarşaf aldın. Sepete götür, temiz çarşafı geri getir.'); break; }
       case 'cleanFloor': { this.facility(t.target).floorDirty = false; break; }
