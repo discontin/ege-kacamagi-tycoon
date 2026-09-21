@@ -15,6 +15,12 @@ const bagCount = (a: PlayerState | WorkerState) => linenCount(a.bag);
 const GUEST_ARRIVAL_SECONDS = [30, 26, 22, 18, 15, 12];
 const WASH_CYCLE_SECONDS = 10;
 const SHEET_MAKING_SECONDS = 2.4;
+// Two lanes down the central promenade keep idle room attendants visible and
+// out of guest rooms without blocking either row of bungalow entrances.
+const ROOM_CLEANER_PATROL: Point[] = [
+  { x: 15, y: 39 }, { x: 21, y: 39 }, { x: 21, y: 29 },
+  { x: 15, y: 29 }, { x: 15, y: 19 }, { x: 21, y: 19 },
+];
 export class ResortSimulation {
   /** Transient presentation events; never persisted or replayed after loading. */
   feedback: { kind: 'cash' | 'clean' | 'towel' | 'build' | 'level' | 'welcome' | 'wash'; x: number; y: number; text: string }[] = [];
@@ -487,6 +493,19 @@ export class ResortSimulation {
       return;
     }
     if (w.role === 'bartender' && this.state.bar?.open) { const bar = this.area('barPrepare')!; if (!this.inside(w, bar) && !w.path.length) w.path = this.path(w, bar); w.status = w.drink ? 'Yeni içecek siparişi bekleniyor' : 'Barda sipariş bekleniyor'; return; }
+    if (w.role === 'rooms') {
+      if (!w.path.length) {
+        let nearest = 0;
+        for (let i = 1; i < ROOM_CLEANER_PATROL.length; i++) if (distance(w, ROOM_CLEANER_PATROL[i]) < distance(w, ROOM_CLEANER_PATROL[nearest])) nearest = i;
+        const atWaypoint = distance(w, ROOM_CLEANER_PATROL[nearest]) < .4;
+        const workerNumber = Number(w.id.match(/\d+$/)?.[0] ?? 0);
+        const direction = workerNumber % 2 ? 1 : -1;
+        const next = atWaypoint ? (nearest + direction + ROOM_CLEANER_PATROL.length) % ROOM_CLEANER_PATROL.length : nearest;
+        w.path = this.path(w, ROOM_CLEANER_PATROL[next]);
+      }
+      w.status = 'Koridorda devriye geziyor';
+      return;
+    }
     w.status = 'Uygun iş / havlu bekleniyor';
   }
   private guests(dt: number) {
