@@ -25,6 +25,7 @@ describe('visible laundry layout and carrying limits', () => {
     expect(LAUNDRY_MACHINE.x).toBeLessThan(DIRTY_BASKET.x - 2);
     expect(LAUNDRY_MACHINE_AREA.x).toBeGreaterThan(LAUNDRY_MACHINE.x);
     expect(LAUNDRY_MACHINE_AREA.y).toBe(LAUNDRY_MACHINE.y);
+    expect(LAUNDRY_MACHINE.y - DIRTY_BASKET.y).toBeGreaterThanOrEqual(3.5);
     expect(TOWEL_RACK.x - DIRTY_BASKET.x).toBeGreaterThanOrEqual(4);
     const areas = [LAUNDRY_MACHINE_AREA, DIRTY_DROP, DIRTY_TAKE, CLEAN_TAKE, LAUNDRY_TRASH];
     for (let i = 0; i < areas.length; i++) for (let j = i + 1; j < areas.length; j++) {

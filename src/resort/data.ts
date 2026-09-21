@@ -15,8 +15,8 @@ export const LAUNDRY_RIGHT_EDGE = 11.5;
 export const LAUNDRY_FRONT_EDGE = 51;
 // Keep the washer close to the left wall and face it toward the side entrance.
 // The shelves stay along the rear wall with a clear gap between them.
-export const LAUNDRY_MACHINE = { x: 2.8, y: 45 };
-export const LAUNDRY_MACHINE_AREA = { x: 4, y: 45 };
+export const LAUNDRY_MACHINE = { x: 2.8, y: 46.4 };
+export const LAUNDRY_MACHINE_AREA = { x: 4, y: 46.4 };
 export const TOWEL_RACK = { x: 9.5, y: 42.7 }, DIRTY_BASKET = { x: 5, y: 42.7 };
 export const LAUNDRY_TRASH = { x: 5.4, y: 49 };
 export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 3.9, y: 43.4 }, DIRTY_TAKE = { x: 6.3, y: 43.4 }, CLEAN_TAKE = { x: 10, y: 44 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
