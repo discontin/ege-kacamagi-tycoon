@@ -1,5 +1,6 @@
 import { staffRole } from './StaffHiring';
 import { DIRTY_BASKET, DIRTY_HAMPER, LAUNDRY_RIGHT_EDGE, ROOM_DEFS, TOWEL_RACK } from './data';
+import { atPoolEdge } from './PoolServices';
 import type { Area, Point } from './types';
 
 function besideShelf(p: Point, center: Point, halfWidth: number, halfDepth: number, reach: number) {
@@ -9,7 +10,7 @@ function besideShelf(p: Point, center: Point, halfWidth: number, halfDepth: numb
 
 /** Shared by automatic jobs, progress indicators and floor highlights. */
 export function workAreaContains(p: Point, a: Point | Area): boolean {
-  if ('mode' in a && a.taskKind === 'cleanPool') return Math.abs(p.x - a.x) <= .85 && Math.abs(p.y - a.y) <= .85;
+  if ('mode' in a && a.taskKind === 'cleanPool') return atPoolEdge(p, a.facilityLevel);
   if ('mode' in a && a.taskKind === 'prepareDrink') return Math.abs(p.x - a.x) <= .85 && Math.abs(p.y - a.y) <= .85;
   if ('mode' in a && a.taskKind === 'deliverDrink') {
     // Reach the guest from either side or end of the visible lounger.

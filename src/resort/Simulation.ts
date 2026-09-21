@@ -269,7 +269,7 @@ export class ResortSimulation {
     switch (a.taskKind) {
       case 'cleanPool': return !this.facility('pool').open || !(this.facility('pool').dirt ?? 0) ? 'Havuz temiz' : null;
       case 'prepareDrink': return !this.state.bar?.open ? 'Bar kapalı' : actor.drink ? 'Elindeki siparişi teslim et' : !this.state.guests.some(g => wantsDrink(g) && !this.state.tasks.some(t => t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink'))) ? 'Sipariş bekleniyor' : null;
-      case 'deliverDrink': { const g = this.state.guests.find(g => `drink:${g.id}` === a.target); return !actor.drink ? 'Bardan siparişi al' : !g || (actor.heldProduct ?? 'lemonade') !== (g.orderProduct ?? 'lemonade') || !wantsDrink(g) || this.state.tasks.some(t => t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink')) ? 'Sipariş başka birine ait veya bitmiş' : null; }
+      case 'deliverDrink': { const g = this.state.guests.find(g => `drink:${g.id}` === a.target); return !actor.drink ? 'Bardan siparişi al' : !g || (actor.heldProduct ?? 'lemonade') !== (g.orderProduct ?? 'lemonade') || !wantsDrink(g) || this.state.tasks.some(t => t.owner !== actor.id && t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink')) ? 'Sipariş başka birine ait veya bitmiş' : null; }
       case 'checkin': return !this.state.guests.some(g => g.phase === 'queue') ? 'Misafir bekleniyor' : !serviceGuestReady(this.state, 'checkin') ? 'Misafirin bankoya gelmesi bekleniyor' : !this.availableRoom() ? 'Hazır oda yok · temizle ve havlu bırak' : null;
       case 'cleanRoom': return bagCount(actor) + 1 > this.actorCapacity(actor) ? 'Çanta dolu. Yatağı temizlemek için önce elindekileri bırak.' : null;
       case 'cleanFloor': return !room!.floorDirty ? 'Zemin temiz' : null;
@@ -584,7 +584,7 @@ export class ResortSimulation {
     }
     const p = this.state.player;
     const nearby = this.areas.filter(a => a.mode !== 'cash' && this.inside(p, a));
-    const delivery = p.drink ? nearby.find(a => a.taskKind === 'deliverDrink' && !this.reason(a, p)) : undefined;
+    const delivery = p.drink ? this.areas.find(a => a.taskKind === 'deliverDrink' && this.inside(p, a) && !this.reason(a, p)) : undefined;
     const at = delivery ?? nearby.find(a => a.id === 'poolStock' && p.bag.clean > 0 && !this.reason(a, p)) ?? nearby.find(a => a.mode === 'work' && !this.reason(a, p)) ?? nearby[0];
     if (at && !p.path.length) {
       if (at.mode === 'buy' || at.mode === 'upgrade') {

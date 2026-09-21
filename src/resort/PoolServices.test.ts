@@ -145,10 +145,11 @@ describe('pool bar and maintenance', () => {
     const other = swimmer(s, .2, 'other', 1); advance(s, .3); expect(other.phase).toBe('leaving');
     expect(s.facility('pool').dirt).toBe(4);
   });
-  it.each([{ x: 23, y: 5 }, { x: 34, y: 5 }, { x: 28, y: 1 }, { x: 28, y: 8 }])('does not start maintenance away from the dedicated cleaning area %j', position => {
+  it.each([{ x: 23, y: 5 }, { x: 34, y: 5 }, { x: 28, y: 1 }, { x: 28, y: 8 }])('starts maintenance from any reachable pool edge %j', position => {
     const s = setup(); s.facility('pool').dirt = 4; Object.assign(s.state.player, position);
     expect(s.isWalkable(position.x, position.y)).toBe(true); advance(s, 8.2);
-    expect(s.facility('pool').dirt).toBe(4); expect(s.state.tasks).toHaveLength(0);
+    expect(s.facility('pool').dirt).toBe(0); expect(s.state.tasks).toHaveLength(0);
+    expect(taskIndicators(s.state).find(n => n.id === 'poolMaintenance')).toBeUndefined();
   });
   it('pauses maintenance outside range and reserves it against a second worker', () => {
     const s = setup(); s.facility('pool').dirt = 4; stand(s, 'poolClean'); advance(s, 2);

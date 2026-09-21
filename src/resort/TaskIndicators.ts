@@ -1,4 +1,4 @@
-import { BAR_CASH, BAR_WORK, POOL_CLEAN, poolDirtyRack, poolTowelRack, wantsDrink } from './PoolServices';
+import { BAR_CASH, BAR_WORK, POOL_CENTER, poolDirtyRack, poolTowelRack, wantsDrink } from './PoolServices';
 import { areasFor, CLEAN_TAKE, DIRTY_BASKET, DIRTY_DROP, LAUNDRY_MACHINE, LAUNDRY_TRASH, machineCapacityForLevel, POOL_GATE, RECEPTION, ROOM_DEFS, SEAT_DEFS, TOWEL_RACK } from './data';
 import { carryingCapacity, towelLimit } from './Office';
 import type { Point, ResortGameState, TaskKind } from './types';
@@ -50,7 +50,7 @@ export function taskIndicators(s: ResortGameState): TaskIndicator[] {
     const dirtyRack = poolDirtyRack(pool.level), cleanRack = poolTowelRack(pool.level);
     if ((pool.dirtyTowels ?? 0) > 0) add('poolDirtyTowels', 'poolDirtyTake', 'towel', 'Kirli havluları çamaşırhaneye taşı', dirtyRack.x, dirtyRack.y, 2.3, 'poolDirty', 'poolDirtyTake');
     for (const r of SEAT_DEFS) { const seat = s.seats.find(s => s.id === r.id)!; if (seat.open && !seat.dirty && !seat.guest && !seat.towel) add(`${r.id}Restock`, `${r.id}Towel`, 'towel', 'Şezlonga temiz havlu ser', r.x, r.y - .6, 1.8, r.id, 'restockSeat'); }
-    if ((pool.dirt ?? 0) > 0) add('poolMaintenance', 'poolClean', 'net', 'Havuzu kepçeyle temizle', POOL_CLEAN.x, POOL_CLEAN.y, 2, 'pool', 'cleanPool');
+    if ((pool.dirt ?? 0) > 0) add('poolMaintenance', 'poolClean', 'net', 'Havuzu kepçeyle temizle', POOL_CENTER.x, POOL_CENTER.y, 2.8, 'pool', 'cleanPool');
     if (s.bar?.open) {
       if (s.guests.some(wantsDrink) && !s.player.drink) add('barOrder', 'barPrepare', 'drink', 'Siparişi hazırla', BAR_WORK.x, BAR_WORK.y, 2.3, 'bar', 'prepareDrink');
       for (const guest of s.guests.filter(wantsDrink)) { const seat = SEAT_DEFS.find(r => r.id === guest.seat)!; add(`order:${guest.id}`, `drink:${guest.id}`, guest.orderProduct === 'icecream' ? 'icecream' : 'drink', guest.orderProduct === 'icecream' ? 'Misafire dondurma ver' : 'Misafire limonata ver', seat.x, seat.y - .6, 2.4, `drink:${guest.id}`, 'deliverDrink'); }

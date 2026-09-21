@@ -443,6 +443,7 @@ export class ResortWorld {
       if (a.taskKind === 'cleanTake' || a.taskKind === 'dirtyDrop' || a.taskKind === 'laundryDirtyTake') continue;
       if ((a.id === 'machineLoad' || a.id === 'machineUnload') && a.id !== machineAreaId) continue;
       const root = this.group(a), color = a.mode === 'buy' ? 0x72c891 : a.mode === 'upgrade' ? 0xd8c99c : a.mode === 'cash' ? 0x9eca86 : 0xffffff;
+      const freeformPoolCleaning = a.taskKind === 'cleanPool';
       const room = a.mode === 'work' && (a.taskKind === 'cleanRoom' || a.taskKind === 'restockRoom') ? ROOM_DEFS.find(r => r.id === a.target) : undefined;
       const rectangle = (w: number, d: number, holeW: number, holeD: number, holeZ = 0) => {
         const shape = new T.Shape(); shape.moveTo(-w, -d); shape.lineTo(w, -d); shape.lineTo(w, d); shape.lineTo(-w, d); shape.closePath();
@@ -469,6 +470,7 @@ export class ResortWorld {
       const outline = new T.Mesh(geometry, new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: a.mode === 'upgrade', opacity: a.mode === 'upgrade' ? .42 : 1 })); outline.rotation.x = -Math.PI / 2; outline.position.y = .17; root.add(outline);
       const label = document.createElement('button'); label.className = `floor-label ${a.mode}${a.id === 'office' ? ' office-marker' : ''}`; label.setAttribute('aria-label', a.id === 'office' ? 'Personel geliştirme ofisine git' : `${a.label} alanına yürü`); if (a.id === 'office') label.title = 'Personel geliştirme ofisi'; label.addEventListener('click', () => { this.sim.goToArea(a.id); this.follow = true; }, { signal: this.abort.signal }); this.labels.append(label); this.pads.set(a.id, { root, outline, fill, label, area: a });
       if (a.mode === 'cash') { const pile = new T.Group(); for (let i = 0; i < 4; i++) this.box(pile, i % 2 ? 0x9ad364 : 0x60a957, 0, .25 + i * .12, 0, .8, .1, .4); root.add(pile); this.moneyModels.set(a.target, pile); }
+      if (freeformPoolCleaning) { fill.visible = false; outline.visible = false; label.style.display = 'none'; }
       if (HIDDEN_RECEPTION_MARKERS.has(a.id)) { fill.visible = false; outline.visible = false; label.style.display = 'none'; }
     }
     for (const f of this.sim.state.facilities) { if (f.kind === 'room' || f.kind === 'reception' || f.id === 'laundry' || f.id === 'pool') continue; const l = document.createElement('div'); l.className = 'facility-label'; l.addEventListener('click', () => this.inspect(f.id), { signal: this.abort.signal }); this.labels.append(l); this.facilityLabels.set(f.id, l); }

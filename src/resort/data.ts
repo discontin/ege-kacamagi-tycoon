@@ -94,7 +94,7 @@ export function areasFor(s: ResortGameState): Area[] {
         areas.unshift({ id: `drink:${guest.id}`, label: 'Limonata ver', mode: 'work', target: `drink:${guest.id}`, taskKind: 'deliverDrink', x: seat.x, y: seat.y });
       }
     }
-    if ((pool.dirt ?? 0) > 0) areas.unshift({ id: 'poolClean', label: 'Havuzu kepçeyle temizle', mode: 'work', target: 'pool', taskKind: 'cleanPool', ...POOL_CLEAN });
+    if ((pool.dirt ?? 0) > 0) areas.unshift({ id: 'poolClean', label: 'Havuzu kepçeyle temizle', mode: 'work', target: 'pool', taskKind: 'cleanPool', facilityLevel: pool.level, ...POOL_CLEAN });
     if (pool.level < 3) areas.push({ id: 'poolUpgrade', label: 'Havuz', mode: 'upgrade', target: 'pool', x: 22, y: 13 });
     for (const r of SEAT_DEFS) {
       const seat = s.seats.find(s => s.id === r.id)!;
