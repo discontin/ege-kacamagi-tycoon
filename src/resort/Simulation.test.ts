@@ -33,7 +33,7 @@ describe('resort guest and towel cycle', () => {
     stand(s, 'room1Work'); advance(s, 3); expect(r.towels).toBe(1); expect(s.state.player.bag.clean).toBe(0);
   });
   it('does not start outside the bedside region and resumes the same reserved job on return', () => {
-    const s = new ResortSimulation(), r = s.facility('room1'); r.dirty = true; r.towels = 0; stand(s, 'room1Work'); s.state.player.x += .51; advance(s, 1); expect(s.state.tasks).toHaveLength(0);
+    const s = new ResortSimulation(), r = s.facility('room1'); r.dirty = true; r.towels = 0; stand(s, 'room1Work'); s.state.player.x += 2; advance(s, 1); expect(s.state.tasks).toHaveLength(0);
     stand(s, 'room1Work'); advance(s, 2); const remaining = s.state.tasks[0].remaining; s.state.player.x += 2; advance(s, 2); expect(s.state.tasks[0].remaining).toBe(remaining);
     stand(s, 'room1Work'); advance(s, 5); expect(r.dirty).toBe(false); expect(s.state.stats.cleaned).toBe(1);
   });

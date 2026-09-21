@@ -35,10 +35,12 @@ export function workAreaContains(p: Point, a: Point | Area): boolean {
   if ('mode' in a && a.mode === 'work' && (a.taskKind === 'cleanRoom' || a.taskKind === 'restockRoom')) {
     const r = ROOM_DEFS.find(r => r.id === a.target);
     if (!r) return false;
-    const x = p.x - r.x, y = p.y - r.y;
-    // Accessible strip around all four bed edges, not the bed or the room walls.
-    const onBed = Math.round(x) >= 2 && Math.round(x) <= 4 && Math.round(y) >= 2 && Math.round(y) <= 4;
-    return x >= .6 && x <= 5.4 && y >= .6 && y <= 5.8 && !onBed;
+    // Match the visible mattress instead of accepting most of the room. This is
+    // especially important in right-hand bungalows, whose door is on the same
+    // side as the old oversized interaction strip.
+    const single = (a.facilityLevel ?? 1) === 1;
+    const bedCenter = { x: r.x + (single ? 4.5 : 3), y: r.y + 3 };
+    return besideShelf(p, bedCenter, single ? .9 : 1.675, single ? 1.9 : 2.075, .9);
   }
   return Math.abs(p.x - a.x) <= .5 && Math.abs(p.y - a.y) <= .5;
 }

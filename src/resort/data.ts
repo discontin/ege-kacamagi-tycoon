@@ -69,7 +69,7 @@ export function areasFor(s: ResortGameState): Area[] {
     const f = s.facilities.find(f => f.id === r.id)!;
     if (!f.open) areas.push({ id: `${r.id}Buy`, label: r.name, mode: 'buy', target: r.id, ...ROOM_APPROACH(r) });
     else {
-      areas.push({ id: `${r.id}Work`, label: 'Yatak yanında temizle / havlu bırak', mode: 'work', target: r.id, taskKind: f.dirty ? 'cleanRoom' : 'restockRoom', ...ROOM_WORK(r) });
+      areas.push({ id: `${r.id}Work`, label: 'Yatak yanında temizle / havlu bırak', mode: 'work', target: r.id, taskKind: f.dirty ? 'cleanRoom' : 'restockRoom', facilityLevel: f.level, ...ROOM_WORK(r) });
       if (f.floorDirty) areas.push({ id: `${r.id}Floor`, label: 'Zemini süpür', mode: 'work', target: r.id, taskKind: 'cleanFloor', x: r.x + 7, y: r.y + 4 });
       if (f.level >= 2 && f.bathroomDirty) areas.push({ id: `${r.id}Bathroom`, label: 'Banyoyu temizle', mode: 'work', target: r.id, taskKind: 'cleanBathroom', x: r.x + 6, y: r.y + 2 });
       if (f.level < 2) areas.push({ id: `${r.id}Upgrade`, label: r.name, mode: 'upgrade', target: r.id, x: ROOM_APPROACH(r).x, y: r.y + 7 });

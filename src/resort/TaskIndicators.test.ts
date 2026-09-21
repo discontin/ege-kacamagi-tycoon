@@ -33,8 +33,8 @@ describe('floating task notices', () => {
     const s = initialResort(), r = s.facilities.find(f => f.id === 'room1')!; r.dirty = true; r.towels = 0;
     Object.assign(s.player, ROOM_WORK(ROOM_DEFS[0])); s.tasks.push({ id: 't1', owner: 'player', target: 'room1', kind: 'cleanRoom', total: 6, remaining: 3 });
     let n = taskIndicators(s).find(n => n.id === 'room1Clean')!; expect(n.state).toBe('working'); expect(n.progress).toBe(.5);
-    s.player.x += 1; n = taskIndicators(s).find(n => n.id === 'room1Clean')!; expect(n.state).toBe('waiting'); expect(n.progress).toBe(.5);
-    s.player.x -= 1; s.settings.paused = true; expect(taskIndicators(s).find(n => n.id === 'room1Clean')!.state).toBe('waiting');
+    s.player.x += 2; n = taskIndicators(s).find(n => n.id === 'room1Clean')!; expect(n.state).toBe('waiting'); expect(n.progress).toBe(.5);
+    s.player.x -= 2; s.settings.paused = true; expect(taskIndicators(s).find(n => n.id === 'room1Clean')!.state).toBe('waiting');
   });
   it('marks dirty loungers and an understocked pool shelf', () => {
     const s = initialResort(true); s.seats[0].dirty = true; s.facilities.find(f => f.id === 'pool')!.towels = 0;
