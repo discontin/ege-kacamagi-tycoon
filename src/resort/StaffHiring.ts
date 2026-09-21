@@ -4,7 +4,8 @@ export const STAFF_AREAS = [
   { id: 'receptionHire', target: 'receptionWorker', role: 'reception', label: 'Resepsiyon çalışanı', x: 16, y: 44 },
   // Keep the cleaner hiring pad tucked against the promenade's left edge.
   { id: 'roomsHire', target: 'roomsWorker', role: 'rooms', label: 'Oda temizlikçisi', x: 12.25, y: 37 },
-  { id: 'haulingHire', target: 'haulingWorker', role: 'hauling', label: 'Çamaşırhane görevlisi', x: 10, y: 49 },
+  // Outside the laundry, just below its side entrance and close to the wall.
+  { id: 'haulingHire', target: 'haulingWorker', role: 'hauling', label: 'Çamaşırhane görevlisi', x: 13, y: 47 },
   { id: 'poolHire', target: 'poolWorker', role: 'pool', label: 'Havuz ve bar görevlisi', x: 18, y: 11 },
 ] as const;
 export const staffRole = (target: string): Role | undefined => STAFF_AREAS.find(a => a.target === target)?.role;

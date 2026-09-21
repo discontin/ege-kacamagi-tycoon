@@ -1,4 +1,4 @@
-import { initialResort, LEVELS, ROOM_DEFS } from './data';
+import { initialResort, LEVELS, ROOM_DEFS, upgradeCost } from './data';
 import { atOffice } from './Office';
 import './office-window.css';
 import './game-menus.css';
@@ -77,6 +77,8 @@ export class ResortUI {
       case 'staff-speed': this.sim.upgradeWorker(t.dataset.worker!); break;
       case 'staff-move': this.sim.upgradeMove(t.dataset.worker!); break;
       case 'staff-carry': this.sim.upgradeCarry(t.dataset.worker!); break;
+      case 'laundry-upgrade': this.sim.upgradeLaundry(); break;
+      case 'laundry-buy-towels': this.sim.buyLaundryTowels(); break;
       case 'panel': this.panel = t.dataset.panel!; this.lastPanel = ''; document.querySelector('#drawer')!.classList.add('open'); break;
       case 'close': document.querySelector('#drawer')!.classList.remove('open'); break;
       case 'goto': this.sim.goToArea(t.dataset.area!); this.world?.centerPlayer(); document.querySelector('#drawer')!.classList.remove('open'); break;
@@ -117,11 +119,11 @@ export class ResortUI {
     return `<span class="eyebrow">BÜYÜK BİR KAÇAMAĞA DOĞRU</span><h2>Küçük adımlar<span>.</span></h2><p class="intro">Konaklama +10, oda temizliği +5, havuz hizmeti +5 XP.</p>${goals.map(([title, done]) => `<div class="goal-row ${done ? 'done' : ''}"><span>${done ? '✓' : '○'}</span>${title}</div>`).join('')}<h3>Seviye açılışları</h3>${LEVELS.map((xp, i) => `<p class="unlock-line">⭐ ${i + 1}. seviye · ${xp} XP${i ? ' · Bungalov ' + (i + 1) : ' · Başlangıç' }${i === 1 ? ' + çalışanlar' : i === 3 ? ' + havuz' : ''}</p>`).join('')}`;
   }
   private help() {
-    return `<span class="eyebrow">NASIL OYNANIR?</span><h2>Acele yok, tatildesin<span>.</span></h2><ol class="help-list"><li>Beyaz resepsiyon karesinde dur. Misafir varsa hazır bir odaya yerleşir.</li><li>Misafir karşılanınca para toplama noktasında ücret birikir. Yanına yürüyerek topla.</li><li>Yatak simgesine yürü: yatağın herhangi bir kenarında durarak çarşafları topla. Kirli havlu ve çarşaf çantana alınır; ikisi de sepete taşınıp makinede yıkanır. Temiz çarşafı raftan alıp yatağa geri getir. Süpürge simgesinin alanında zemini ayrıca temizle.</li><li>Kirli havlu sepetine yaklaş; havlular otomatik bırakılır. Makine kendisi yıkar.</li><li>Temiz havlu rafına yaklaşarak havlu al; odanın karesinde durarak bırak. En fazla dört temiz havlu ve iki temiz çarşaf taşınır; toplam çanta kapasitesi test modunda da sekiz parçadır.</li><li>Yeşil alan yeni tesis açar, sarı alan mevcut tesisi yükseltir. 1,3 saniye bekle; yeniden satın almak için ayrılıp dön.</li><li>Havuzu açınca konaklayan misafirler yer varsa havuza gider. Girişte karşıla, rafta havlu bulundur ve şezlongları temizle.</li></ol><p>Havuz barını 200 ₺’ye aç. Bardak simgesindeki misafire limonata hazırlayıp tepsiyle götür; teslim başına 15 ₺ bar kasasına gelir. Dört havuz ziyareti sonrası yeni girişler bakım için durur; kepçe simgesine veya havuzun kenarına yaklaşarak temizle. Bar yanında barmen alabilirsin.</p><h3>Kontroller</h3><p>WASD / oklar veya mobil hareket çubuğu. Yere ve kare etiketine dokunarak yürü. Etkileşim tuşu yok.</p><p>Boşluk: duraklat. Tekerlek / iki parmak: yakınlaştır. Sürükle: kamerayı gezdir. ◎: karaktere dön.</p><p>Bir işi yarıda bırakınca aynı kareye dönerek devam edebilirsin. Rehberdeki görevi bırak düğmesi görev rezervasyonunu serbest bırakır.</p>${this.sim.state.player.task ? '<button data-action="cancel-job">Geçerli görevi bırak</button>' : ''}<button class="primary" data-action="save">Şimdi kaydet</button><p class="muted">15 saniyede otomatik kayıt · ${this.save.lastSaved || 'Henüz kayıt yok'}. Çevrimdışı gelir yok. Eski oyun kaydı korunur.</p><button class="danger" data-action="reset">Yeni tatil köyü kur</button>`;
+    return `<span class="eyebrow">NASIL OYNANIR?</span><h2>Acele yok, tatildesin<span>.</span></h2><ol class="help-list"><li>Beyaz resepsiyon karesinde dur. Misafir varsa hazır bir odaya yerleşir.</li><li>Misafir karşılanınca para toplama noktasında ücret birikir. Yanına yürüyerek topla.</li><li>Yatak simgesine yürü: yatağın herhangi bir kenarında durarak çarşafları topla. Kirli havlu ve çarşaf çantana alınır; ikisi de sepete taşınıp makinede yıkanır. Temiz çarşafı raftan alıp yatağa geri getir. Süpürge simgesinin alanında zemini ayrıca temizle.</li><li>Kirli havlu sepetine yaklaş; havlular otomatik bırakılır. Makine kendisi yıkar.</li><li>Temiz havlu rafına yaklaşarak havlu al; odanın karesinde durarak bırak. Bir oda için gereken temiz çarşaf alınır; toplam çanta kapasitesi sekiz parçadır.</li><li>Makine kapasitesini yükseltmek veya temiz havlu satın almak için işletme ofisini kullan.</li><li>Yeşil alan yeni tesis açar, sarı alan mevcut tesisi yükseltir. 1,3 saniye bekle; yeniden satın almak için ayrılıp dön.</li><li>Havuzu açınca konaklayan misafirler yer varsa havuza gider. Girişte karşıla, rafta havlu bulundur ve şezlongları temizle.</li></ol><p>Havuz barını 200 ₺’ye aç. Bardak simgesindeki misafire limonata hazırlayıp tepsiyle götür; teslim başına 15 ₺ bar kasasına gelir. Dört havuz ziyareti sonrası yeni girişler bakım için durur; kepçe simgesine veya havuzun kenarına yaklaşarak temizle. Bar yanında barmen alabilirsin.</p><h3>Kontroller</h3><p>WASD / oklar veya mobil hareket çubuğu. Yere ve kare etiketine dokunarak yürü. Etkileşim tuşu yok.</p><p>Boşluk: duraklat. Tekerlek / iki parmak: yakınlaştır. Sürükle: kamerayı gezdir. ◎: karaktere dön.</p><p>Bir işi yarıda bırakınca aynı kareye dönerek devam edebilirsin. Rehberdeki görevi bırak düğmesi görev rezervasyonunu serbest bırakır.</p>${this.sim.state.player.task ? '<button data-action="cancel-job">Geçerli görevi bırak</button>' : ''}<button class="primary" data-action="save">Şimdi kaydet</button><p class="muted">15 saniyede otomatik kayıt · ${this.save.lastSaved || 'Henüz kayıt yok'}. Çevrimdışı gelir yok. Eski oyun kaydı korunur.</p><button class="danger" data-action="reset">Yeni tatil köyü kur</button>`;
   }
   private officeVisited = false;
   private office() {
-    const workers = this.sim.state.workers;
+    const workers = this.sim.state.workers, laundry = this.sim.facility('laundry');
     const skill = (name: string, stat: string, action: string, id: string, level: number, cost: number, glyph: string) => `
       <div class="office-skill">
         <div class="office-skill-info"><span class="office-skill-icon">${glyph}</span><span><b>${name}</b><small>${stat}</small></span><strong>${level}/3</strong></div>
@@ -130,6 +132,21 @@ export class ResortUI {
       </div>`;
       return `
         <header class="office-banner"><div><small>PERSONEL · EĞİTİM</small><h2>İşletme ofisi</h2><p>Ekibinin gelişimini buradan yönet.</p></div><span class="office-team-count"><b>${workers.length}</b><small>ÇALIŞAN</small></span></header>
+        <article class="office-worker office-department">
+          <header class="office-worker-head"><span class="office-avatar">▣</span><span class="office-worker-name"><b>Çamaşırhane</b><small>Makine ve temiz havlu tedariki</small></span><span class="office-rank">SV. ${laundry.level}</span></header>
+          <div class="office-skills">
+            <div class="office-skill">
+              <div class="office-skill-info"><span class="office-skill-icon">◉</span><span><b>Makine kapasitesi</b><small>Tek seferde ${this.sim.machineCapacity} parça yıkar</small></span><strong>${laundry.level}/3</strong></div>
+              <div class="office-meter" aria-label="Seviye ${laundry.level} / 3">${[1, 2, 3].map(step => `<i class="${step <= laundry.level ? 'lit' : ''}"></i>`).join('')}</div>
+              <button data-action="laundry-upgrade" ${laundry.level >= 3 ? 'disabled' : ''}>${laundry.level >= 3 ? 'EN İYİ SEVİYE' : `Geliştir <span>${this.sim.testMode ? 'Ücretsiz' : upgradeCost('laundry', laundry.level) + ' ₺'}</span>`}</button>
+            </div>
+            <div class="office-skill">
+              <div class="office-skill-info"><span class="office-skill-icon">▱</span><span><b>Temiz havlu satın al</b><small>${this.sim.laundryTowelPackSize ? this.sim.laundryTowelPackSize + ' havlu doğrudan temiz rafa eklenir' : 'Temiz raf kapasitesi dolu'}</small></span><strong>${this.sim.testMode ? '∞' : this.sim.state.laundry.clean}/${this.sim.shelfCapacity}</strong></div>
+              <div class="office-meter" aria-label="Temiz raf doluluğu">${[1, 2, 3].map(step => `<i class="${this.sim.state.laundry.clean / this.sim.shelfCapacity >= step / 3 ? 'lit' : ''}"></i>`).join('')}</div>
+              <button data-action="laundry-buy-towels" ${!this.sim.laundryTowelPackSize ? 'disabled' : ''}>${!this.sim.laundryTowelPackSize ? 'RAF DOLU' : `Satın al <span>${this.sim.testMode ? 'Ücretsiz' : this.sim.laundryTowelPackCost + ' ₺'}</span>`}</button>
+            </div>
+          </div>
+        </article>
         <div class="office-roster"><span>EKİP LİSTESİ</span><small>Gelişim hemen etkili olur</small></div>
       ${workers.map(w => `
         <article class="office-worker">

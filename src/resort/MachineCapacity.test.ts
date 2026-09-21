@@ -3,6 +3,7 @@ import { ResortSimulation } from './Simulation';
 import { towelLimit } from './Office';
 import { validResort } from './SaveService';
 import { LAUNDRY_MACHINE_AREA } from './data';
+import { OFFICE } from './Office';
 const advance = (s: ResortSimulation, seconds: number) => { for (let i = 0; i < seconds * 10; i++) s.tick(.1); };
 describe('machine batches and towel limits', () => {
   it('starts with room for five mixed items and unloads the full batch onto the clean rack', () => {
@@ -17,12 +18,20 @@ describe('machine batches and towel limits', () => {
     expect(s.state.laundry.clean).toBe(11); expect(s.state.laundry.cleanSheets).toBe(10); expect(s.state.stats.washed).toBe(5);
     expect(s.state.laundry.remaining).toBeNull();
   });
-  it('charges for capacity at the reachable machine-side area', () => {
-    const s = new ResortSimulation(); s.state.money=1000; const a=s.area('laundryUpgrade')!;
-    expect(s.isWalkable(a.x,a.y)).toBe(true); Object.assign(s.state.player,{x:a.x,y:a.y});
-    advance(s,1.4); expect(s.machineCapacity).toBe(7); expect(s.state.money).toBe(880);
-    s.state.player.y=49; s.tick(.1); Object.assign(s.state.player,{x:a.x,y:a.y}); advance(s,1.4);
-    expect(s.machineCapacity).toBe(9); expect(s.state.money).toBe(640);
+  it('moves machine capacity upgrades into the office', () => {
+    const s = new ResortSimulation(); s.state.money=1000;
+    expect(s.area('laundryUpgrade')).toBeUndefined(); expect(s.upgradeLaundry()).toBe(false);
+    Object.assign(s.state.player, OFFICE);
+    expect(s.upgradeLaundry()).toBe(true); expect(s.machineCapacity).toBe(7); expect(s.state.money).toBe(880);
+    expect(s.upgradeLaundry()).toBe(true); expect(s.machineCapacity).toBe(9); expect(s.state.money).toBe(640);
+    expect(s.upgradeLaundry()).toBe(false); expect(s.state.money).toBe(640);
+  });
+  it('buys up to five clean towels from the office without overflowing the shelf', () => {
+    const s = new ResortSimulation(); s.state.money=1000; Object.assign(s.state.player, OFFICE);
+    expect(s.buyLaundryTowels()).toBe(true); expect(s.state.laundry.clean).toBe(13); expect(s.state.money).toBe(950);
+    s.state.laundry.clean = s.shelfCapacity - 2;
+    expect(s.buyLaundryTowels()).toBe(true); expect(s.state.laundry.clean).toBe(s.shelfCapacity); expect(s.state.money).toBe(930);
+    expect(s.buyLaundryTowels()).toBe(false); expect(s.state.money).toBe(930);
   });
   it('limits the player to two towels and freshly hired staff to one, with office growth', () => {
     const s = new ResortSimulation(); s.hire('rooms'); const w=s.state.workers[0];

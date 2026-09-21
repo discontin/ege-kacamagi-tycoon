@@ -86,6 +86,28 @@ export class ResortSimulation {
   get level() { return LEVELS.filter(n => this.state.xp >= n).length; }
   get boost() { return this.state.boost.remaining > 0 ? this.state.boost.multiplier : 1; }
   get bagCapacity() { return 8; }
+  get laundryTowelPackSize() { return Math.min(5, Math.max(0, this.shelfCapacity - this.state.laundry.clean)); }
+  get laundryTowelPackCost() { return this.laundryTowelPackSize * 10; }
+  upgradeLaundry() {
+    const laundry = this.facility('laundry');
+    if (!atOffice(this.state.player) || this.state.settings.paused || laundry.level >= 3) return false;
+    const cost = upgradeCost('laundry', laundry.level);
+    if (!this.testMode && this.state.money < cost) { this.notify('Makine kapasitesi yükseltmesi için para yetersiz.'); return false; }
+    if (!this.testMode) this.state.money -= cost;
+    laundry.level++;
+    this.celebrate('build', OFFICE, 'MAKİNE YÜKSELDİ!');
+    this.notify(`Çamaşır makinesi kapasitesi ${this.machineCapacity} parçaya yükseldi.`);
+    return true;
+  }
+  buyLaundryTowels() {
+    if (!atOffice(this.state.player) || this.state.settings.paused) return false;
+    const count = this.laundryTowelPackSize, cost = this.laundryTowelPackCost;
+    if (!count) { this.notify('Temiz havlu rafı dolu.'); return false; }
+    if (!this.testMode && this.state.money < cost) { this.notify('Temiz havlu satın almak için para yetersiz.'); return false; }
+    if (!this.testMode) { this.state.money -= cost; this.state.laundry.clean += count; }
+    this.notify(`${count} temiz havlu çamaşırhane rafına eklendi.`);
+    return true;
+  }
   upgradeMove(id: string) {
     const w = this.state.workers.find(w => w.id === id);
     if (!w || w.role === 'reception' || !atOffice(this.state.player) || this.state.settings.paused || (w.moveLevel ?? 1) >= 3) return;

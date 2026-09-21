@@ -42,6 +42,12 @@ describe('department-specific hiring', () => {
     expect(s.isWalkable(Math.round(area.x), area.y)).toBe(true);
     expect(s.path(s.state.player, area).length).toBeGreaterThan(0);
   });
+  it('places the laundry worker marker outside, below the side entrance', () => {
+    const s = new ResortSimulation(), area = s.area('haulingHire')!;
+    expect(area.x).toBeGreaterThan(11.5); expect(area.y).toBeGreaterThan(46);
+    expect(s.isWalkable(area.x, area.y)).toBe(true);
+    expect(s.path(s.state.player, area).length).toBeGreaterThan(0);
+  });
   it('unlocks the first cleaner at level two and the second at level four', () => {
     const s = new ResortSimulation(); s.state.money = 1000;
     const first = s.area('roomsHire')!;

@@ -47,7 +47,6 @@ export function areasFor(s: ResortGameState): Area[] {
     { id: 'receptionUpgrade', label: 'Resepsiyon', mode: 'upgrade', target: 'reception', x: 16, y: 46 },
     { id: 'dirtyDrop', label: 'Kirli havlu bırak', mode: 'work', target: 'laundry', taskKind: 'dirtyDrop', ...DIRTY_DROP },
     { id: 'cleanTake', label: 'Temiz havlu al', mode: 'work', target: 'laundry', taskKind: 'cleanTake', ...CLEAN_TAKE },
-    { id: 'laundryUpgrade', label: 'Makine kapasitesi', mode: 'upgrade', target: 'laundry', x: 8, y: 47 },
   ];
   const openRoomCount = s.facilities.filter(f => f.kind === 'room' && f.open).length;
   const poolOpen = s.facilities.find(f => f.kind === 'pool')!.open;
