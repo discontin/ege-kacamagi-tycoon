@@ -26,7 +26,9 @@ export const TOWEL_RACK = { x: 9.5, y: 42.7 }, DIRTY_BASKET = { x: 5, y: 42.7 };
 // the rear dirty shelf is pickup-only. The waste bin sits in the opposite corner.
 export const DIRTY_HAMPER = { x: 3, y: 49.3 }, LAUNDRY_TRASH_PROP = { x: 10.3, y: 49.3 };
 export const LAUNDRY_TRASH = { x: 8.8, y: 49.3 };
-export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 4.3, y: 49.3 }, DIRTY_TAKE = { x: 6.3, y: 43.4 }, CLEAN_TAKE = { x: 10, y: 44 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
+export const RECEPTION = { x: 19, y: 42 }, DIRTY_DROP = { x: 4.3, y: 49.3 }, DIRTY_TAKE = { x: 6.3, y: 43.4 }, CLEAN_TAKE = { x: 10, y: 44 }, REWARDED_BOOST = { x: 15, y: 38 }, REWARDED_MONEY = { x: 21, y: 38 }, POOL_GATE = { x: 19.5, y: 6 }, POOL_STOCK = { x: 34, y: 1.5 }, EXIT = { x: 19, y: 50 };
+export const REWARD_SPOTS = [{ x: 15, y: 38 }, { x: 21, y: 38 }, { x: 15, y: 30 }, { x: 21, y: 30 }, { x: 15, y: 22 }, { x: 21, y: 22 }, { x: 15, y: 14 }, { x: 21, y: 14 }, { x: 18, y: 35 }, { x: 18, y: 26 }, { x: 18, y: 17 }];
+const rewardSpawn = (point: Point, activeUntil: number, nextAt: number) => ({ x: point.x, y: point.y, activeUntil, nextAt });
 export const receptionQueuePoint = (index: number): Point => ({ x: RECEPTION.x, y: 46 + index });
 export const SEAT_DEFS = [24, 27, 30, 33].map((x, i) => ({ id: `seat${i + 1}`, x, y: 10 })).concat([{ id: 'seat5', x: 25.5, y: 13 }, { id: 'seat6', x: 31.5, y: 13 }]);
 export const poolSeatCount = (level: number) => level < 2 ? 4 : 6;
@@ -37,9 +39,14 @@ export const upgradeCost = (id: string, level: number) => (id === 'reception' ? 
 export function initialResort(test = false): ResortGameState {
   return { version: 1, concept: 'ege-resort', money: test ? 999999 : 0, xp: test ? 280 : 0, elapsed: 0, spawnTimer: 0, nextId: 10,
     player: { id: 'player', x: 19, y: 48, path: [], bag: { clean: 0, dirty: 0 } }, guests: [], workers: [], tasks: [], bar: { open: test, cash: 0 },
+    rewardedAds: { boost: rewardSpawn(REWARDED_BOOST, 25, 43), money: rewardSpawn(REWARDED_MONEY, 25, 43), seed: test ? 3 : 0 },
     facilities: [{ id: 'reception', kind: 'reception', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, { id: 'laundry', kind: 'laundry', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, ...ROOM_DEFS.map((r, i) => ({ id: r.id, kind: 'room' as const, open: test || !i, level: 1, dirty: false, towels: 1, cash: 0 })), { id: 'pool', kind: 'pool', open: test, level: 1, dirty: false, towels: test ? 999 : 0, cash: 0 }],
     seats: SEAT_DEFS.map((r, i) => ({ id: r.id, open: test && i < 4, dirty: false, towel: test && i < 4 })), laundry: { clean: test ? 999 : 8, dirty: 0, remaining: null }, boost: { remaining: 0, multiplier: 1.5 }, settings: { paused: false, speed: 1 }, stats: { welcomed: 0, stays: 0, cleaned: 0, washed: 0, poolVisits: 0, earned: 0 } };
 }
+const rewardVisible = (s: ResortGameState, kind: 'boost' | 'money') => {
+  const ad = s.rewardedAds?.[kind], target = kind === 'boost' ? 'rewardedBoost' : 'rewardedMoney';
+  return !!ad && (ad.activeUntil > s.elapsed || s.tasks.some(t => t.target === target));
+};
 export function areasFor(s: ResortGameState): Area[] {
   const areas: Area[] = [
     { id: 'office', label: 'Ofis · çalışan geliştirme', mode: 'work', target: 'office', ...OFFICE },
@@ -55,6 +62,8 @@ export function areasFor(s: ResortGameState): Area[] {
     { id: 'dirtyDrop', label: 'Kirli çamaşırı sepete bırak', mode: 'work', target: 'laundry', taskKind: 'dirtyDrop', ...DIRTY_DROP },
     { id: 'cleanTake', label: 'Temiz havlu al', mode: 'work', target: 'laundry', taskKind: 'cleanTake', ...CLEAN_TAKE },
   ];
+  if (rewardVisible(s, 'boost')) areas.push({ id: 'rewardedBoost', label: 'Reklam izle · Paten boost kazan', mode: 'work', target: 'rewardedBoost', taskKind: 'watchBoost', ...(s.rewardedAds?.boost ?? REWARDED_BOOST) });
+  if (rewardVisible(s, 'money')) areas.push({ id: 'rewardedMoney', label: 'Reklam izle · Kasaya +100 kazan', mode: 'work', target: 'rewardedMoney', taskKind: 'watchMoney', ...(s.rewardedAds?.money ?? REWARDED_MONEY) });
   const openRoomCount = s.facilities.filter(f => f.kind === 'room' && f.open).length;
   const poolOpen = s.facilities.find(f => f.kind === 'pool')!.open;
   for (const a of STAFF_AREAS) {
@@ -83,7 +92,8 @@ export function areasFor(s: ResortGameState): Area[] {
   if (!pool.open) areas.push({ id: 'poolBuy', label: 'Havuzu aç', mode: 'buy', target: 'pool', ...POOL_GATE });
   else {
     const cleanRack = poolTowelRack(pool.level), dirtyBasket = poolDirtyBasket(pool.level);
-    const cleanWork = { x: cleanRack.x, y: cleanRack.y + 1.5 }, dirtyWork = { x: dirtyBasket.x, y: dirtyBasket.y + 1.5 };
+    // The rack now sits beside the bar at the old palm spot, just outside the pool wall.
+    const cleanWork = { x: cleanRack.x, y: cleanRack.y - .5 }, dirtyWork = { x: dirtyBasket.x, y: dirtyBasket.y + 1.5 };
     areas.push({ id: 'poolDirtyDrop', label: 'Kirli havluyu havuz sepetine bırak', mode: 'work', target: 'poolDirty', taskKind: 'poolDirtyDrop', facilityLevel: pool.level, ...dirtyWork }, { id: 'poolDirtyTake', label: 'Havuzun kirli havlularını al', mode: 'work', target: 'poolDirty', taskKind: 'poolDirtyTake', facilityLevel: pool.level, ...dirtyWork }, { id: 'poolCleanTake', label: 'Havuz rafından havlu al', mode: 'work', target: 'poolClean', taskKind: 'poolCleanTake', ...cleanWork });
     areas.push({ id: 'poolCheckin', label: 'Havuz girişi', mode: 'work', target: 'pool', taskKind: 'poolCheckin', ...POOL_GATE }, { id: 'poolStock', label: 'Havuza havlu bırak', mode: 'work', target: 'pool', taskKind: 'poolStock', ...cleanWork }, { id: 'poolCash', label: 'Havuz geliri', mode: 'cash', target: 'pool', x: 18, y: 5 });
     if (!s.bar?.open) areas.push({ id: 'barBuy', label: 'Havuz barı', mode: 'buy', target: 'bar', ...BAR_WORK });
@@ -95,7 +105,7 @@ export function areasFor(s: ResortGameState): Area[] {
       }
     }
     if ((pool.dirt ?? 0) > 0) areas.unshift({ id: 'poolClean', label: 'Havuzu kepçeyle temizle', mode: 'work', target: 'pool', taskKind: 'cleanPool', facilityLevel: pool.level, ...POOL_CLEAN });
-    if (pool.level < 3) areas.push({ id: 'poolUpgrade', label: 'Havuz', mode: 'upgrade', target: 'pool', x: 22, y: 13 });
+    if (pool.level < 2) areas.push({ id: 'poolUpgrade', label: 'Havuz', mode: 'upgrade', target: 'pool', x: 22, y: 13 });
     for (const r of SEAT_DEFS) {
       const seat = s.seats.find(s => s.id === r.id)!;
       if (seat.open) areas.push({ id: `${r.id}Area`, label: 'Şezlongu temizle', mode: 'work', target: r.id, taskKind: 'cleanSeat', x: r.x, y: r.y });

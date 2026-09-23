@@ -35,7 +35,7 @@ describe('guest patience and room tips', () => {
     Object.assign(s.state.player, s.area('checkin')!); advance(s, 3.2);
     expect(guestMood(g)).toBe(''); expect(g.queueWait).toBe(0); expect(g.worstWait).toBeGreaterThanOrEqual(20);
   });
-  it.each([[0, 5], [10, 3], [20, 1]])('leaves %i-second-wait tips of %i on checkout, and collects only once', (wait, amount) => {
+  it.each([[0, 10], [10, 6], [20, 2]])('leaves %i-second-wait tips of %i on checkout, and collects only once', (wait, amount) => {
     const s = new ResortSimulation(); checkout(s, wait);
     expect(s.facility('room1').tips).toBe(amount); expect(s.state.money).toBe(0);
     Object.assign(s.state.player, { x: ROOM_DEFS[0].x + 6, y: ROOM_DEFS[0].y + 2 }); s.tick(.1);
@@ -45,7 +45,7 @@ describe('guest patience and room tips', () => {
   it('accumulates uncollected tips and workers cannot collect them', () => {
     const s = new ResortSimulation(); checkout(s, 0); checkout(s, 10);
     s.state.xp = 20; s.hire(); Object.assign(s.state.workers[0], { x: 9, y: 36 });
-    advance(s, 1); expect(s.facility('room1').tips).toBe(8);
+    advance(s, 1); expect(s.facility('room1').tips).toBe(16);
   });
   it('preserves patience and tips in saves, accepts older saves and rejects invalid new values', () => {
     const s = new ResortSimulation(); expect(validResort(s.state)).toBe(true);

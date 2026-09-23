@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { areasFor, DIRTY_BASKET, DIRTY_DROP, initialResort, ROOM_WORK, ROOM_DEFS } from './data';
+import { BAR_CASH, poolTowelRack } from './PoolServices';
 import { taskIndicators, taskIconSvg } from './TaskIndicators';
 
 describe('floating task notices', () => {
@@ -50,6 +51,15 @@ describe('floating task notices', () => {
     const ns = taskIndicators(s); expect(ns.find(n => n.id === 'seat1Clean')!.areaId).toBe('seat1Area'); expect(ns.find(n => n.id === 'poolTowels')!.icon).toBe('towel');
     s.seats[0].dirty = false; expect(taskIndicators(s).some(n => n.id === 'seat1Clean')).toBe(false);
   });
+  it('shows a towel icon over the pool clean rack while a towel is being taken', () => {
+    const s = initialResort(true), rack = poolTowelRack(s.facilities.find(f => f.id === 'pool')!.level);
+    s.facilities.find(f => f.id === 'pool')!.towels = 3;
+    s.tasks.push({ id: 'pool-take-clean', owner: 'player', target: 'poolClean', kind: 'poolCleanTake', total: .6, remaining: .3 });
+    const notices = taskIndicators(s), pickup = notices.find(n => n.id === 'poolCleanPickup')!;
+    expect(pickup.icon).toBe('towel'); expect(pickup.areaId).toBe('poolCleanTake');
+    expect(pickup.x).toBe(rack.x); expect(pickup.y).toBe(rack.y); expect(pickup.progress).toBe(.5);
+    expect(notices.some(n => n.id === 'poolTowels')).toBe(false);
+  });
   it('marks laundry deposit, clean pickup and automatic washing distinctly', () => {
     const s = initialResort(); s.player.bag.dirty = 1; s.facilities.find(f => f.id === 'room1')!.towels = 0; s.laundry.dirty = 2; s.laundry.remaining = 2;
     s.tasks.push({ id: 'take-clean', owner: 'player', target: 'laundry', kind: 'cleanTake', total: 5, remaining: 5 });
@@ -65,6 +75,8 @@ describe('floating task notices', () => {
     expect(taskIndicators(s).some(n => n.id === 'receptionGuest')).toBe(false);
   });
   it('marks available cash and removes the notice after collection', () => { const s = initialResort(); const r = s.facilities.find(f => f.id === 'reception')!; r.cash = 40; expect(taskIndicators(s).find(n => n.id === 'receptionMoney')!.icon).toBe('cash'); r.cash = 0; expect(taskIndicators(s).some(n => n.id === 'receptionMoney')).toBe(false); });
+  it('uses one pool cash marker at the cash collection point', () => { const s = initialResort(true); const pool = s.facilities.find(f => f.id === 'pool')!; pool.cash = 25; const notice = taskIndicators(s).find(n => n.id === 'poolMoney')!; expect(notice.areaId).toBe('poolCash'); expect(notice.x).toBe(18); expect(notice.y).toBe(5); });
+  it('shows bar cash with the same cash notice as other collection points', () => { const s = initialResort(true); s.bar!.cash = 15; const notice = taskIndicators(s).find(n => n.id === 'barMoney')!; expect(notice.icon).toBe('cash'); expect(notice.areaId).toBe('barCash'); expect(notice.x).toBe(BAR_CASH.x); expect(notice.y).toBe(BAR_CASH.y); });
   it('does not mutate saves, creates no duplicate notices and targets real work areas', () => {
     const s = initialResort(true); s.facilities.filter(f => f.kind === 'room').forEach(f => { f.dirty = true; f.towels = 0; }); s.seats.forEach(seat => seat.dirty = true); const before = JSON.stringify(s), ns = taskIndicators(s);
     expect(JSON.stringify(s)).toBe(before); expect(new Set(ns.map(n => n.id)).size).toBe(ns.length);

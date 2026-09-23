@@ -6,7 +6,7 @@ import { serviceGuestReady } from './CustomerService';
 import { workAreaContains } from './WorkAreas';
 import { dirtyLinenCount, linenCount } from './Linen';
 
-export type TaskIcon = 'bed' | 'bath' | 'clean' | 'towel' | 'guest' | 'dirty' | 'wash' | 'cash' | 'drink' | 'icecream' | 'net' | 'trash' | 'warning';
+export type TaskIcon = 'bed' | 'bath' | 'clean' | 'towel' | 'guest' | 'dirty' | 'wash' | 'cash' | 'drink' | 'net' | 'trash' | 'warning' | 'boost' | 'adMoney';
 export interface TaskIndicator extends Point { id: string; areaId: string; icon: TaskIcon; label: string; height: number; state: 'todo' | 'working' | 'waiting'; progress?: number }
 /** Presentation-only notices; no new jobs, resource transfers or save fields. */
 export function taskIndicators(s: ResortGameState): TaskIndicator[] {
@@ -49,24 +49,30 @@ export function taskIndicators(s: ResortGameState): TaskIndicator[] {
   if (pool.open) {
     const dirtyBasket = poolDirtyBasket(pool.level), cleanRack = poolTowelRack(pool.level);
     if ((pool.dirtyTowels ?? 0) > 0) add('poolDirtyTowels', 'poolDirtyTake', 'towel', 'Kirli havluları çamaşırhaneye taşı', dirtyBasket.x, dirtyBasket.y, 2.3, 'poolDirty', 'poolDirtyTake');
+    const takingPoolCleanTowel = s.tasks.some(t => t.target === 'poolClean' && t.kind === 'poolCleanTake');
+    if (takingPoolCleanTowel) add('poolCleanPickup', 'poolCleanTake', 'towel', 'Havuz rafından temiz havlu al', cleanRack.x, cleanRack.y, 2.7, 'poolClean', 'poolCleanTake');
     for (const r of SEAT_DEFS) { const seat = s.seats.find(s => s.id === r.id)!; if (seat.open && !seat.dirty && !seat.guest && !seat.towel) add(`${r.id}Restock`, `${r.id}Towel`, 'towel', 'Şezlonga temiz havlu ser', r.x, r.y - .6, 1.8, r.id, 'restockSeat'); }
     if ((pool.dirt ?? 0) > 0) add('poolMaintenance', 'poolClean', 'net', 'Havuzu kepçeyle temizle', POOL_CENTER.x, POOL_CENTER.y, 2.8, 'pool', 'cleanPool');
     if (s.bar?.open) {
       if (s.guests.some(wantsDrink) && !s.player.drink) add('barOrder', 'barPrepare', 'drink', 'Siparişi hazırla', BAR_WORK.x, BAR_WORK.y, 2.3, 'bar', 'prepareDrink');
-      for (const guest of s.guests.filter(wantsDrink)) { const seat = SEAT_DEFS.find(r => r.id === guest.seat)!; add(`order:${guest.id}`, `drink:${guest.id}`, guest.orderProduct === 'icecream' ? 'icecream' : 'drink', guest.orderProduct === 'icecream' ? 'Misafire dondurma ver' : 'Misafire limonata ver', seat.x, seat.y - .6, 2.4, `drink:${guest.id}`, 'deliverDrink'); }
+      for (const guest of s.guests.filter(wantsDrink)) { const seat = SEAT_DEFS.find(r => r.id === guest.seat)!; add(`order:${guest.id}`, `drink:${guest.id}`, 'drink', 'Misafire limonata ver', seat.x, seat.y - .6, 2.4, `drink:${guest.id}`, 'deliverDrink'); }
       if (s.bar.cash > 0) add('barMoney', 'barCash', 'cash', `${s.bar.cash} para topla`, BAR_CASH.x, BAR_CASH.y, 1.5);
     }
     for (const r of SEAT_DEFS) { const seat = s.seats.find(s => s.id === r.id)!; if (seat.open && seat.dirty && !seat.guest) add(`${r.id}Clean`, `${r.id}Area`, 'clean', 'Şezlongu temizle', r.x, r.y - .6, 1.8, r.id, 'cleanSeat'); }
-    if (pool.towels < 4) add('poolTowels', 'poolStock', 'towel', 'Havuz rafına temiz havlu getir', cleanRack.x, cleanRack.y, 2.3, 'pool', 'poolStock');
+    if (pool.towels < 4 && !takingPoolCleanTowel) add('poolTowels', 'poolStock', 'towel', 'Havuz rafına temiz havlu getir', cleanRack.x, cleanRack.y, 2.3, 'pool', 'poolStock');
     if (((pool.dirt ?? 0) < 4 && (pool.towels > 0 || s.seats.some(seat => seat.open && !seat.dirty && !seat.guest && seat.towel)) && s.guests.some(g => g.phase === 'poolQueue') && s.seats.some(s => s.open && !s.dirty && !s.guest)) || s.tasks.some(t => t.kind === 'poolCheckin')) add('poolGuest', 'poolCheckin', 'guest', 'Havuz misafirini karşıla', POOL_GATE.x, POOL_GATE.y, 2.5, 'pool', 'poolCheckin');
-    if (pool.cash > 0) add('poolMoney', 'poolCash', 'cash', `${pool.cash} para topla`, 21, 5, 1.5);
+    if (pool.cash > 0) add('poolMoney', 'poolCash', 'cash', `${pool.cash} para topla`, 18, 5, 1.5);
   }
+  const rewardedBoost = areasFor(s).find(a => a.id === 'rewardedBoost');
+  const rewardedMoney = areasFor(s).find(a => a.id === 'rewardedMoney');
+  if (rewardedBoost) add('rewardedBoost', 'rewardedBoost', 'boost', 'Ödüllü reklam · Paten boost', rewardedBoost.x, rewardedBoost.y, 2.4, 'rewardedBoost', 'watchBoost');
+  if (rewardedMoney) add('rewardedMoney', 'rewardedMoney', 'adMoney', 'Ödüllü reklam · +100 para', rewardedMoney.x, rewardedMoney.y, 2.2, 'rewardedMoney', 'watchMoney');
   return out;
 }
 export function taskIconSvg(icon: TaskIcon): string {
+  if (icon === 'boost') return '<img class="task-indicator-asset" src="/assets/icons/skateboard-outline-generated.png" alt="" aria-hidden="true" />';
   const paths: Record<TaskIcon, string> = {
     bath: '<path d="M4 13h16v2a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6v-2Zm2 0V6a3 3 0 0 1 6 0v1M3 13h18M7 21v1m10-1v1"/>',
-    icecream: '<path d="m8 10 4 12 4-12M9 14h6"/><circle cx="12" cy="7" r="5"/>',
     drink: '<path d="M7 7h10l-1 14H8L7 7ZM13 7l3-5h4M8 12h8"/><circle cx="5" cy="7" r="3"/>',
     net: '<path d="m3 21 8-10"/><ellipse cx="15" cy="7" rx="7" ry="5" transform="rotate(-35 15 7)"/><path d="m10 4 8 5m-9-2 7 5m-3-9-3 7m8-6-3 7"/>',
     bed: '<path d="M3 18v3m18-3v3M3 10V5h3m-3 5h18v8H3v-8Z"/><rect x="6" y="6" width="5" height="4" rx="1"/><rect x="12" y="6" width="5" height="4" rx="1"/><path d="m18 2 1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2Z" fill="currentColor" stroke="none"/>',
@@ -78,6 +84,8 @@ export function taskIconSvg(icon: TaskIcon): string {
     cash: '<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M5 10v5m14-5v5M6 3h12"/>',
     trash: '<path d="M4 7h16M9 3h6l1 4H8l1-4Zm-3 4 1 14h10l1-14M9 11v6m6-6v6"/>',
     warning: '<path d="M12 3 2.5 21h19L12 3Z"/><path d="M12 9v5m0 3v.5"/>',
+    boost: '',
+    adMoney: '<rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M5 10v5m14-5v5M6 3h12M19 3l2 2m-2-2v2"/>',
   };
   return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths[icon]}</svg>`;
 }

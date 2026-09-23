@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ResortSimulation } from './Simulation';
 import { CLEAN_TAKE, DIRTY_BASKET, DIRTY_DROP, DIRTY_HAMPER, DIRTY_TAKE, initialResort, LAUNDRY_FRONT_EDGE, LAUNDRY_MACHINE, LAUNDRY_MACHINE_AREA, LAUNDRY_RIGHT_EDGE, LAUNDRY_TRASH, LAUNDRY_TRASH_PROP, TOWEL_RACK } from './data';
 import { linenCount } from './Linen';
+import { laundryMachines } from './LaundryLayout';
 
 const advance = (s: ResortSimulation, seconds: number) => {
   for (let i = 0; i < seconds * 10; i++) s.tick(.1);
@@ -35,6 +36,13 @@ describe('visible laundry layout and carrying limits', () => {
     expect(DIRTY_HAMPER.x).toBeLessThan(LAUNDRY_TRASH_PROP.x);
     expect(DIRTY_DROP.x).toBeGreaterThan(DIRTY_HAMPER.x);
     expect(LAUNDRY_TRASH.x).toBeLessThan(LAUNDRY_TRASH_PROP.x);
+  });
+
+  it('keeps exactly one physical washer at every capacity level', () => {
+    for (const level of [1, 2, 3]) {
+      expect(laundryMachines(level)).toHaveLength(1);
+      expect(laundryMachines(level)[0]).toMatchObject({ x: LAUNDRY_MACHINE.x, y: LAUNDRY_MACHINE.y });
+    }
   });
 
   it('leaves a continuous two-cell walkway to the left of reception', () => {

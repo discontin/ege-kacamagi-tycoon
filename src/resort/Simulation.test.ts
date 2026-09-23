@@ -154,6 +154,16 @@ describe('isolated resort saves', () => {
     const s = new ResortSimulation(); guest(s); stand(s, 'checkin'); advance(s, 1); s.facility('reception').cash = 10;
     const save = new ResortSaveService(store); expect(validResort(s.state)).toBe(true); expect(save.save(s.state)).toBe(true); expect(save.load().state).toEqual(s.state); expect(entries.get('copten-sehre-save-v1')).toBe('OLD GAME'); expect(entries.has(RESORT_SAVE_KEY)).toBe(true);
   });
+  it('migrates removed pool level three and old ice-cream orders in existing saves', () => {
+    const legacy: any = JSON.parse(JSON.stringify(initialResort()));
+    legacy.facilities.find((f: any) => f.id === 'pool').level = 3;
+    legacy.player.drink = true; legacy.player.heldProduct = 'icecream';
+    legacy.guests.push({ id: 'legacyGuest', ...receptionQueuePoint(0), path: [], phase: 'queue', remaining: 0, orderProduct: 'icecream' });
+    const save = new ResortSaveService({ getItem: () => JSON.stringify(legacy), setItem: () => {} });
+    const loaded = save.load();
+    expect(loaded.recovered).toBe(false); expect(loaded.state.facilities.find(f => f.id === 'pool')?.level).toBe(2);
+    expect(loaded.state.player.heldProduct).toBe('lemonade'); expect(loaded.state.guests[0].orderProduct).toBe('lemonade');
+  });
   it.each(['not json', '{}', '{"version":2}'])('recovers safely from %s', raw => { const save = new ResortSaveService({ getItem: () => raw, setItem: () => {} }); expect(save.load().recovered).toBe(true); expect(save.load().state).toEqual(initialResort()); });
   it('rejects invalid coordinates, unknown roles, negative stock and orphan tasks', () => { for (const edit of [(v: any) => v.player.x = 999, (v: any) => v.laundry.clean = -1, (v: any) => v.player.task = 'missing']) { const s = initialResort(); edit(s); expect(validResort(s)).toBe(false); } });
   it('never reads or writes saves in test mode', () => { let reads = 0, writes = 0; const save = new ResortSaveService({ getItem: () => { reads++; return '{}'; }, setItem: () => { writes++; } }, true); expect(save.load().state.facilities.every(f => f.open)).toBe(true); expect(save.save(initialResort(true))).toBe(true); expect(reads).toBe(0); expect(writes).toBe(0); });

@@ -20,6 +20,8 @@ Tatil köyü; Kenney modellerini, havuz için OpenGameArt dokusunu ve 3DAssets.d
 | [Laundromat and Cleaning Services](https://3dassets.dev/packs/laundrette-and-cleaning) | Üst üste makine, tekerlekli çöp kutusu ve açık bez çamaşır arabası | v1 | CC0 |
 | [Home Appliances and Utility Room](https://3dassets.dev/packs/home-appliances-and-utility) | Açık ve kapalı durum görünümleri için önden yüklemeli çamaşır makinesi | v1 | CC0 |
 | [Pavement 05](https://polyhaven.com/a/pavement_05) | Orta yürüyüş yolunun taş kaplama dokusu | 1K | CC0 |
+| [Mini Skate](https://kenney.nl/assets/mini-skate) | Oyuncu, personel ve misafirler için paten/kaykay sürüş animasyonlu karakterler | 1.1 | CC0 |
+| Özgün kaykay ikonu | Ödüllü paten boost görevinin kaykay simgesi (`public/assets/icons/skateboard-outline-generated.png`) | 22 Eylül 2026 | Proje için özgün üretim |
 
 Her kaynağın `License.txt` dosyası kendi `public/assets/...` klasöründe korunur ve build çıktısına kopyalanır. Bu dosyalar kişisel ve ticari kullanıma izin verir; atıf zorunlu değildir. Kenney için isteğe bağlı kredi: “3D assets by Kenney (kenney.nl)”. [CC0 metni](https://creativecommons.org/publicdomain/zero/1.0/).
 
@@ -28,6 +30,10 @@ GLB dosyaları değiştirilmeden kopyalanmıştır. Ölçek, yerleşim ve bazı 
 Blue Pool Tiles dosyaları 15 Eylül 2026'da OpenGameArt kaynağından indirilmiştir. Yeni oda yatakları, Poolside Sun Lounger, ticari çamaşır makineleri ve tekerlekli çöp kutusu aynı tarihte 3DAssets.dev CDN'inden alınmıştır; kaynak sayfaları modellerin CC0 olduğunu ve atıf gerektirmediğini belirtir. Pavement 05'in 1K diffuse haritası Poly Haven'ın resmî indirme sunucusundan alınmıştır.
 
 Açık bez çamaşır arabası 21 Eylül 2026'da aynı 3DAssets.dev paketinden alınmıştır (`Rolling laundry cart`, asset 25531). Model dosyasının SHA-256 değeri `9FA6BAEF0DAA5FD1DBC75027BECB5A6E1F5E671E629388FCAB14CECB2C40E14C`'dir.
+
+Mini Skate karakter modelleri 22 Eylül 2026'da Kenney'nin CC0 paketinden alınmıştır. Karakterler normal yürüme/taşıma/etkileşim kliplerinin yanında `skate`, `skate-stand`, `skate-air` ve `skate-grab` kliplerini de içerir.
+
+Kaykay görev simgesi 22 Eylül 2026'da proje için özgün olarak üretilmiştir. iStock görseli yalnızca genel stil referansı olarak kullanılmış, herhangi bir stok görsel kopyalanmamıştır. Şeffaf PNG dosyası `public/assets/icons/skateboard-outline-generated.png` konumundadır.
 
 Çamaşır makinesi modelleri 16 Eylül 2026'da Home Appliances and Utility Room paketinden alınmıştır. Açık varyant kapı dışarı alınmış ve tamburu görünür durumda gelir; kapalı varyantın `door-open` ve `door-close` animasyon klipleri vardır. Kaynak sayfaları CC0 1.0 olarak lisanslandıklarını belirtir.
 

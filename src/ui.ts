@@ -132,7 +132,7 @@ export class UI {
       case 'boost':
         if (this.boostBusy || this.sim.state.boost.remaining > 0) break;
         this.boostBusy = true;
-        try { const boost = await this.reward.requestReward(); if (boost) { this.sim.state.boost = boost; this.sim.notify('Hızlı adımlar! 2 dakika boyunca %50 daha hızlı çalışıyorsunuz.'); } } catch { this.sim.notify('Ödül alınamadı. Tekrar deneyebilirsin.'); } finally { this.boostBusy = false; }
+        try { const boost = await this.reward.requestReward(); if (boost) { this.sim.state.boost = boost; this.sim.notify('Paten boost hazır! 2 dakika boyunca %50 daha hızlı çalışıyorsunuz.'); } } catch { this.sim.notify('Ödül alınamadı. Tekrar deneyebilirsin.'); } finally { this.boostBusy = false; }
         break;
       case 'zoom-in': if (this.scene) this.scene.setZoom(this.scene.cameras.main.zoom * 1.15); break;
       case 'zoom-out': if (this.scene) this.scene.setZoom(this.scene.cameras.main.zoom / 1.15); break;
@@ -179,7 +179,7 @@ export class UI {
   }
   private boostCard() {
     const boost = this.sim.state.boost;
-    return `<div class="boost-card"><span class="boost-icon">🛼</span><div><b>Hızlı adımlar</b><p>${boost.remaining > 0 ? `%50 hız · ${time(boost.remaining)} kaldı` : '2 dakika boyunca %50 hız'}</p></div><button data-action="boost" class="boost-button" ${boost.remaining > 0 || this.boostBusy ? 'disabled' : ''}>${boost.remaining > 0 ? 'Aktif' : 'Dene'}</button><small class="boost-note">Ödüllü reklam denemesi · gerçek reklam içermez</small></div>`;
+    return `<div class="boost-card"><span class="boost-icon">🛼</span><div><b>Paten boost</b><p>${boost.remaining > 0 ? `%50 hız · ${time(boost.remaining)} kaldı` : '2 dakika boyunca %50 hız'}</p></div><button data-action="boost" class="boost-button" ${boost.remaining > 0 || this.boostBusy ? 'disabled' : ''}>${boost.remaining > 0 ? 'Aktif' : 'Dene'}</button><small class="boost-note">Ödüllü reklam denemesi · gerçek reklam içermez</small></div>`;
   }
   private buildingPanel() {
     const b = this.selected ? this.sim.building(this.selected) : undefined; if (!b) return this.overview();

@@ -1,11 +1,12 @@
 import type { GuestState, Point } from './types';
-export const BAR_CENTER = { x: 28.5, y: -1 };
-export const BAR_WORK = { x: 28.5, y: -3 };
-export const BAR_CASH = { x: 25, y: -1 };
-export const BAR_HIRE = { x: 32, y: -1 };
-export const POOL_TOWEL_RACK = { x: 34.5, y: 0 };
+export const BAR_CENTER = { x: 27.5, y: -1 };
+export const BAR_WORK = { x: 27.5, y: -3 };
+export const BAR_CASH = { x: 24, y: -1 };
+export const BAR_HIRE = { x: 30.5, y: -1 };
+// Put the clean rack where the palm beside the pool bar used to stand.
+export const POOL_TOWEL_RACK = { x: 32, y: 1 };
 export const POOL_DIRTY_RACK = { x: 34.5, y: 3 };
-export const poolTowelRack = (level: number): Point => level >= 2 ? { x: 37, y: 0 } : POOL_TOWEL_RACK;
+export const poolTowelRack = (_level: number): Point => POOL_TOWEL_RACK;
 export const poolDirtyBasket = (level: number): Point => level >= 2 ? { x: 37, y: 3 } : POOL_DIRTY_RACK;
 export const POOL_CENTER = { x: 28.5, y: 4.5 };
 export const POOL_STAY_SECONDS = 150;

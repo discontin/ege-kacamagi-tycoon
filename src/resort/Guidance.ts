@@ -58,7 +58,7 @@ export function resortGoal(s: ResortGameState, testMode = false): ResortGoal {
 export function upgradeBenefit(id: string, level: number): string {
   if (id.startsWith('room')) return level === 1 ? 'Konfor oda · 50 ₺/misafir · banyo · %20 hızlı iş' : 'En yüksek oda seviyesi';
   if (id === 'laundry') return `Makine: ${level === 1 ? 5 : 7} parça · daha hızlı yıkama`;
-  if (id === 'pool') return `${level === 1 ? 25 : 30} ₺/ziyaret · hızlı hizmet + dekor`;
+  if (id === 'pool') return level === 1 ? '6 şezlong · geniş havuz · 25 ₺/ziyaret' : 'En yüksek havuz seviyesi';
   return `${level === 1 ? '%20' : '%35'} hızlı karşılama · yeni bekleme koltuğu`;
 }
 export function cleaningProgress(remaining: number, total: number): number { return Math.max(0, Math.min(1, total > 0 ? 1 - remaining / total : 0)); }

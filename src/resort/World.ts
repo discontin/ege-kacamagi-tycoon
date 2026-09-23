@@ -20,11 +20,12 @@ import { OFFICE } from './Office';
 import { LAUNDRY_WALLS, laundryMachines } from './LaundryLayout';
 import './hire-marker.css';
 
-interface Character { root: T.Group; load: T.Group; broom: T.Group; tray: T.Group; iceCream: T.Group; net: T.Group; mixer?: T.AnimationMixer; actions: Map<string, T.AnimationAction>; mode: string; previous: T.Vector3; bagKey: string }
-// Keep the reception's cash and upgrade interaction zones available to the
-// simulation, but remove their old yellow floor markers from the scene.
-const HIDDEN_RECEPTION_MARKERS = new Set(['receptionCash', 'receptionUpgrade']);
+interface Character { root: T.Group; load: T.Group; broom: T.Group; tray: T.Group; net: T.Group; skateboard: T.Group; mixer?: T.AnimationMixer; actions: Map<string, T.AnimationAction>; mode: string; previous: T.Vector3; bagKey: string }
+// Keep these interaction zones available to the simulation, but remove their
+// redundant floor labels; floating notices are the visible markers instead.
+const HIDDEN_AREA_MARKERS = new Set(['receptionCash', 'receptionUpgrade', 'poolCash', 'barCash']);
 const RECEPTION_VISUAL_X = RECEPTION.x - 1;
+const BEACH_PREVIEW_CENTER = { x: 7.2, y: 3.8 };
 const world = (p: Point) => new T.Vector3(p.x - 19, 0, p.y - 27);
 const purchaseIconSvg = (kind: 'bed' | 'pool' | 'bar' | 'lock') => {
   const paths = {
@@ -42,6 +43,7 @@ export class ResortWorld {
   private renderer = new T.WebGLRenderer({ antialias: true });
   private host = document.querySelector<HTMLDivElement>('#game')!;
   private labels = document.createElement('div');
+  private beachMarker = document.createElement('div');
   private structures = new T.Group();
   private characters = new Map<string, Character>();
   private pads = new Map<string, { root: T.Group; outline: T.Mesh; fill: T.Mesh; label: HTMLButtonElement; area: Area }>();
@@ -49,6 +51,7 @@ export class ResortWorld {
   private tipModels = new Map<string, T.Group>();
   private guestMoods = new Map<string, HTMLDivElement>();
   private moneyModels = new Map<string, T.Group>();
+  private rewardPads = new Map<string, { glow: T.Mesh; ring: T.Mesh }>();
   private taskMarkers = new Map<string, { button: HTMLButtonElement; progress: HTMLSpanElement; notice: TaskIndicator }>();
   private dirtModels = new Map<string, T.Mesh[]>();
   private bedLinen = new Map<string, BedLinen>();
@@ -106,6 +109,9 @@ export class ResortWorld {
     this.poolWaterMaterial = new T.MeshStandardMaterial({ color: 0x48cbd5, transparent: true, opacity: .58, roughness: .12, metalness: .05 });
     this.renderer.domElement.tabIndex = 0; this.renderer.domElement.setAttribute('aria-label', 'Ege Kaçamağı 3D tatil köyü'); this.host.append(this.renderer.domElement);
     this.labels.className = 'resort-world-labels'; this.host.append(this.labels);
+    this.beachMarker.className = 'beach-coming-soon'; this.beachMarker.setAttribute('aria-hidden', 'true');
+    this.beachMarker.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 17a12 12 0 0 1 24 0H4Z"/><path d="M16 5v21m-4 0h8M5 21c2 0 2 2 5 2s3-2 5-2 3 2 5 2 3-2 5-2"/></svg><span>COMING SOON</span>';
+    this.labels.append(this.beachMarker);
     this.scene.background = new T.Color(0xd4edec); this.scene.fog = new T.Fog(0xd4edec, 95, 160);
     this.scene.add(new T.HemisphereLight(0xffffff, 0x96ae82, 2));
     const sun = new T.DirectionalLight(0xfff4dc, 3.3); sun.position.set(-25, 45, 18); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, far: 120 }); sun.shadow.bias = -.0004; this.scene.add(sun);
@@ -174,11 +180,37 @@ export class ResortWorld {
     this.prop(office, 'plantSmallA', -3, .1, -2, { height: 1.25 });
     const ground = this.group({ x: 19, y: 25 }, this.scene); this.box(ground, 0xeeddb4, 0, -.22, 0, 44, .4, 60);
     const grass = this.group({ x: 18, y: 27 }, this.scene); this.box(grass, 0xa3c98c, 0, -.03, 0, 38, .08, 46);
-    const sea = this.group({ x: 57, y: 27 }, this.scene); const water = new T.Mesh(new T.PlaneGeometry(45, 100), new T.MeshStandardMaterial({ color: 0x41babc, roughness: .24, metalness: .12 })); water.rotation.x = -Math.PI / 2; water.position.y = -.12; sea.add(water); this.wave = water;
-    for (let i = 0; i < 4; i++) this.box(sea, [0x76d4cf, 0x99e0d5, 0xb9e7d9, 0xe4f0db][i], -21.5 + i * .65, -.06, 0, .3, .025, 80);
+    // Decorative beach preview in the open area left of the pool. It is scenery
+    // only: no clickable control, task target, collision, or progression hook.
+    const beach = this.group(BEACH_PREVIEW_CENTER, this.scene);
+    this.box(beach, 0xdab77d, 0, .035, 0, 18, .09, 8.4);
+    this.box(beach, 0x45c4c8, 0, .09, -8.1, 17.9, .08, 9.8);
+    for (const [x, w] of [[-7.3, 2], [-4.7, 1.55], [-2.35, 2.1], [.25, 1.8], [2.65, 2.1], [5.25, 1.7], [7.35, 1.15]] as const)
+      this.box(beach, 0xeaf6df, x, .145, -3.35 + (x % 2) * .08, w, .025, .14);
+    for (const [x, z, r] of [[-7.2, .85, .2], [-5.3, 2.4, .16], [-2.6, 1.35, .15], [.6, 2.5, .19], [3.6, 1.15, .15], [6.7, 2.3, .2]] as const)
+      this.sphere(beach, 0xe9cc91, x, .11, z, r, 1.5, .3, .8);
+    // A low decorative fence keeps the preview visually marked as unavailable;
+    // it is scenery only and is deliberately absent from the collision layout.
+    const fenceWood = 0xa9794f, railHeight = .52, fenceHalfWidth = 8.98, fenceHalfDepth = 4.3;
+    for (const z of [-fenceHalfDepth, fenceHalfDepth]) {
+      this.box(beach, fenceWood, 0, railHeight, z, fenceHalfWidth * 2, .12, .13);
+      this.box(beach, fenceWood, 0, .86, z, fenceHalfWidth * 2, .12, .13);
+      for (let x = -fenceHalfWidth; x <= fenceHalfWidth; x += 1.5)
+        this.box(beach, 0xc39362, x, .52, z, .13, .9, .15);
+    }
+    for (const x of [-fenceHalfWidth, fenceHalfWidth]) {
+      this.box(beach, fenceWood, x, railHeight, 0, .13, .12, fenceHalfDepth * 2);
+      this.box(beach, fenceWood, x, .86, 0, .13, .12, fenceHalfDepth * 2);
+      for (let z = -fenceHalfDepth; z <= fenceHalfDepth; z += 1.5)
+        this.box(beach, 0xc39362, x, .52, z, .15, .9, .13);
+    }
+    const sea = this.group({ x: 57, y: 27 }, this.scene); const water = new T.Mesh(new T.PlaneGeometry(45, 100), new T.MeshStandardMaterial({ color: 0xa9dedc, roughness: .24, metalness: .12 })); water.rotation.x = -Math.PI / 2; water.position.y = -.12; sea.add(water); this.wave = water;
+    for (let i = 0; i < 4; i++) this.box(sea, [0xbce9e4, 0xc9eee8, 0xd8f2eb, 0xe8f5ec][i], -21.5 + i * .65, -.06, 0, .3, .025, 80);
     const promenade = [0xc39a6b, 0xcba477, 0xb99468, 0xd1ac80, 0xc09c73];
     const courtyard = [0xd0ad82, 0xc9a478, 0xd8b88e, 0xc7a27a, 0xd3b18a];
     this.paving({ x: 19, y: 47 }, 37, 8, courtyard);
+    // Give the reception a distinct, welcoming plaza so its entrance reads as
+    // a deliberate area instead of blending into the surrounding courtyard.
     for (const r of ROOM_DEFS) {
       const door = ROOM_DOOR(r);
       const promenadeEdge = door.x < 18 ? 14 : 24;
@@ -195,7 +227,7 @@ export class ResortWorld {
     }
     // Edge landscaping stays outside the bungalow footprints after the map
     // expansion, so tree crowns cannot spill into guest rooms.
-    for (const [x, y] of [[-1, 8], [-1, 23], [-1, 43], [36, 16], [36, 31], [36, 46], [16, 2], [32, 1]]) this.palm(x, y, 4 + (y % 3));
+    for (const [x, y] of [[-1, 8], [-1, 23], [-1, 43], [36, 16], [36, 31], [36, 46], [16, 2]]) this.palm(x, y, 4 + (y % 3));
     for (let y = 3; y < 49; y += 5) { const g = this.group({ x: 0, y }, this.scene); this.prop(g, 'bush', 0, 0, 0, { width: 1.7 }); }
     for (let y = 14; y < 48; y += 3) { const g = this.group({ x: 35, y }, this.scene); this.box(g, 0xfff5d5, 0, .6, 0, .12, 1.2, .12); this.box(g, 0xfff5d5, 0, .7, 1.4, .1, .1, 2.8); }
   }
@@ -321,6 +353,9 @@ export class ResortWorld {
     this.box(g, 0x549c97, .8, 1.23, -.08, .65, .045, .45); this.box(g, 0xfffbed, .8, 1.26, -.08, .57, .025, .4);
     if (f.level >= 2) { this.box(g, 0x365d60, 1.65, 1.26, -.3, .55, .07, .45); const screen = this.box(g, 0x365d60, 1.65, 1.52, -.4, .55, .44, .08); screen.rotation.x = -.15; }
     this.prop(g, 'plant', -3.3, .2, 1.1, { height: 1.4 }); this.prop(g, 'plant', 3.3, .2, 1.1, { height: 1.4 });
+    // The reception entrance sits in the front courtyard. Keep the rug small
+    // and forward so it never covers the central promenade.
+    this.prop(g, 'roomRug', 0, .12, 2.65, { width: 6.4 });
     if (f.level >= 2) this.prop(g, 'bench', -5, .12, 1, { width: 2.5 }, Math.PI / 2);
     if (f.level === 3) this.prop(g, 'bench', 5, .12, 1, { width: 2.5 }, -Math.PI / 2);
   }
@@ -333,20 +368,13 @@ export class ResortWorld {
     for (const wall of LAUNDRY_WALLS) { this.box(g, 0x99c9cd, wall.x - LAUNDRY_ORIGIN.x, .15 + wall.height / 2, wall.y - LAUNDRY_ORIGIN.y, wall.width, wall.height, wall.depth); this.box(g, 0xffe9bf, wall.x - LAUNDRY_ORIGIN.x, .19 + wall.height, wall.y - LAUNDRY_ORIGIN.y, wall.width + .1, .12, wall.depth + .1); }
     for (let z = -3.5; z <= floorFront - .5; z++) this.box(g, 0xe6d7b9, -.2, .17, z, 8.9, .015, .035);
     for (const machine of laundryMachines(f.level)) {
-      const x = machine.x - LAUNDRY_ORIGIN.x, stacked = f.level >= 2;
-      const z = machine.y - LAUNDRY_ORIGIN.y;
-      if (stacked) {
-        const appliance = this.prop(g, 'washerStacked', x, .2, z, { height: 2.25 }, Math.PI / 2);
-        if (appliance) this.setupWasherDoor(appliance);
-        else this.box(g, 0xfff9e8, x, 1, z, machine.width, 1.8, machine.depth);
-      } else {
-        const closed = this.prop(g, 'washer', x, .2, z, { height: 1.62 }, Math.PI / 2);
-        const open = this.prop(g, 'washerOpen', x, .2, z, { height: 1.62 }, Math.PI / 2);
-        if (closed && open) {
-          closed.root.visible = false;
-          this.washerStates.push({ open: open.root, closed: closed.root });
-        } else if (!closed && !open) this.box(g, 0xfff9e8, x, 1, z, machine.width, 1.8, machine.depth);
-      }
+      const x = machine.x - LAUNDRY_ORIGIN.x, z = machine.y - LAUNDRY_ORIGIN.y;
+      const closed = this.prop(g, 'washer', x, .2, z, { height: 1.62 }, Math.PI / 2);
+      const open = this.prop(g, 'washerOpen', x, .2, z, { height: 1.62 }, Math.PI / 2);
+      if (closed && open) {
+        closed.root.visible = false;
+        this.washerStates.push({ open: open.root, closed: closed.root });
+      } else if (!closed && !open) this.box(g, 0xfff9e8, x, 1, z, machine.width, 1.8, machine.depth);
     }
     this.prop(g, 'rack', TOWEL_RACK.x - LAUNDRY_ORIGIN.x, .1, TOWEL_RACK.y - LAUNDRY_ORIGIN.y, { height: 2.2 });
     const rack = new TowelShelf(color => this.material(color), 2.2, false, false); rack.root.position.set(TOWEL_RACK.x - LAUNDRY_ORIGIN.x, .1, TOWEL_RACK.y - LAUNDRY_ORIGIN.y); g.add(rack.root);
@@ -390,10 +418,9 @@ export class ResortWorld {
     for (let x = -1.7; x < 1.8; x += .4) this.box(g, 0xc59163, x, .75, .94, .3, .95, .06);
     this.box(g, 0x389c96, 0, 1.3, 0, 4.2, .18, 2.05);
     this.lemonade(g, .65, 1.4, .4); this.lemonade(g, 1.2, 1.4, .4);
-    if (this.sim.facility('pool').level >= 2) { for (const x of [-1.45, -1.05]) { const cone = new T.Mesh(new T.ConeGeometry(.13, .35, 10), this.material(0xd8a45e)); cone.position.set(x, 1.52, .45); cone.rotation.z = Math.PI; g.add(cone); this.sphere(g, x, 1.78, .45, .18, 1, 1, 1); } this.prop(g, 'iceCream', -1.25, 1.35, .42, { height: .55 }); this.box(g, 0xe8f4ed, -1.25, 1.15, -.35, 1.15, .75, .65); for (const x of [-1.6, -1.15, -.7]) this.prop(g, 'barStool', x, .15, 1.65, { height: 1.05 }); }
+    if (this.sim.facility('pool').level >= 2) for (const x of [-1.6, -1.15, -.7]) this.prop(g, 'barStool', x, .15, 1.65, { height: 1.05 });
     this.box(g, 0xffedb0, -1, 1.65, 0, .45, .5, .45); this.box(g, 0xfffbeb, -1, 1.96, 0, .5, .12, .5);
     this.sphere(g, 0xffcb42, -.45, 1.45, .45, .13); this.sphere(g, 0xffd951, -.2, 1.45, .45, .13);
-    this.prop(g, 'plant', -2.4, .1, -.6, { height: 1.1 });
   }
   private pool() {
     const f = this.sim.facility('pool'), g = this.group({ x: 28.5, y: 4.5 });
@@ -431,11 +458,10 @@ export class ResortWorld {
       const umbrella = new T.Mesh(new T.ConeGeometry(1.6, .65, 8), this.material(r.id.endsWith('2') || r.id.endsWith('4') ? 0xeaa978 : 0x76bda8)); umbrella.position.set(1, 3.05, -.9); umbrella.castShadow = true; p.add(umbrella);
     }
     if (f.level >= 2) { this.sphere(g, 0xffb473, 2.7, .5, -1, .6, 1, .2, 1); this.prop(g, 'plant', -5.8, .1, -3.7, { height: 1.5 }); }
-    if (f.level === 3) { this.prop(g, 'plant', 5.8, .1, -3.7, { height: 1.5 }); this.box(g, 0xf2d16e, 0, .4, -3.2, 5, .05, .2); }
   }
-  private clearStructures() { this.structures.traverse(o => { if (o instanceof T.Mesh && o.geometry.userData.generated) o.geometry.dispose(); }); this.structures.clear(); for (const washer of this.washerDoors) { washer.mixer.stopAllAction(); washer.mixer.uncacheRoot(washer.root); } this.washerDoors = []; this.washerStates = []; for (const p of this.pads.values()) { p.label.remove(); (p.outline.material as T.Material).dispose(); (p.fill.material as T.Material).dispose(); } this.pads.clear(); for (const l of this.facilityLabels.values()) l.remove(); this.facilityLabels.clear(); this.tipModels.clear(); this.moneyModels.clear(); this.dirtModels.clear(); this.bedLinen.clear(); this.bathroomDoors.clear(); this.stockModels.clear(); this.drums = []; this.poolLeaves = []; }
+  private clearStructures() { this.structures.traverse(o => { if (o instanceof T.Mesh && o.geometry.userData.generated) o.geometry.dispose(); }); this.structures.clear(); for (const washer of this.washerDoors) { washer.mixer.stopAllAction(); washer.mixer.uncacheRoot(washer.root); } this.washerDoors = []; this.washerStates = []; for (const p of this.pads.values()) { p.label.remove(); (p.outline.material as T.Material).dispose(); (p.fill.material as T.Material).dispose(); } this.pads.clear(); for (const p of this.rewardPads.values()) { p.glow.geometry.dispose(); (p.glow.material as T.Material).dispose(); p.ring.geometry.dispose(); (p.ring.material as T.Material).dispose(); } this.rewardPads.clear(); for (const l of this.facilityLabels.values()) l.remove(); this.facilityLabels.clear(); this.tipModels.clear(); this.moneyModels.clear(); this.dirtModels.clear(); this.bedLinen.clear(); this.bathroomDoors.clear(); this.stockModels.clear(); this.drums = []; this.poolLeaves = []; }
   private rebuild() {
-    const key = JSON.stringify([!!this.sim.state.bar?.open, !!this.sim.facility('pool').dirt, this.sim.state.guests.filter(wantsDrink).map(g => [g.id, g.orderProduct]), this.sim.state.workers.map(w => w.role), this.sim.state.workers.length,this.sim.state.facilities.map(f => [f.id, f.open, f.level, f.dirty, !!f.floorDirty, !!f.bathroomDirty, !!f.needsSheet, !!f.towels]), this.sim.state.laundry.remaining === 0, this.sim.state.seats.map(s => [s.open, s.dirty, !!s.towel, !!s.guest])]);
+    const key = JSON.stringify([!!this.sim.state.bar?.open, !!this.sim.facility('pool').dirt, this.sim.state.rewardedAds, this.sim.state.guests.filter(wantsDrink).map(g => [g.id, g.orderProduct]), this.sim.state.workers.map(w => w.role), this.sim.state.workers.length,this.sim.state.facilities.map(f => [f.id, f.open, f.level, f.dirty, !!f.floorDirty, !!f.bathroomDirty, !!f.needsSheet, !!f.towels]), this.sim.state.laundry.remaining === 0, this.sim.state.seats.map(s => [s.open, s.dirty, !!s.towel, !!s.guest])]);
     if (key === this.layoutKey) return; this.layoutKey = key; this.clearStructures(); ROOM_DEFS.forEach(r => this.bungalow(r)); this.reception(); this.laundry(); this.pool(); this.poolBar();
     const machineAreaId = this.sim.state.laundry.remaining === 0 ? 'machineUnload' : 'machineLoad';
     for (const a of this.sim.areas) {
@@ -466,11 +492,22 @@ export class ResortWorld {
         const ring = new T.Mesh(ringGeometry, new T.MeshBasicMaterial({ color: 0xffdf83, side: T.DoubleSide }));
         ring.rotation.x = -Math.PI / 2; ring.position.y = .18; root.add(ring);
       }
+      const rewardColor = a.id === 'rewardedBoost' ? 0xd98ad9 : a.id === 'rewardedMoney' ? 0xee9fc4 : 0;
+      if (rewardColor) {
+        (fill.material as T.MeshBasicMaterial).color.setHex(rewardColor); (fill.material as T.MeshBasicMaterial).opacity = .2;
+        const glowGeometry = new T.CircleGeometry(1.05, 40); glowGeometry.userData.generated = true;
+        const glow = new T.Mesh(glowGeometry, new T.MeshBasicMaterial({ color: rewardColor, transparent: true, opacity: .16, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+        glow.rotation.x = -Math.PI / 2; glow.position.y = .15; root.add(glow);
+        const ringGeometry = new T.RingGeometry(.68, .76, 40); ringGeometry.userData.generated = true;
+        const ring = new T.Mesh(ringGeometry, new T.MeshBasicMaterial({ color: rewardColor, transparent: true, opacity: .48, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+        ring.rotation.x = -Math.PI / 2; ring.position.y = .18; root.add(ring);
+        this.rewardPads.set(a.id, { glow, ring });
+      }
       const outline = new T.Mesh(geometry, new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: a.mode === 'upgrade', opacity: a.mode === 'upgrade' ? .42 : 1 })); outline.rotation.x = -Math.PI / 2; outline.position.y = .17; root.add(outline);
       const label = document.createElement('button'); label.className = `floor-label ${a.mode}${a.id === 'office' ? ' office-marker' : ''}`; label.setAttribute('aria-label', a.id === 'office' ? 'Personel geliştirme ofisine git' : `${a.label} alanına yürü`); if (a.id === 'office') label.title = 'Personel geliştirme ofisi'; label.addEventListener('click', () => { this.sim.goToArea(a.id); this.follow = true; }, { signal: this.abort.signal }); this.labels.append(label); this.pads.set(a.id, { root, outline, fill, label, area: a });
       if (a.mode === 'cash') { const pile = new T.Group(); for (let i = 0; i < 4; i++) this.box(pile, i % 2 ? 0x9ad364 : 0x60a957, 0, .25 + i * .12, 0, .8, .1, .4); root.add(pile); this.moneyModels.set(a.target, pile); }
       if (freeformPoolCleaning) { fill.visible = false; outline.visible = false; label.style.display = 'none'; }
-      if (HIDDEN_RECEPTION_MARKERS.has(a.id)) { fill.visible = false; outline.visible = false; label.style.display = 'none'; }
+      if (HIDDEN_AREA_MARKERS.has(a.id)) { fill.visible = false; outline.visible = false; label.style.display = 'none'; }
     }
     for (const f of this.sim.state.facilities) { if (f.kind === 'room' || f.kind === 'reception' || f.id === 'laundry' || f.id === 'pool') continue; const l = document.createElement('div'); l.className = 'facility-label'; l.addEventListener('click', () => this.inspect(f.id), { signal: this.abort.signal }); this.labels.append(l); this.facilityLabels.set(f.id, l); }
   }
@@ -480,7 +517,7 @@ export class ResortWorld {
     const workerAsset: Record<string, AssetKey> = { reception: 'receptionStaff', rooms: 'roomStaff', hauling: 'laundryStaff', pool: 'poolStaff', bartender: 'poolStaff' };
     const guestAssets: AssetKey[] = ['guestA', 'guestB', 'guestC', 'guestD', 'guestE', 'guestF', 'guestG', 'guestH', 'guestI', 'guestJ'];
     const hash = [...a.id].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 0);
-    const characterAsset: AssetKey = a.id === 'player' ? 'player' : worker ? workerAsset[role ?? ''] ?? 'worker' : guestAssets[hash % guestAssets.length];
+    const characterAsset: AssetKey = a.id === 'player' ? 'skateBoy' : worker ? workerAsset[role ?? ''] ?? 'skateGirl' : guestAssets[hash % guestAssets.length];
     const instance = this.assets.instantiate(characterAsset, { height: 1.65 });
     const actions = new Map<string, T.AnimationAction>(); let mixer: T.AnimationMixer | undefined;
     if (instance) { root.add(instance.root); if (instance.clips.length) { mixer = new T.AnimationMixer(instance.model); for (const clip of instance.clips) actions.set(clip.name, mixer.clipAction(clip)); } }
@@ -488,13 +525,25 @@ export class ResortWorld {
     if (a.id === 'player') { const dot = new T.Mesh(new T.RingGeometry(.45, .55, 24), new T.MeshBasicMaterial({ color: 0xfff6ca, side: T.DoubleSide })); dot.rotation.x = -Math.PI / 2; dot.position.y = .2; root.add(dot); }
     const broom = new T.Group(); broom.position.set(.55, .18, .4); broom.rotation.z = -.25; this.box(broom, 0xc59b63, 0, .75, 0, .08, 1.5, .08); this.box(broom, 0x4fb0a2, 0, .08, .1, .65, .15, .24); for (let i = 0; i < 6; i++) this.box(broom, 0xf1d58a, -.25 + i * .1, -.05, .1, .065, .15, .22); broom.visible = false; root.add(broom);
     const tray = new T.Group(); tray.position.set(0, .98, .65); this.box(tray, 0xa36d48, 0, 0, 0, .7, .07, .45); this.lemonade(tray, 0, .04, 0); root.add(tray);
-    const iceCream = new T.Group(); iceCream.position.set(0, .98, .65); this.box(iceCream, 0xa36d48, 0, 0, 0, .7, .07, .45); const cone = new T.Mesh(new T.ConeGeometry(.13, .35, 10), this.material(0xd8a45e)); cone.position.y = .18; cone.rotation.z = Math.PI; iceCream.add(cone); this.sphere(iceCream, 0, .42, 0, .18, 1, 1, 1); root.add(iceCream);
     const net = new T.Group(); net.position.set(.5, .2, .4); net.rotation.z = -.35; this.box(net, 0xb28860, 0, .95, 0, .06, 1.9, .06);
     const hoop = new T.Mesh(new T.TorusGeometry(.32, .035, 6, 16), this.material(0x478e9e)); hoop.geometry.userData.generated = true; hoop.rotation.x = Math.PI / 2; hoop.position.set(0, 1.95, .25); net.add(hoop);
     for (const x of [-.18, 0, .18]) this.box(net, 0xc9e3dd, x, 1.93, .25, .018, .025, .46);
     for (const z of [.07, .25, .43]) this.box(net, 0xc9e3dd, 0, 1.93, z, .46, .025, .018);
     root.add(net);
-    const c: Character = { root, load, broom, tray, iceCream, net, mixer, actions, mode: '', previous: world(a), bagKey: '' }; this.characters.set(a.id, c); return c;
+    const skateboardAsset = this.assets.instantiate('skateboardMini', { width: 1.5 });
+    const skateboard = skateboardAsset?.root ?? new T.Group(); skateboard.position.set(.14, .05, .08); skateboard.rotation.y = 0;
+    if (!skateboardAsset) {
+      this.box(skateboard, 0x303844, 0, .08, 0, .28, .08, 1.2);
+      this.box(skateboard, 0xd66d4f, 0, .13, 0, .18, .035, .72);
+      for (const z of [-.35, .35]) {
+        for (const x of [-.14, .14]) {
+          const wheel = new T.Mesh(new T.CylinderGeometry(.055, .055, .06, 8), this.material(0x8ed0c0));
+          wheel.geometry.userData.generated = true; wheel.rotation.z = Math.PI / 2; wheel.position.set(x, 0, z); skateboard.add(wheel);
+        }
+      }
+    }
+    skateboard.visible = false; root.add(skateboard);
+    const c: Character = { root, load, broom, tray, net, skateboard, mixer, actions, mode: '', previous: world(a), bagKey: '' }; this.characters.set(a.id, c); return c;
   }
   private carriedLinen(parent: T.Group, sheet: boolean, dirty: boolean, index: number) {
     const item = new T.Group(); item.position.y = index * .115; parent.add(item);
@@ -516,12 +565,15 @@ export class ResortWorld {
     if (walking) c.root.rotation.y = Math.atan2(delta.x, delta.z);
     else if (!a.id.startsWith('guest') && this.sim.inside(a, RECEPTION)) c.root.rotation.y = 0;
     const cleaning = working && this.sim.state.tasks.some(t => t.owner === a.id && (t.kind === 'cleanFloor' || t.kind === 'cleanBathroom' || t.kind === 'cleanSeat'));
-    const actor = this.sim.actor(a.id), held = actor?.heldProduct ?? (actor?.drink ? 'lemonade' : undefined); c.tray.visible = held === 'lemonade'; c.iceCream.visible = held === 'icecream';
-    c.load.visible = !c.tray.visible && !c.iceCream.visible;
+    const actor = this.sim.actor(a.id); c.tray.visible = !!actor?.drink;
+    c.skateboard.visible = a.id === 'player' && this.sim.state.boost.remaining > 0;
+    c.load.visible = !c.tray.visible;
     c.net.visible = working && this.sim.state.tasks.some(t => t.owner === a.id && t.kind === 'cleanPool');
     c.net.rotation.x = Math.sin(this.sim.state.elapsed * 5) * .3;
     c.broom.visible = cleaning; c.broom.rotation.x = Math.sin(this.sim.state.elapsed * 8) * .35; c.broom.rotation.y = Math.sin(this.sim.state.elapsed * 6) * .5;
-    const mode = walking ? 'walk' : working ? 'interact-right' : linenCount(bag) || c.tray.visible || c.iceCream.visible ? 'holding-both' : 'idle';
+    const riding = a.id === 'player' && this.sim.state.boost.remaining > 0;
+    // The Mini Skate character has a real skating pose, while the normal task poses remain intact.
+    const mode = riding && walking ? 'skate' : riding && !working && !linenCount(bag) && !c.tray.visible ? 'skate-stand' : walking ? 'walk' : working ? 'interact-right' : linenCount(bag) || c.tray.visible ? 'holding-both' : 'idle';
     if (mode !== c.mode) { c.actions.get(c.mode)?.fadeOut(.12); c.actions.get(mode)?.reset().fadeIn(.12).play(); c.mode = mode; } c.mixer?.update(this.sim.state.settings.paused ? 0 : dt); c.previous.copy(p);
     const key = `${bag.clean}:${bag.dirty}:${bag.cleanSheets ?? 0}:${bag.dirtySheets ?? 0}`;
     if (key !== c.bagKey) {
@@ -573,6 +625,7 @@ export class ResortWorld {
     }
     if (this.follow) this.target.lerp(world(s.player).add(new T.Vector3(0, 0, -3)), 1 - Math.exp(-dt * 5));
     const d = this.follow ? 1 / this.zoom : Math.max(2.3, 2.1 / this.camera.aspect); this.camera.position.copy(this.target).add(new T.Vector3(0, 20 * d, 23 * d)); this.camera.lookAt(this.target);
+    this.project(this.beachMarker, world(BEACH_PREVIEW_CENTER).add(new T.Vector3(0, 2.05, 0)));
     this.updateCharacter(s.player, dt, s.player.bag, s.tasks.some(t => t.owner === 'player' && this.sim.isTaskActive(t)));
     for (const w of s.workers) this.updateCharacter(w, dt, w.bag, s.tasks.some(t => t.owner === w.id && this.sim.isTaskActive(t)));
     for (const [roomId, door] of this.bathroomDoors) {
@@ -639,7 +692,7 @@ export class ResortWorld {
     this.feel.update(s.settings.paused ? 0 : dt * s.settings.speed, world(s.player));
     for (const p of this.pads.values()) {
       const a = p.area;
-      if (HIDDEN_RECEPTION_MARKERS.has(a.id)) {
+      if (HIDDEN_AREA_MARKERS.has(a.id)) {
         p.fill.visible = false; p.outline.visible = false; p.label.style.display = 'none';
         if (a.mode === 'cash') { const cash = a.target === 'bar' ? s.bar!.cash : this.sim.facility(a.target).cash; this.moneyModels.get(a.target)!.visible = cash > 0; }
         continue;
@@ -687,6 +740,11 @@ export class ResortWorld {
       const g = s.guests.find(g => g.id === f.guest), title = r?.name ?? (id === 'reception' ? 'Resepsiyon' : id === 'laundry' ? 'Çamaşırhane' : 'Havuz');
       const description = !f.open ? 'YENİ ALAN' : f.kind === 'room' ? g ? g.phase === 'staying' ? `Konaklıyor · ${Math.ceil(g.remaining)} sn` : 'Misafir geliyor' : f.dirty ? 'YATAĞI TOPLA' : f.floorDirty ? 'ZEMİNİ SÜPÜR' : f.bathroomDirty ? 'BANYOYU TEMİZLE' : f.needsSheet ? 'TEMİZ ÇARŞAF GEREKLİ' : f.towels ? 'MİSAFİRE HAZIR' : 'TEMİZ HAVLU GEREKLİ' : id === 'laundry' ? `${this.sim.testMode ? '∞' : s.laundry.clean} temiz · ${s.laundry.dirty} kirli${s.laundry.remaining !== null ? ' · ' + Math.ceil(s.laundry.remaining) + ' sn' : ''}` : id === 'reception' ? `${s.guests.filter(g => g.phase === 'queue').length} misafir sırada` : `${s.seats.filter(s => s.open && !s.guest && !s.dirty).length} boş şezlong`;
       const text = `<b>${title}</b><small>${description}${f.open ? ' · Sv. ' + f.level : ''}</small>${r && f.open ? `<small class="room-class">${['Standart oda · 40 ₺', 'Konfor oda · 50 ₺'][f.level - 1]}</small>` : ''}`; if (l.innerHTML !== text) l.innerHTML = text; l.classList.toggle('dirty', f.dirty); pos.y = r ? 3.5 : 4; this.project(l, pos); if (!this.follow || !f.open) l.style.display = 'none';
+    }
+    for (const [id, pad] of this.rewardPads) {
+      const pulse = .5 + Math.sin(now / 420 + (id === 'rewardedMoney' ? 1.5 : 0)) * .5;
+      pad.glow.scale.setScalar(1 + pulse * .12); (pad.glow.material as T.MeshBasicMaterial).opacity = .1 + pulse * .14;
+      pad.ring.scale.setScalar(.94 + pulse * .12); pad.ring.rotation.z = now / 2600; (pad.ring.material as T.MeshBasicMaterial).opacity = .3 + pulse * .35;
     }
     this.updateTaskMarkers(notices);
     this.wave.position.y = -.12 + Math.sin(now / 1500) * .025; this.renderer.render(this.scene, this.camera); this.frame = requestAnimationFrame(this.animate);

@@ -17,16 +17,16 @@ export class ResortUI {
   private panel = 'village';
   private lastPanel = '';
   private lastMessage = -1;
+  private lastXp = -1;
   private interval: number;
   private html(selector: string, value: string) { const el = document.querySelector(selector)!; if (el.innerHTML !== value) el.innerHTML = value; }
   constructor(private sim: ResortSimulation, private save: ResortSaveService) {
     document.querySelector('#app')!.innerHTML = `
       <main id="game" aria-label="Tatil köyü haritası"></main>
-      <header class="resort-brand"><span class="brand-mark">☀</span><div>Ege<span>Kaçamağı.</span><small>TATİL KÖYÜ TYCOON</small></div></header>
-      <div id="level-card" class="level-card"></div><div id="wallet" class="wallet"></div>
+      <div id="level-card" class="level-card"></div><div id="xp-feedback" class="xp-feedback" aria-live="polite"></div><div id="wallet" class="wallet"></div>
       <div class="mode-controls">${sim.testMode ? '<span>∞ TEST MODU · KAYIT YOK</span><button data-action="test">Normal oyuna dön</button>' : '<button data-action="test">∞ Sınırsız test modu</button>'}</div>
       <div class="quick-controls" aria-label="Oyun kontrolleri"><button id="speed-button" data-action="speed" aria-label="2 kat hız" aria-pressed="false">2× Hız</button><button data-action="reset" aria-label="Oyunu sıfırla">↻ Sıfırla</button></div>
-      <div class="camera-controls"><button data-action="zoom-in" aria-label="Yakınlaştır">＋</button><button data-action="zoom-out" aria-label="Uzaklaştır">−</button><button data-action="focus" aria-label="Karaktere odaklan">◎</button><button data-action="map" aria-label="Tüm haritayı göster">▦</button></div>
+      <div id="reward-timers" class="reward-timers" aria-label="Ödül zamanlayıcıları"></div>
       <div class="resort-toast" id="toast" role="status"></div>
       <div id="joystick" aria-label="Hareket çubuğu"><div id="joystick-knob"></div></div>
       <nav hidden aria-label="Yönetim panelleri"><button data-action="panel" data-panel="village">⌂<small>Köy</small></button><button data-action="panel" data-panel="workers">♙<small>Ekip</small></button><button data-action="panel" data-panel="journey">☆<small>Hedefler</small></button><button data-action="panel" data-panel="help">?<small>Rehber</small></button></nav>
@@ -88,10 +88,6 @@ export class ResortUI {
       case 'pause': this.sim.state.settings.paused = !this.sim.state.settings.paused; break;
       case 'speed': this.sim.state.settings.speed = this.sim.state.settings.speed === 1 ? 2 : 1; break;
       case 'boost': this.sim.activateBoost(); break;
-      case 'zoom-in': this.world?.setZoom(1.1); break;
-      case 'zoom-out': this.world?.setZoom(.9); break;
-      case 'focus': this.world?.centerPlayer(); break;
-      case 'map': this.world?.showAll(); break;
       case 'test': { const url = new URL(location.href); if (this.sim.testMode) url.searchParams.delete('test'); else url.searchParams.set('test', '1'); location.href = url.href; break; }
       case 'save': this.sim.notify(this.save.save(this.sim.state) ? this.sim.testMode ? 'Test modu normal kaydını değiştirmez.' : 'Tatil köyün kaydedildi.' : 'Kayıt yapılamadı. Tarayıcı depolamasını kontrol et.'); break;
       case 'reset': document.querySelector<HTMLDialogElement>('#restart-dialog')!.showModal(); break;
@@ -120,7 +116,7 @@ export class ResortUI {
     return `<span class="eyebrow">BÜYÜK BİR KAÇAMAĞA DOĞRU</span><h2>Küçük adımlar<span>.</span></h2><p class="intro">Müşteri kabulü +10, oda temizliği +5, havuz hizmeti +5 XP.</p>${goals.map(([title, done]) => `<div class="goal-row ${done ? 'done' : ''}"><span>${done ? '✓' : '○'}</span>${title}</div>`).join('')}<h3>Seviye açılışları</h3>${LEVELS.map((xp, i) => `<p class="unlock-line">⭐ ${i + 1}. seviye · ${xp} XP · ${levelReward(i)}</p>`).join('')}`;
   }
   private help() {
-    return `<span class="eyebrow">NASIL OYNANIR?</span><h2>Acele yok, tatildesin<span>.</span></h2><ol class="help-list"><li>Beyaz resepsiyon karesinde dur. Misafir varsa hazır bir odaya yerleşir.</li><li>Misafir karşılanınca para toplama noktasında ücret birikir. Yanına yürüyerek topla.</li><li>Yatak simgesine yürü: yatağın herhangi bir kenarında durarak çarşafları topla. Kirli havlu ve çarşaf çantana alınır; ikisi de sepete taşınıp makinede yıkanır. Temiz çarşafı raftan alıp yatağa geri getir. Süpürge simgesinin alanında zemini ayrıca temizle.</li><li>Kirli havlu sepetine yaklaş; havlular otomatik bırakılır. Makine kendisi yıkar.</li><li>Temiz havlu rafına yaklaşarak havlu al; odanın karesinde durarak bırak. Bir oda için gereken temiz çarşaf alınır; toplam çanta kapasitesi sekiz parçadır.</li><li>Makine kapasitesini yükseltmek veya temiz havlu satın almak için işletme ofisini kullan.</li><li>Yeşil alan yeni tesis açar, sarı alan mevcut tesisi yükseltir. 1,3 saniye bekle; yeniden satın almak için ayrılıp dön.</li><li>Havuzu açınca konaklayan misafirler yer varsa havuza gider. Girişte karşıla, rafta havlu bulundur ve şezlongları temizle.</li></ol><p>Havuz barını 200 ₺’ye aç. Bardak simgesindeki misafire limonata hazırlayıp tepsiyle götür; teslim başına 15 ₺ bar kasasına gelir. Dört havuz ziyareti sonrası yeni girişler bakım için durur; kepçe simgesine veya havuzun kenarına yaklaşarak temizle. Bar yanında barmen alabilirsin.</p><h3>Kontroller</h3><p>WASD / oklar veya mobil hareket çubuğu. Yere ve kare etiketine dokunarak yürü. Etkileşim tuşu yok.</p><p>Boşluk: duraklat. Tekerlek / iki parmak: yakınlaştır. Sürükle: kamerayı gezdir. ◎: karaktere dön.</p><p>Bir işi yarıda bırakınca aynı kareye dönerek devam edebilirsin. Rehberdeki görevi bırak düğmesi görev rezervasyonunu serbest bırakır.</p>${this.sim.state.player.task ? '<button data-action="cancel-job">Geçerli görevi bırak</button>' : ''}<button class="primary" data-action="save">Şimdi kaydet</button><p class="muted">15 saniyede otomatik kayıt · ${this.save.lastSaved || 'Henüz kayıt yok'}. Çevrimdışı gelir yok. Eski oyun kaydı korunur.</p><button class="danger" data-action="reset">Yeni tatil köyü kur</button>`;
+    return `<span class="eyebrow">NASIL OYNANIR?</span><h2>Acele yok, tatildesin<span>.</span></h2><ol class="help-list"><li>Beyaz resepsiyon karesinde dur. Misafir varsa hazır bir odaya yerleşir.</li><li>Misafir karşılanınca para toplama noktasında ücret birikir. Yanına yürüyerek topla.</li><li>Yatak simgesine yürü: yatağın herhangi bir kenarında durarak çarşafları topla. Kirli havlu ve çarşaf çantana alınır; ikisi de sepete taşınıp makinede yıkanır. Temiz çarşafı raftan alıp yatağa geri getir. Süpürge simgesinin alanında zemini ayrıca temizle.</li><li>Kirli havlu sepetine yaklaş; havlular otomatik bırakılır. Makine kendisi yıkar.</li><li>Temiz havlu rafına yaklaşarak havlu al; odanın karesinde durarak bırak. Bir oda için gereken temiz çarşaf alınır; toplam çanta kapasitesi sekiz parçadır.</li><li>Makine kapasitesini yükseltmek veya temiz havlu satın almak için işletme ofisini kullan.</li><li>Yeşil alan yeni tesis açar, sarı alan mevcut tesisi yükseltir. 1,3 saniye bekle; yeniden satın almak için ayrılıp dön.</li><li>Havuzu açınca konaklayan misafirler yer varsa havuza gider. Girişte karşıla, rafta havlu bulundur ve şezlongları temizle.</li></ol><p>Havuz barını 200 ₺’ye aç. Bardak simgesindeki misafire limonata hazırlayıp tepsiyle götür; teslim başına 15 ₺ bar kasasına gelir. Dört havuz ziyareti sonrası yeni girişler bakım için durur; kepçe simgesine veya havuzun kenarına yaklaşarak temizle. Bar yanında barmen alabilirsin.</p><h3>Kontroller</h3><p>WASD / oklar veya mobil hareket çubuğu. Yere ve kare etiketine dokunarak yürü. Etkileşim tuşu yok.</p><p>Boşluk: duraklat. Tekerlek / iki parmak: yakınlaştır. Sürükle: kamerayı gezdir.</p><p>Bir işi yarıda bırakınca aynı kareye dönerek devam edebilirsin. Rehberdeki görevi bırak düğmesi görev rezervasyonunu serbest bırakır.</p>${this.sim.state.player.task ? '<button data-action="cancel-job">Geçerli görevi bırak</button>' : ''}<button class="primary" data-action="save">Şimdi kaydet</button><p class="muted">15 saniyede otomatik kayıt · ${this.save.lastSaved || 'Henüz kayıt yok'}. Çevrimdışı gelir yok. Eski oyun kaydı korunur.</p><button class="danger" data-action="reset">Yeni tatil köyü kur</button>`;
   }
   private officeVisited = false;
   private office() {
@@ -180,8 +176,24 @@ export class ResortUI {
     if (!nearbyOffice && this.panel === 'office') document.querySelector('#drawer')!.classList.remove('open');
     this.officeVisited = nearbyOffice;
     const s = this.sim.state, level = this.sim.level, base = LEVELS[level - 1], end = LEVELS[level];
-    this.html('#wallet', `<span>₺</span><b>${this.sim.testMode ? '∞' : Math.floor(s.money).toLocaleString('tr-TR')}<small>kasa</small></b>`);
-    this.html('#level-card', `<div><span class="level-star">★ ${level}</span><small class="level-xp">${s.xp}${end ? '/' + end : ''} XP${s.boost.remaining ? ' · ☀ ' + Math.ceil(s.boost.remaining) + ' sn' : ''}</small></div><div class="xp-track"><i style="width:${end ? Math.min(100, (s.xp - base) / (end - base) * 100) : 100}%"></i></div>`);
+    this.html('#wallet', `<div class="wallet-copy"><small>KASA</small><b>$${this.sim.testMode ? '∞' : Math.floor(s.money).toLocaleString('tr-TR')}</b></div>`);
+    const levelProgress = end ? Math.min(100, (s.xp - base) / (end - base) * 100) : 100;
+    const xpLabel = end ? `${s.xp - base}/${end - base} XP` : 'MAX';
+    this.html('#level-card', `<span class="level-star" aria-label="Seviye ${level}"><i>★</i><b>${level}</b></span><div class="xp-track" aria-label="${xpLabel}"><i style="width:${levelProgress}%"></i><b>${xpLabel}</b></div>`);
+    const rewardState = s.rewardedAds;
+    const rewardCards: string[] = [];
+    if (s.boost.remaining > 0) rewardCards.push(`<div class="reward-timer-marker" aria-label="Kaykay boostu: ${Math.ceil(s.boost.remaining)} saniye"><span class="reward-timer-icon boost"><img src="/assets/icons/skateboard-outline-generated.png" alt=""></span><small>${Math.ceil(s.boost.remaining)} sn</small></div>`);
+    else if (rewardState && rewardState.boost.activeUntil > s.elapsed) rewardCards.push(`<div class="reward-timer-marker" aria-label="Kaykay boostu: ${Math.ceil(rewardState.boost.activeUntil - s.elapsed)} saniye"><span class="reward-timer-icon boost"><img src="/assets/icons/skateboard-outline-generated.png" alt=""></span><small>${Math.ceil(rewardState.boost.activeUntil - s.elapsed)} sn</small></div>`);
+    if (rewardState && rewardState.money.activeUntil > s.elapsed) rewardCards.push(`<div class="reward-timer-marker" aria-label="Para ödülü: ${Math.ceil(rewardState.money.activeUntil - s.elapsed)} saniye"><span class="reward-timer-icon money">$</span><small>${Math.ceil(rewardState.money.activeUntil - s.elapsed)} sn</small></div>`);
+    this.html('#reward-timers', rewardCards.join(''));
+    if (this.lastXp < 0) this.lastXp = s.xp;
+    else if (s.xp > this.lastXp) {
+      const gain = s.xp - this.lastXp, pop = document.createElement('span');
+      pop.className = 'xp-gain-pop'; pop.textContent = `+${gain} XP`; pop.setAttribute('aria-label', `+${gain} XP`);
+      document.querySelector('#xp-feedback')!.append(pop);
+      window.setTimeout(() => pop.remove(), 1800);
+      this.lastXp = s.xp;
+    } else if (s.xp < this.lastXp) this.lastXp = s.xp;
     this.html('#bag-stat', `<span>☀ ${s.player.bag.clean} <small>temiz</small></span><span>♺ ${s.player.bag.dirty} <small>kirli</small></span><span>▱ ${s.player.bag.cleanSheets ?? 0}/${s.player.bag.dirtySheets ?? 0} <small>temiz/kirli çarşaf</small></span><small>${s.player.drink ? '<span>🍋 <small>limonata</small></span>' : ''}ÇANTA ${linenCount(s.player.bag)}/${this.sim.bagCapacity}</small>`);
     this.html('#laundry-stat', `<span>▣ ${this.sim.testMode ? '∞' : s.laundry.clean}<small>temiz raf</small></span><span>${s.laundry.dirty}<small>havlu yıkanacak</small></span><span>▱ ${s.laundry.cleanSheets ?? 0}/${s.laundry.dirtySheets ?? 0}<small>temiz/kirli çarşaf</small></span>`);
     this.html('#time-controls', `<button data-action="pause" aria-label="${s.settings.paused ? 'Devam et' : 'Duraklat'}">${s.settings.paused ? '▶' : 'Ⅱ'}</button><button data-action="speed" aria-label="Oyun hızı">${s.settings.speed}×</button>`);

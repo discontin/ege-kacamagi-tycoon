@@ -10,7 +10,8 @@ export const LAUNDRY_WALLS = [
   // Extend the room into the marked forecourt; it remains entered from the side.
   { x: 6.75, y: LAUNDRY_FRONT_EDGE, width: 9.5, depth: .25, height: 1.1 },
 ];
-export const laundryMachines = (level: number): LaundryFootprint[] => Array.from({ length: level }, (_, i) => ({ x: LAUNDRY_MACHINE.x + i * 2.3, y: LAUNDRY_MACHINE.y, width: 1.4, depth: 1.9 }));
+// Capacity upgrades improve the single washer; they never add more machines.
+export const laundryMachines = (_level: number): LaundryFootprint[] => [{ x: LAUNDRY_MACHINE.x, y: LAUNDRY_MACHINE.y, width: 1.4, depth: 1.9 }];
 export const laundryObstacles = (level: number): LaundryFootprint[] => [
   ...LAUNDRY_WALLS, ...laundryMachines(level),
   { ...TOWEL_RACK, width: 2, depth: 1 }, { ...DIRTY_BASKET, width: 1.2, depth: 1.1 },

@@ -79,3 +79,21 @@
   .game-menu-ribbon { padding: 10px 13px; }
   .menu-actions button { min-height: 39px; }
 }
+
+/* Board-game pause screen: stronger hierarchy and tactile controls. */
+.game-menu-frame{position:relative;border:4px solid #1e625b;border-radius:22px;background:#f3ead0;box-shadow:0 7px 0 #103e3b88,0 28px 70px #0b292880}
+.game-menu-frame::before,.game-menu-frame::after{content:'✦';position:absolute;z-index:2;top:12px;color:#f5d26e;font-size:13px;text-shadow:0 1px #8a6730;pointer-events:none}
+.game-menu-frame::before{left:13px}.game-menu-frame::after{right:13px}
+.game-menu-ribbon{min-height:52px;padding:13px 32px;border-bottom:5px solid #e2b94f;background:repeating-linear-gradient(135deg,#246b62 0,#246b62 9px,#2b766b 9px,#2b766b 11px);box-shadow:inset 0 -2px #174c48;color:#fff4c8}
+.menu-status{border:2px solid #eac766;border-radius:999px;background:#184f4dcc;box-shadow:inset 0 1px #ffffff33;color:#ffe49a}
+.game-menu-content{padding:24px 25px 19px;background:radial-gradient(circle at 95% 0,#fff8db 0 13%,transparent 14%),#f3ead0}
+.pause-heading{grid-template-columns:68px minmax(0,1fr);gap:15px;margin-bottom:20px}
+.pause-emblem{width:64px;height:64px;border:3px solid #fff1af;border-radius:50%;background:radial-gradient(circle at 35% 25%,#ffe88d,#d69e3e);box-shadow:inset 0 0 0 5px #fff4d255,0 4px 0 #8d6d3655;color:#fff9df;font-size:28px}
+.pause-heading>div>small{color:#9d7840;letter-spacing:2px}.pause-heading h2{color:#28665c;font-size:25px}.pause-heading p{color:#718776}
+.sound-card,.music-card{border:2px solid #cad8bb;border-radius:14px;background:#fff8e3;box-shadow:0 3px 0 #b7c7ad66,inset 0 0 0 2px #ffffff99}
+.music-card{background:#e7f0dc}.menu-section-heading>span,.music-cover{border:2px solid #b5cfad;background:#d6e8ca;box-shadow:0 2px 0 #96b38f66}
+.volume-row input{accent-color:#d19a3e}
+.music-title-row>span{border:2px solid #d0a84d;background:#f5d77e;color:#71572b}
+.menu-actions button{min-height:46px;border-radius:12px}.menu-continue{border:3px solid #1e625b;background:linear-gradient(#4ca887,#347f70);box-shadow:0 4px 0 #1b554c}.menu-newgame{border:2px solid #d5b989;background:linear-gradient(#f3e7c8,#dec9a5);box-shadow:0 4px 0 #bea77f}
+.game-menu-footer{background:#e7dfc5;border-top:2px dashed #c3c8ac}
+@media(max-width:520px){.game-menu-content{padding:17px 14px 14px}.pause-heading{grid-template-columns:48px minmax(0,1fr);gap:10px}.pause-emblem{width:46px;height:46px;font-size:21px}.pause-heading h2{font-size:20px}.game-menu-ribbon{padding:11px 28px}.menu-actions button{min-height:42px}}

@@ -3,7 +3,7 @@ import { guestTip } from './GuestMood';
 import { atOffice, carryingCapacity, OFFICE, towelLimit, workerMoveSpeed } from './Office';
 import { guestPreferences } from './GuestPreferences';
 import { staffHireCost, staffRequiredLevel, staffRole, staffRoleLimit } from './StaffHiring';
-import { areasFor, CLEAN_TAKE, DIRTY_DROP, EXIT, HEIGHT, incomeFactor, initialResort, LAUNDRY_FRONT_EDGE, LAUNDRY_RIGHT_EDGE, LEVELS, machineCapacityForLevel, MAP_MAX_X, MAP_MIN_X, poolSeatCount, POOL_GATE, POOL_UNLOCK_LEVEL, receptionQueuePoint, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, taskDuration, upgradeCost, WIDTH } from './data';
+import { areasFor, CLEAN_TAKE, DIRTY_DROP, EXIT, HEIGHT, incomeFactor, initialResort, LAUNDRY_FRONT_EDGE, LAUNDRY_RIGHT_EDGE, LEVELS, machineCapacityForLevel, MAP_MAX_X, MAP_MIN_X, poolSeatCount, POOL_GATE, POOL_UNLOCK_LEVEL, REWARD_SPOTS, receptionQueuePoint, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, taskDuration, upgradeCost, WIDTH } from './data';
 import type { Actor, Area, GuestState, PlayerState, Point, ResortGameState, Role, TaskKind, TaskState, WorkerState } from './types';
 import { serviceGuestReady } from './CustomerService';
 import { workAreaContains } from './WorkAreas';
@@ -15,11 +15,18 @@ const bagCount = (a: PlayerState | WorkerState) => linenCount(a.bag);
 const GUEST_ARRIVAL_SECONDS = [30, 26, 22, 18, 15, 12];
 const WASH_CYCLE_SECONDS = 10;
 const SHEET_MAKING_SECONDS = 2.4;
+const REWARD_RESPAWN_COOLDOWN_SECONDS = 120;
 // Two lanes down the central promenade keep idle room attendants visible and
 // out of guest rooms without blocking either row of bungalow entrances.
 const ROOM_CLEANER_PATROL: Point[] = [
   { x: 15, y: 39 }, { x: 21, y: 39 }, { x: 21, y: 29 },
   { x: 15, y: 29 }, { x: 15, y: 19 }, { x: 21, y: 19 },
+];
+// Pool linen runs use the central promenade instead of wrapping around the
+// outside edge of the map. The route is reversed automatically on the return.
+const MIDDLE_HAUL_ROUTE: Point[] = [
+  { x: 19, y: 42 }, { x: 19, y: 30 }, { x: 19, y: 18 },
+  { x: 20, y: 6 }, { x: 22, y: 1 }, { x: 34, y: 1 },
 ];
 const PLAYER_TAKEOVER_TASKS: TaskKind[] = [
   'cleanRoom', 'cleanFloor', 'cleanBathroom', 'restockRoom', 'cleanSeat', 'cleanPool',
@@ -38,6 +45,12 @@ export class ResortSimulation {
     // suites back into the fully featured level-two room instead of rejecting them.
     for (const facility of state.facilities.filter(f => f.kind === 'room')) facility.level = Math.min(facility.level, 2);
     state.bar ??= { open: testMode, cash: 0 };
+    const defaultRewards = initialResort().rewardedAds!;
+    state.rewardedAds ??= { boost: { ...defaultRewards.boost }, money: { ...defaultRewards.money }, seed: 0 };
+    for (const kind of ['boost', 'money'] as const) {
+      const ad = state.rewardedAds[kind], fallback = defaultRewards[kind];
+      if (!Number.isFinite(ad.x) || !Number.isFinite(ad.y) || !Number.isFinite(ad.activeUntil) || !Number.isFinite(ad.nextAt)) state.rewardedAds[kind] = { ...fallback };
+    }
     if (testMode) state.bar.open = true;
     state.laundry.cleanSheets ??= testMode ? 999 : 8;
     const pool = state.facilities.find(f => f.id === 'pool')!;
@@ -187,6 +200,20 @@ export class ResortSimulation {
     }
     return [];
   }
+  private haulingPath(from: WorkerState, to: Point): Point[] {
+    const returningFromPool = from.x >= 30 && from.y <= 8;
+    const checkpoints = returningFromPool ? [...MIDDLE_HAUL_ROUTE].reverse() : MIDDLE_HAUL_ROUTE;
+    const route = [...checkpoints, to];
+    const result: Point[] = [];
+    let current: Point = from;
+    for (const checkpoint of route) {
+      const segment = this.path(current, checkpoint);
+      if (!segment.length && distance(current, checkpoint) > .5) return this.path(from, to);
+      result.push(...segment);
+      current = checkpoint;
+    }
+    return result;
+  }
   goTo(p: Point) { if (!this.state.settings.paused) this.state.player.path = this.path(this.state.player, p); }
   goToArea(id: string) { const a = this.area(id); if (a) this.goTo(a); }
   movePlayer(dx: number, dy: number, realSeconds: number) {
@@ -234,7 +261,7 @@ export class ResortSimulation {
     if (!this.testMode && this.state.money < cost) { this.notify('Yeterli para yok. Kasadaki para yığınlarını topla.'); return false; }
     if (a.target === 'bar') this.state.bar!.open = true;
     else if (a.mode === 'upgrade') {
-      const f = this.facility(a.target); if (f.level >= (f.kind === 'room' ? 2 : 3)) return false; f.level++; if (f.kind === 'pool') this.state.seats.slice(0, poolSeatCount(f.level)).forEach(s => { s.open = true; s.dirty = false; s.towel = true; });
+      const f = this.facility(a.target); if (f.level >= (f.kind === 'room' || f.kind === 'pool' ? 2 : 3)) return false; f.level++; if (f.kind === 'pool') this.state.seats.slice(0, poolSeatCount(f.level)).forEach(s => { s.open = true; s.dirty = false; s.towel = true; });
     } else if (a.target.startsWith('seat')) { const seat = this.state.seats.find(s => s.id === a.target)!; if (seat.open) return false; seat.open = true; seat.dirty = false; seat.towel = true; }
     else { const f = this.facility(a.target); if (f.open) return false; f.open = true; if (f.kind === 'pool') { f.towels = 2; this.state.seats.slice(0, poolSeatCount(f.level)).forEach(s => { s.open = true; s.dirty = false; s.towel = true; }); } }
     if (!this.testMode) this.state.money -= cost;
@@ -254,6 +281,23 @@ export class ResortSimulation {
   upgradeWorker(id: string) { const w = this.state.workers.find(w => w.id === id); if (!w || !atOffice(this.state.player) || this.state.settings.paused || w.level >= 3) return; const cost = 120 * w.level; if (!this.testMode && this.state.money < cost) { this.notify('Eğitim için para yetersiz.'); return; } if (!this.testMode) this.state.money -= cost; w.level++; }
   assign(id: string, role: Role) { const w = this.state.workers.find(w => w.id === id); if (!w) return; if (w.task) this.cancelTask(w.task); w.role = role; w.path = []; }
   activateBoost() { if (this.state.boost.remaining > 0) { this.notify('Bonus zaten aktif; üst üste birikmez.'); return; } this.state.boost.remaining = 120; this.notify('120 saniye boyunca çalışma ve üretim %50 hızlı!'); }
+  private updateRewardAds() {
+    const rewards = this.state.rewardedAds!;
+    for (const kind of ['boost', 'money'] as const) {
+      const ad = rewards[kind], target = kind === 'boost' ? 'rewardedBoost' : 'rewardedMoney';
+      const activeTask = this.state.tasks.some(t => t.target === target);
+      if (activeTask) continue;
+      if (ad.activeUntil > 0 && ad.activeUntil <= this.state.elapsed) { ad.activeUntil = 0; ad.nextAt = this.state.elapsed + REWARD_RESPAWN_COOLDOWN_SECONDS; }
+      if (ad.activeUntil > this.state.elapsed) continue;
+      if (this.state.elapsed < ad.nextAt) continue;
+      const occupied = Object.values(rewards).filter((value): value is { x: number; y: number; activeUntil: number; nextAt: number } => typeof value === 'object' && value.activeUntil > this.state.elapsed);
+      const start = (Math.floor(this.state.elapsed / 10) + rewards.seed + (kind === 'money' ? 5 : 0)) % REWARD_SPOTS.length;
+      const available = REWARD_SPOTS.filter(candidate => occupied.every(other => distance(candidate, other) >= 5.5));
+      const spot = available.length ? available[start % available.length] : REWARD_SPOTS[start];
+      ad.x = spot.x; ad.y = spot.y; ad.activeUntil = this.state.elapsed + 25; ad.nextAt = ad.activeUntil + REWARD_RESPAWN_COOLDOWN_SECONDS;
+    }
+  }
+  private consumeReward(kind: 'boost' | 'money') { const ad = this.state.rewardedAds![kind]; ad.activeUntil = 0; ad.nextAt = this.state.elapsed + REWARD_RESPAWN_COOLDOWN_SECONDS; }
   private taskArea(t: TaskState) { return this.areas.find(a => a.mode === 'work' && a.target === t.target && (a.taskKind === t.kind || a.id === `${t.target}Work` && (t.kind === 'cleanRoom' || t.kind === 'restockRoom'))); }
   isTaskActive(t: TaskState) { const actor = this.actor(t.owner), area = this.taskArea(t); return !this.state.settings.paused && !!actor && !!area && !actor.path.length && this.inside(actor, area) && serviceGuestReady(this.state, t.kind, t.guest); }
   private availableRoom() { return this.state.facilities.find(f => f.kind === 'room' && f.open && !f.dirty && !f.floorDirty && !f.bathroomDirty && !f.needsSheet && !f.guest && f.towels > 0 && !this.state.tasks.some(t => t.target === f.id)); }
@@ -261,7 +305,10 @@ export class ResortSimulation {
   private reason(a: Area, actor: PlayerState | WorkerState): string | null {
     if (a.mode !== 'work' || !a.taskKind) return 'Çalışma alanı değil';
     const canPlayerTakeOver = actor.id === 'player' && PLAYER_TAKEOVER_TASKS.includes(a.taskKind);
-    const conflict = this.state.tasks.some(t => t.owner !== actor.id && t.target === a.target && (a.target !== 'laundry' || t.kind === a.taskKind));
+    // Laundry stations are independent objects inside the same room. Let the
+    // player and laundry staff use them at the same time; each completion
+    // re-checks stock/capacity before changing the inventory.
+    const conflict = a.target !== 'laundry' && this.state.tasks.some(t => t.owner !== actor.id && t.target === a.target);
     const onlyCleaningConflicts = this.state.tasks.filter(t => t.owner !== actor.id && t.target === a.target).every(t => PLAYER_TAKEOVER_TASKS.includes(t.kind));
     if (!canPlayerTakeOver || !onlyCleaningConflicts) if (conflict) return 'Bu iş başka birine ait';
     const room = a.target.startsWith('room') ? this.facility(a.target) : undefined;
@@ -269,7 +316,7 @@ export class ResortSimulation {
     switch (a.taskKind) {
       case 'cleanPool': return !this.facility('pool').open || !(this.facility('pool').dirt ?? 0) ? 'Havuz temiz' : null;
       case 'prepareDrink': return !this.state.bar?.open ? 'Bar kapalı' : actor.drink ? 'Elindeki siparişi teslim et' : !this.state.guests.some(g => wantsDrink(g) && !this.state.tasks.some(t => t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink'))) ? 'Sipariş bekleniyor' : null;
-      case 'deliverDrink': { const g = this.state.guests.find(g => `drink:${g.id}` === a.target); return !actor.drink ? 'Bardan siparişi al' : !g || (actor.heldProduct ?? 'lemonade') !== (g.orderProduct ?? 'lemonade') || !wantsDrink(g) || this.state.tasks.some(t => t.owner !== actor.id && t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink')) ? 'Sipariş başka birine ait veya bitmiş' : null; }
+      case 'deliverDrink': { const g = this.state.guests.find(g => `drink:${g.id}` === a.target); return !actor.drink ? 'Bardan siparişi al' : !g || !wantsDrink(g) || this.state.tasks.some(t => t.owner !== actor.id && t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink')) ? 'Sipariş başka birine ait veya bitmiş' : null; }
       case 'checkin': return !this.state.guests.some(g => g.phase === 'queue') ? 'Misafir bekleniyor' : !serviceGuestReady(this.state, 'checkin') ? 'Misafirin bankoya gelmesi bekleniyor' : !this.availableRoom() ? 'Hazır oda yok · temizle ve havlu bırak' : null;
       case 'cleanRoom': return bagCount(actor) + 1 > this.actorCapacity(actor) ? 'Çanta dolu. Yatağı temizlemek için önce elindekileri bırak.' : null;
       case 'cleanFloor': return !room!.floorDirty ? 'Zemin temiz' : null;
@@ -301,6 +348,8 @@ export class ResortSimulation {
       }
       case 'laundryCleanDrop': return !actor.carryingWashed ? 'Makineden temiz çamaşır al' : !this.testMode && (actor.bag.clean && this.state.laundry.clean >= this.shelfCapacity || (actor.bag.cleanSheets ?? 0) && (this.state.laundry.cleanSheets ?? 0) >= this.shelfCapacity) ? 'Temiz raf dolu' : null;
       case 'discardItem': return actor.id !== 'player' && (!('role' in actor) || actor.role !== 'rooms') ? 'Bu kutuyu yalnızca sen veya temizlikçi kullanabilir' : !bagCount(actor) && !actor.drink ? 'Elinde atılacak bir şey yok' : null;
+      case 'watchBoost': return this.state.boost.remaining > 0 ? 'Paten boost zaten aktif' : null;
+      case 'watchMoney': return null;
     }
   }
   startTask(a: Area, owner = 'player'): boolean {
@@ -310,8 +359,9 @@ export class ResortSimulation {
       for (const task of this.state.tasks.filter(t => t.owner !== owner && t.target === a.target && PLAYER_TAKEOVER_TASKS.includes(t.kind))) this.cancelTask(task.id);
     }
     if (this.reason(a, actor)) return false;
-    const seconds: Record<TaskKind, number> = { checkin: 3, cleanRoom: 6, cleanFloor: 4, cleanBathroom: 5, restockRoom: .6, dirtyDrop: .6, cleanTake: 5, poolCheckin: 3, cleanSeat: 4, poolStock: .6, cleanPool: 8, prepareDrink: 3, deliverDrink: 1, poolDirtyDrop: .6, poolDirtyTake: .6, poolCleanTake: .6, restockSeat: 1, laundryDirtyTake: 1.2, machineLoad: .6, machineUnload: .6, laundryCleanDrop: .6, discardItem: 1 };
-    const f = this.facility(a.target.startsWith('seat') || a.target.startsWith('drink:') || a.target === 'bar' || a.target === 'poolDirty' || a.target === 'poolClean' ? 'pool' : a.target);
+    const seconds: Record<TaskKind, number> = { checkin: 3, cleanRoom: 6, cleanFloor: 4, cleanBathroom: 5, restockRoom: .6, dirtyDrop: .6, cleanTake: 5, poolCheckin: 3, cleanSeat: 4, poolStock: .6, cleanPool: 8, prepareDrink: 3, deliverDrink: 1, poolDirtyDrop: .6, poolDirtyTake: .6, poolCleanTake: .6, restockSeat: 1, laundryDirtyTake: 1.2, machineLoad: .6, machineUnload: .6, laundryCleanDrop: .6, discardItem: 1, watchBoost: 4, watchMoney: 3 };
+    const rewardStation = a.taskKind === 'watchBoost' || a.taskKind === 'watchMoney';
+    const f = this.facility(rewardStation ? 'reception' : a.target.startsWith('seat') || a.target.startsWith('drink:') || a.target === 'bar' || a.target === 'poolDirty' || a.target === 'poolClean' ? 'pool' : a.target);
     const makingBed = a.taskKind === 'restockRoom' && f.needsSheet && (actor.bag.cleanSheets ?? 0) > 0;
     const duration = (makingBed ? SHEET_MAKING_SECONDS : seconds[a.taskKind]) * taskDuration(f.level);
     const task: TaskState = { id: `task${this.state.nextId++}`, kind: a.taskKind, target: a.target, owner, remaining: duration, total: duration };
@@ -320,7 +370,11 @@ export class ResortSimulation {
     if (a.taskKind === 'prepareDrink') task.guest = this.state.guests.find(g => wantsDrink(g) && !this.state.tasks.some(t => t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink')))!.id;
     if (a.taskKind === 'deliverDrink') task.guest = a.target.slice(6);
     this.state.tasks.push(task); actor.task = task.id;
-    if (owner !== 'player') actor.path = this.path(actor, a);
+    if (owner === 'player' && rewardStation) this.notify('Ödüllü reklam izleniyor...');
+    if (owner !== 'player') {
+      const worker = actor as WorkerState;
+      actor.path = worker.role === 'hauling' && (a.taskKind === 'poolDirtyTake' || a.taskKind === 'dirtyDrop') ? this.haulingPath(worker, a) : this.path(actor, a);
+    }
     return true;
   }
   cancelTask(id: string) {
@@ -335,12 +389,12 @@ export class ResortSimulation {
     const g = this.state.guests.find(g => g.id === t.guest);
     switch (t.kind) {
       case 'cleanPool': { this.facility('pool').dirt = 0; this.notify('Havuz temizlendi! Misafir kabulüne hazır.'); break; }
-      case 'prepareDrink': { actor.drink = true; actor.heldProduct = g?.orderProduct ?? 'lemonade'; break; }
-      case 'deliverDrink': { if (!g || !wantsDrink(g) || !actor.drink || (actor.heldProduct ?? 'lemonade') !== (g.orderProduct ?? 'lemonade')) { this.cancelTask(t.id); return; } actor.drink = false; actor.heldProduct = undefined; g.drinkServed = true; const price = g.orderProduct === 'icecream' ? 22 : 15; this.state.bar!.cash += price; this.notify(`${g.orderProduct === 'icecream' ? 'Dondurma' : 'Limonata'} teslim edildi! +${price} ₺ bar kasasında.`); break; }
+      case 'prepareDrink': { actor.drink = true; actor.heldProduct = 'lemonade'; break; }
+      case 'deliverDrink': { if (!g || !wantsDrink(g) || !actor.drink) { this.cancelTask(t.id); return; } actor.drink = false; actor.heldProduct = undefined; g.drinkServed = true; this.state.bar!.cash += 15; break; }
       case 'checkin': {
-        if (!g) break; const r = this.facility(t.destination!); r.towels--; this.facility('reception').cash += Math.round(40 * incomeFactor(r.level)); g.room = r.id; g.phase = 'toRoom'; g.queueWait = 0; g.path = this.path(g, ROOM_WORK(ROOM_DEFS.find(d => d.id === r.id)!)); this.state.stats.welcomed++; this.earnXp(10); this.notify('Misafir karşılandı! +10 XP · Bungalovuna gidiyor.'); break;
+        if (!g) break; const r = this.facility(t.destination!); r.towels--; this.facility('reception').cash += Math.round(40 * incomeFactor(r.level)); g.room = r.id; g.phase = 'toRoom'; g.queueWait = 0; g.path = this.path(g, ROOM_WORK(ROOM_DEFS.find(d => d.id === r.id)!)); this.state.stats.welcomed++; this.earnXp(10, true); break;
       }
-      case 'cleanRoom': { const r = this.facility(t.target); if (bagCount(actor) + 1 > this.actorCapacity(actor)) return; r.dirty = false; r.needsSheet = true; actor.bag.dirtySheets = (actor.bag.dirtySheets ?? 0) + 1; this.state.stats.cleaned++; this.earnXp(5); this.notify('Yataktan bir kirli çarşaf aldın. Sepete götür, temiz çarşafı geri getir.'); break; }
+      case 'cleanRoom': { const r = this.facility(t.target); if (bagCount(actor) + 1 > this.actorCapacity(actor)) return; r.dirty = false; r.needsSheet = true; actor.bag.dirtySheets = (actor.bag.dirtySheets ?? 0) + 1; this.state.stats.cleaned++; this.earnXp(5); break; }
       case 'cleanFloor': { this.facility(t.target).floorDirty = false; break; }
       case 'cleanBathroom': { this.facility(t.target).bathroomDirty = false; this.earnXp(3); break; }
       case 'restockRoom': {
@@ -416,14 +470,32 @@ export class ResortSimulation {
         if (actor.carryingWashed && !actor.bag.clean && !(actor.bag.cleanSheets ?? 0)) actor.carryingWashed = false;
         this.notify('Elindeki bir parça çöpe atıldı.'); break;
       }
+      case 'watchBoost': {
+        if (this.state.boost.remaining > 0) { this.cancelTask(t.id); return; }
+        this.state.boost = { multiplier: 1.5, remaining: 120 };
+        this.consumeReward('boost');
+        this.notify('Reklam ödülü: patenler hazır! 120 saniye boyunca %50 daha hızlısın.');
+        break;
+      }
+      case 'watchMoney': {
+        const reward = 100; this.state.money += reward; this.state.stats.earned += reward;
+        this.consumeReward('money');
+        this.notify(`Reklam ödülü: kasaya +${reward} para eklendi!`);
+        break;
+      }
       case 'poolCheckin': { const seat = this.state.seats.find(s => s.id === t.destination)!; if (!g || !seat.towel && this.facility('pool').towels <= 0 || (this.facility('pool').dirt ?? 0) >= 4) { this.cancelTask(t.id); return; } if (!seat.towel) this.facility('pool').towels--; seat.towel = false; g.seat = t.destination; g.phase = 'toSeat'; g.queueWait = 0; g.path = this.path(g, SEAT_DEFS.find(s => s.id === t.destination)!); break; }
       case 'cleanSeat': { if (actor.bag.clean + actor.bag.dirty >= this.actorTowelLimit(actor) || bagCount(actor) >= this.actorCapacity(actor)) return; const s = this.state.seats.find(s => s.id === t.target)!; s.dirty = false; actor.bag.dirty++; break; }
     }
     const area = this.taskArea(t);
-    if (area) this.celebrate(t.kind === 'checkin' || t.kind === 'poolCheckin' ? 'welcome' : ['cleanRoom', 'cleanFloor', 'cleanBathroom', 'cleanSeat'].includes(t.kind) ? 'clean' : 'towel', area, ['cleanRoom', 'cleanFloor', 'cleanBathroom', 'cleanSeat'].includes(t.kind) ? t.kind === 'cleanRoom' ? 'TERTEMİZ! +5 XP' : 'TERTEMİZ!' : t.kind === 'restockRoom' ? 'ODA HAZIR!' : t.kind === 'checkin' ? 'HOŞ GELDİN!' : '✓');
+    if (area) {
+      const cleaning = ['cleanRoom', 'cleanFloor', 'cleanBathroom', 'cleanSeat'].includes(t.kind);
+      const feedbackKind = t.kind === 'checkin' || t.kind === 'poolCheckin' ? 'welcome' : cleaning ? 'clean' : t.kind === 'watchMoney' ? 'cash' : t.kind === 'watchBoost' ? 'build' : 'towel';
+      const feedbackText = cleaning ? t.kind === 'cleanRoom' ? 'TERTEMİZ! +5 XP' : 'TERTEMİZ!' : t.kind === 'restockRoom' ? 'ODA HAZIR!' : t.kind === 'checkin' ? 'HOŞ GELDİN!' : t.kind === 'watchMoney' ? '+100 PARA' : t.kind === 'watchBoost' ? 'PATENLER HAZIR!' : '✓';
+      this.celebrate(feedbackKind, area, feedbackText);
+    }
     actor.task = undefined; this.state.tasks = this.state.tasks.filter(x => x.id !== t.id);
   }
-  private earnXp(n: number) { const before = this.level; this.state.xp += n; if (this.level > before) { this.celebrate('level', this.state.player, `SEVİYE ${this.level}!`); this.notify(`Seviye ${this.level}! Yeni satın alma alanları açıldı.`); } }
+  private earnXp(n: number, silent = false) { const before = this.level; this.state.xp += n; if (this.level > before) { this.celebrate('level', this.state.player, `SEVİYE ${this.level}!`); if (!silent) this.notify(`Seviye ${this.level}! Yeni satın alma alanları açıldı.`); } }
   private workerPlan(w: WorkerState) {
     if (w.task) return;
     if (w.role === 'rooms' && bagCount(w) > 0) {
@@ -549,10 +621,10 @@ export class ResortSimulation {
       else if (g.phase === 'toSeat') { g.phase = 'swimming'; g.remaining = POOL_STAY_SECONDS; }
       else if (g.phase === 'staying' || g.phase === 'swimming') {
         g.remaining = Math.max(0, g.remaining - dt);
-        if (g.phase === 'swimming' && g.wantsLemonade !== false && this.state.bar?.open && g.remaining <= POOL_STAY_SECONDS - DRINK_REQUEST_DELAY) { g.drinkRequested = true; g.orderProduct ??= this.facility('pool').level >= 2 && g.id.charCodeAt(g.id.length - 1) % 2 === 0 ? 'icecream' : 'lemonade'; }
+        if (g.phase === 'swimming' && g.wantsLemonade !== false && this.state.bar?.open && g.remaining <= POOL_STAY_SECONDS - DRINK_REQUEST_DELAY) { g.drinkRequested = true; g.orderProduct = 'lemonade'; }
         if (g.remaining > 0) continue;
         if (g.phase === 'staying') {
-          const r = this.facility(g.room!); r.guest = undefined; r.dirty = true; r.floorDirty = true; if (r.level >= 2) r.bathroomDirty = true; r.tips = (r.tips ?? 0) + guestTip(g) + (r.level >= 2 ? 3 : 0);
+          const r = this.facility(g.room!); r.guest = undefined; r.dirty = true; r.floorDirty = true; if (r.level >= 2) r.bathroomDirty = true; r.tips = (r.tips ?? 0) + guestTip(g) * 2 + (r.level >= 2 ? 6 : 0);
           this.state.stats.stays++; this.earnXp(10);
           const pending = this.state.guests.filter(g => ['toPool', 'poolQueue'].includes(g.phase)).length;
           const seats = this.state.seats.filter(s => s.open && !s.dirty && !s.guest).length;
@@ -572,6 +644,7 @@ export class ResortSimulation {
     if (this.state.settings.paused) return;
     const dt = Math.min(.25, Math.max(0, realSeconds)) * this.state.settings.speed; this.state.elapsed += dt;
     this.state.boost.remaining = Math.max(0, this.state.boost.remaining - dt);
+    this.updateRewardAds();
     if (this.testMode) { this.state.laundry.cleanSheets = Math.max(999, this.state.laundry.cleanSheets ?? 0); this.state.money = 999999; this.state.laundry.clean = Math.max(this.state.laundry.clean, 999); if (this.facility('pool').open) this.facility('pool').towels = Math.max(999, this.facility('pool').towels); }
     this.follow(this.state.player, this.playerMoveSpeed * this.boost, dt); this.guests(dt);
     for (const a of this.areas.filter(a => a.mode === 'cash')) { const f = a.target === 'bar' ? this.state.bar! : this.facility(a.target); if (f.cash > 0 && distance(this.state.player, a) < 1.2) { const n = f.cash; this.state.money += n; this.state.stats.earned += n; f.cash = 0; this.celebrate('cash', a, `+${n} ₺`); this.notify(`+${n} para topladın!`); } }

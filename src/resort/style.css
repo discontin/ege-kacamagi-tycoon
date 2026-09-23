@@ -5,3 +5,33 @@
 /* Compact progression HUD: keep only level, XP and the progress bar. */
 .level-card{width:185px;border-radius:14px;padding:6px 9px;box-shadow:0 3px 0 #6d96722b}.level-card>div:first-child{gap:9px}.level-star{border-radius:10px;padding:5px 7px;font-size:16px}.level-card .level-xp{display:block;font-size:9px;font-weight:650;color:#668676;white-space:nowrap}.xp-track{height:4px;margin-top:5px}
 @media(max-width:620px){.level-card{width:160px;padding:5px 8px}.level-star{font-size:14px;padding:3px 5px}.level-card .level-xp{font-size:8px}.xp-track{height:3px;margin-top:4px}}
+
+/* Game HUD: chunky, readable and clearly interactive. */
+.level-card{top:18px;width:278px;padding:8px 11px;border:3px solid #fff8d9;border-radius:16px;background:linear-gradient(145deg,#fffbed 0%,#f5e9c7 100%);box-shadow:0 5px 0 #39745f55,0 10px 22px #234f4930}
+.level-hud-head{display:flex!important;align-items:center;gap:10px!important}
+.level-star{display:flex;align-items:center;gap:5px;min-width:52px;justify-content:center;border:2px solid #f9dc80;border-radius:11px;padding:5px 7px;background:linear-gradient(145deg,#ffd86b,#e8aa39);color:#704f20;box-shadow:inset 0 2px #fff5b7,0 2px 0 #b2763166;font-size:18px}
+.level-star i{font-style:normal;font-size:15px;color:#fff2ae;text-shadow:0 1px #a16e2b}
+.level-star b{font-size:18px;line-height:1}
+.level-copy{display:grid;gap:2px;text-align:left}
+.level-copy strong{color:#2e6c60;font-size:8px;letter-spacing:1.5px}
+.level-card .level-copy small{font-size:10px;color:#668374;font-weight:800}
+.xp-track{position:relative;height:8px;margin-top:7px;border:2px solid #c4d5bb;border-radius:8px;background:#d9e4cf;box-shadow:inset 0 1px 2px #496b4a33}
+.xp-track i{position:relative;z-index:1;background:linear-gradient(90deg,#4eaa80,#9bc957);box-shadow:0 0 8px #7bc57a88}
+.xp-track>b{position:absolute;right:5px;top:-1px;z-index:2;color:#477461;font-size:6px;letter-spacing:.8px}
+.wallet{min-width:88px;padding:7px 10px;border:3px solid #fff8d9;border-radius:13px;background:linear-gradient(145deg,#fffbed,#f0e7c8);box-shadow:0 4px 0 #39745f55,0 8px 18px #234f4930;align-items:center;justify-content:center}
+.wallet-icon{display:grid;place-items:center;width:34px;height:34px;border:2px solid #9fcb72;border-radius:10px;background:linear-gradient(145deg,#76b978,#438d72);color:#fff7d2;font-size:22px;font-weight:900;box-shadow:inset 0 2px #c6e894,0 2px 0 #326e5a66}
+.wallet-copy{display:grid;gap:1px;min-width:0;text-align:center}
+.wallet-copy small{color:#82946c;font-size:7px;font-weight:900;letter-spacing:1.2px;margin:0}
+.wallet-copy b{color:#356c5d;font-size:21px;line-height:1;font-variant-numeric:tabular-nums}
+.xp-feedback{top:86px}
+@media(max-width:620px){.level-card{top:68px;width:196px;padding:6px 8px}.level-star{min-width:42px;padding:4px 5px}.level-star i{font-size:12px}.level-star b{font-size:15px}.level-copy strong{font-size:7px}.level-card .level-copy small{font-size:8px}.xp-track{height:6px;margin-top:5px}.wallet{top:12px;min-width:72px;padding:5px 7px}.wallet-copy b{font-size:16px}.wallet-copy small{font-size:6px}}
+.xp-feedback{position:absolute;top:83px;left:50%;transform:translateX(-50%);z-index:4;display:grid;justify-items:center;gap:3px;pointer-events:none}.xp-gain-pop{color:#fffdf0;background:#4d9b79;border:2px solid #e4f3c8;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:900;letter-spacing:.2px;white-space:nowrap;pointer-events:none;box-shadow:0 3px 0 #2c705a55;animation:xp-gain-pop 1.7s ease-out forwards}@keyframes xp-gain-pop{0%{opacity:0;transform:translateY(0) scale(.75)}18%{opacity:1;transform:translateY(-2px) scale(1)}75%{opacity:1;transform:translateY(-24px) scale(1)}100%{opacity:0;transform:translateY(-38px) scale(.92)}}
+.level-card{top:18px;width:294px;height:56px;padding:4px 8px;border:2px solid #fff8df;border-radius:18px;background:linear-gradient(145deg,#fffbedf5,#f1e7c9f5);box-shadow:0 4px 0 #39745f45,0 8px 18px #234f4925;display:flex;align-items:center;gap:0}
+.level-card .level-star{position:relative;z-index:2;display:flex;flex:0 0 48px;flex-direction:column;align-items:center;justify-content:center;gap:0;width:48px;height:48px;min-width:48px;margin-right:-10px;padding:2px;border:2px solid #fff2b4;border-radius:15px;background:linear-gradient(145deg,#ffd86b,#e9ab3c);color:#735323;box-shadow:inset 0 2px #fff6c8,0 2px 0 #b2763155}
+.level-card .level-star i{font-style:normal;font-size:13px;line-height:1;color:#fff5c6;text-shadow:0 1px #a16e2b}
+.level-card .level-star b{position:relative;font-size:16px;line-height:1.05;color:#704f20}
+.level-card .xp-track{position:relative;z-index:1;display:block;flex:1;height:30px;margin:0;padding:0;overflow:hidden;border:2px solid #fff;border-radius:18px;background:#4c8271;box-shadow:inset 0 2px 5px #244f4655,0 1px 0 #b6c99d}
+.level-card .xp-track i{position:absolute;inset:0 auto 0 0;height:100%;border-radius:16px;background:linear-gradient(90deg,#68b98f,#a2cb64);box-shadow:inset 0 1px #d8edac99;transition:width .25s ease}
+.level-card .xp-track>b{position:absolute;top:50%;right:12px;z-index:2;transform:translateY(-50%);color:#fffbed;font-size:11px;line-height:1;font-weight:900;letter-spacing:.2px;text-shadow:0 1px 3px #315c5577}
+@media(max-width:620px){.level-card{top:68px;width:min(260px,calc(100vw - 30px));height:50px;padding:4px 7px;border-radius:15px}.level-card .level-star{flex-basis:42px;width:42px;height:42px;min-width:42px;margin-right:-9px;border-radius:13px}.level-card .level-star i{font-size:11px}.level-card .level-star b{font-size:14px}.level-card .xp-track{height:27px}.level-card .xp-track>b{right:10px;font-size:10px}}
+.beach-coming-soon{position:absolute;z-index:2;transform:translate(-50%,-50%);display:flex;align-items:center;gap:5px;padding:5px 9px;border:1px solid #fff8df;border-radius:10px;background:#fffbeded;color:#398f91;box-shadow:0 3px 0 #496e5433,0 5px 12px #315c5525;font-size:9px;font-weight:900;letter-spacing:.65px;white-space:nowrap;pointer-events:none;user-select:none}.beach-coming-soon svg{width:21px;height:21px;fill:#67c8bf;stroke:#287e7e;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}

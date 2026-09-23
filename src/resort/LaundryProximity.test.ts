@@ -88,9 +88,9 @@ describe('laundry object proximity', () => {
     s.state.player.bag.dirty = 0; s.state.laundry.clean = 0; advance(s, 1); expect(s.state.tasks).toHaveLength(0);
     Object.assign(s.state.player, DIRTY_DROP); s.state.player.bag.dirty = 1;
     s.state.laundry = { clean: 24, dirty: 24, remaining: null }; advance(s, 1); expect(s.state.player.bag.dirty).toBe(1);
-    s.state.laundry.dirty = 0; s.state.xp = 20; s.hire(); s.state.workers[0].bag.dirty = 1;
+    s.state.laundry.dirty = 0; s.state.xp = 20; s.hire(); s.state.workers[0].bag.dirty = 1; s.state.player.bag.dirty = 1;
     expect(s.startTask(s.area('dirtyDrop')!, s.state.workers[0].id)).toBe(true);
-    expect(s.startTask(s.area('dirtyDrop')!)).toBe(false);
+    expect(s.startTask(s.area('dirtyDrop')!)).toBe(true);
   });
   it('workers can transfer from the side rather than walking back to the old fixed square', () => {
     const s = new ResortSimulation(initialResort()); s.state.xp = 20; s.hire(); const w = s.state.workers[0];

@@ -77,9 +77,10 @@ export const ASSET_CATALOG = {
   barCounter: ['furniture-kit', 'kitchenBar'],
   washer: ['3dassets/home-appliances-and-utility', 'washer-front-load-600'],
   washerOpen: ['3dassets/home-appliances-and-utility', 'washer-open-drum-600'],
-  washerStacked: ['3dassets/laundrette-and-cleaning', 'stacked-washer-dryer-700'],
-  iceCream: ['food-kit', 'ice-cream'],
   sunLounger: ['3dassets/hotel-resort', 'poolside-sun-lounger'],
+  skateBoy: ['mini-skate', 'character-skate-boy'],
+  skateGirl: ['mini-skate', 'character-skate-girl'],
+  skateboardMini: ['mini-skate', 'skateboard'],
 } as const;
 export type AssetKey = keyof typeof ASSET_CATALOG;
 export const assetPath = (key: AssetKey) => { const [pack, file] = ASSET_CATALOG[key]; return pack.startsWith('3dassets/') ? `assets/${pack}/${file}.glb` : `assets/kenney/${pack}/${file}.glb`; };
