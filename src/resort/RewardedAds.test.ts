@@ -23,10 +23,10 @@ describe('rewarded map stations', () => {
   });
 
   it('adds a cash reward after the money ad', () => {
-    const s = new ResortSimulation(); standAt(s, 'rewardedMoney');
+    const s = new ResortSimulation(), startingMoney = s.state.money; standAt(s, 'rewardedMoney');
     expect(s.startTask(s.area('rewardedMoney')!)).toBe(true);
     advance(s, 3.1);
-    expect(s.state.money).toBe(100);
+    expect(s.state.money).toBe(startingMoney + 100);
     expect(s.state.stats.earned).toBe(100);
   });
 

@@ -30,7 +30,7 @@ const world = (p: Point) => new T.Vector3(p.x - 19, 0, p.y - 27);
 const purchaseIconSvg = (kind: 'bed' | 'pool' | 'bar' | 'lock') => {
   const paths = {
     bed: '<path d="M3 18v3m18-3v3M3 10V5h3m-3 5h18v8H3v-8Z"/><rect x="6" y="6" width="5" height="4" rx="1"/><rect x="12" y="6" width="5" height="4" rx="1"/>',
-    pool: '<path d="M4 13V7h16v6M7 7V4m5 3V4m5 3V4M3 14c2 0 2 2 5 2s3-2 5-2 2 2 5 2 3-2 5-2M3 19c2 0 2 2 5 2s3-2 5-2 2 2 5 2 3-2 5-2"/>',
+    pool: '<rect x="6" y="6" width="16" height="16" rx="1"/><path d="M10 6v16m8-16v16M3 10h3m-3 4h3m-3 4h3"/>',
     bar: '<path d="M6 7h12l-1 14H7L6 7Z"/><path d="M9 3h6m-3 4V3m4 4 3-3"/>',
     lock: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3m-5 4v3"/>',
   };

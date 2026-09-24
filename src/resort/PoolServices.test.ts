@@ -101,7 +101,7 @@ describe('pool bar and maintenance', () => {
     advance(s, 2); expect(s.state.money).toBe(50); expect(s.area('bartenderHire')).toBeUndefined(); expect(s.area('poolHire')).toBeDefined();
   });
   it('requests a drink after twenty seconds, prepares one visible carried item, delivers and pays once', () => {
-    const s = setup(); s.state.bar!.open = true; const g = swimmer(s);
+    const s = setup(), startingMoney = s.state.money; s.state.bar!.open = true; const g = swimmer(s);
     advance(s, 19.9); expect(wantsDrink(g)).toBe(false); advance(s, .2); expect(wantsDrink(g)).toBe(true);
     expect(taskIndicators(s.state).some(i => i.id === `order:${g.id}` && i.icon === 'drink')).toBe(true);
     stand(s, 'barPrepare'); advance(s, 3.1); expect(s.state.player.drink).toBe(true);
@@ -109,7 +109,7 @@ describe('pool bar and maintenance', () => {
     stand(s, `drink:${g.id}`); advance(s, 1.1); expect(g.drinkServed).toBe(true);
     expect(s.state.player.drink).toBe(false); expect(s.state.bar!.cash).toBe(15);
     advance(s, 1); expect(s.state.bar!.cash).toBe(15);
-    stand(s, 'barCash'); s.tick(.1); expect(s.state.money).toBe(15); expect(s.state.bar!.cash).toBe(0);
+    stand(s, 'barCash'); s.tick(.1); expect(s.state.money).toBe(startingMoney + 15); expect(s.state.bar!.cash).toBe(0);
   });
   it('lets the bartender physically carry and serve an order without player intervention', () => {
     const s = setup(); s.state.bar!.open = true; s.hire('bartender');

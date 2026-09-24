@@ -17,11 +17,11 @@ describe('resort guest and towel cycle', () => {
     guest(s); Object.assign(s.state.player, receptionQueuePoint(0)); advance(s, 4); expect(s.state.stats.welcomed).toBe(0);
     stand(s, 'checkin'); advance(s, 3.2); expect(s.state.stats.welcomed).toBe(1);
   });
-  it('starts with one bungalow, eight clean towels and no money', () => { const s = new ResortSimulation(); expect(s.state.money).toBe(0); expect(s.state.laundry.clean).toBe(8); expect(s.state.facilities.filter(f => f.kind === 'room' && f.open)).toHaveLength(1); });
+  it('starts normal mode with 10000 test cash, one bungalow and eight clean towels', () => { const s = new ResortSimulation(); expect(s.state.money).toBe(10_000); expect(s.state.laundry.clean).toBe(8); expect(s.state.facilities.filter(f => f.kind === 'room' && f.open)).toHaveLength(1); expect(initialResort(true).money).toBe(999999); });
   it('checks a guest in automatically, reserves the room and pays cash at check-in without paying again after the stay', () => {
     const s = new ResortSimulation(); guest(s); stand(s, 'checkin'); advance(s, 3.2); expect(s.state.stats.welcomed).toBe(1); expect(s.facility('room1').guest).toBeDefined(); expect(s.facility('reception').cash).toBe(40);
-    advance(s, 100); expect(s.state.stats.stays).toBe(1); expect(s.facility('room1').dirty).toBe(true); expect(s.facility('reception').cash).toBe(40); expect(s.state.money).toBe(0);
-    stand(s, 'receptionCash'); s.tick(.1); expect(s.state.money).toBe(40); expect(s.facility('reception').cash).toBe(0);
+    advance(s, 100); expect(s.state.stats.stays).toBe(1); expect(s.facility('room1').dirty).toBe(true); expect(s.facility('reception').cash).toBe(40); expect(s.state.money).toBe(10_000);
+    stand(s, 'receptionCash'); s.tick(.1); expect(s.state.money).toBe(10_040); expect(s.facility('reception').cash).toBe(0);
   });
   it('cleans, carries one dirty sheet, washes it and restocks a room', () => {
     const s = new ResortSimulation(), r = s.facility('room1'); r.dirty = true; r.towels = 0;
@@ -57,7 +57,7 @@ describe('resort guest and towel cycle', () => {
     expect(s.state.guests.filter(g => g.phase === 'queue')).toHaveLength(4);
     expect(s.state.guests).toHaveLength(6);
   });
-  it('limits the queue and total guests without penalties', () => { const s = new ResortSimulation(); advance(s, 300); expect(s.state.guests).toHaveLength(1); expect(s.state.guests.every(g => g.phase === 'queue')).toBe(true); expect(s.state.money).toBe(0); });
+  it('limits the queue and total guests without penalties', () => { const s = new ResortSimulation(); advance(s, 300); expect(s.state.guests).toHaveLength(1); expect(s.state.guests.every(g => g.phase === 'queue')).toBe(true); expect(s.state.money).toBe(10_000); });
 });
 
 describe('pool and expansion', () => {

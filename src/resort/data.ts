@@ -32,12 +32,21 @@ const rewardSpawn = (point: Point, activeUntil: number, nextAt: number) => ({ x:
 export const receptionQueuePoint = (index: number): Point => ({ x: RECEPTION.x, y: 46 + index });
 export const SEAT_DEFS = [24, 27, 30, 33].map((x, i) => ({ id: `seat${i + 1}`, x, y: 10 })).concat([{ id: 'seat5', x: 25.5, y: 13 }, { id: 'seat6', x: 31.5, y: 13 }]);
 export const poolSeatCount = (level: number) => level < 2 ? 4 : 6;
+export function roomUpgradeRowUnlocked(s: ResortGameState, roomId: string) {
+  if (!s.facilities.find(f => f.id === 'pool')?.open) return false;
+  const index = ROOM_DEFS.findIndex(r => r.id === roomId);
+  if (index < 0) return false;
+  const rowStart = Math.floor(index / 2) * 2;
+  return ROOM_DEFS.slice(0, rowStart).every(r => (s.facilities.find(f => f.id === r.id)?.level ?? 1) >= 2);
+}
 export const machineCapacityForLevel = (level: number) => 5 + 2 * (level - 1);
 export const taskDuration = (level: number) => [1, .8, .65][level - 1];
 export const incomeFactor = (level: number) => [1, 1.25, 1.5][level - 1];
 export const upgradeCost = (id: string, level: number) => (id === 'reception' ? 100 : id === 'laundry' ? 120 : id === 'pool' ? 180 : 80) * level;
+// Temporary normal-mode grant for balance testing; remove after the test pass.
+const TEMP_STARTING_CASH = 10_000;
 export function initialResort(test = false): ResortGameState {
-  return { version: 1, concept: 'ege-resort', money: test ? 999999 : 0, xp: test ? 280 : 0, elapsed: 0, spawnTimer: 0, nextId: 10,
+  return { version: 1, concept: 'ege-resort', money: test ? 999999 : TEMP_STARTING_CASH, xp: test ? 280 : 0, elapsed: 0, spawnTimer: 0, nextId: 10,
     player: { id: 'player', x: 19, y: 48, path: [], bag: { clean: 0, dirty: 0 } }, guests: [], workers: [], tasks: [], bar: { open: test, cash: 0 },
     rewardedAds: { boost: rewardSpawn(REWARDED_BOOST, 25, 43), money: rewardSpawn(REWARDED_MONEY, 25, 43), seed: test ? 3 : 0 },
     facilities: [{ id: 'reception', kind: 'reception', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, { id: 'laundry', kind: 'laundry', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, ...ROOM_DEFS.map((r, i) => ({ id: r.id, kind: 'room' as const, open: test || !i, level: 1, dirty: false, towels: 1, cash: 0 })), { id: 'pool', kind: 'pool', open: test, level: 1, dirty: false, towels: test ? 999 : 0, cash: 0 }],
@@ -85,7 +94,7 @@ export function areasFor(s: ResortGameState): Area[] {
       areas.push({ id: `${r.id}Work`, label: 'Yatak yanında temizle / havlu bırak', mode: 'work', target: r.id, taskKind: f.dirty ? 'cleanRoom' : 'restockRoom', facilityLevel: f.level, ...ROOM_WORK(r) });
       if (f.floorDirty) areas.push({ id: `${r.id}Floor`, label: 'Zemini süpür', mode: 'work', target: r.id, taskKind: 'cleanFloor', x: r.x + 7, y: r.y + 4 });
       if (f.level >= 2 && f.bathroomDirty) areas.push({ id: `${r.id}Bathroom`, label: 'Banyoyu temizle', mode: 'work', target: r.id, taskKind: 'cleanBathroom', x: r.x + 6, y: r.y + 2 });
-      if (f.level < 2) areas.push({ id: `${r.id}Upgrade`, label: r.name, mode: 'upgrade', target: r.id, x: ROOM_APPROACH(r).x, y: r.y + 7 });
+      if (f.level < 2 && roomUpgradeRowUnlocked(s, r.id)) areas.push({ id: `${r.id}Upgrade`, label: r.name, mode: 'upgrade', target: r.id, x: ROOM_APPROACH(r).x, y: r.y + 7 });
     }
   }
   const pool = s.facilities.find(f => f.id === 'pool')!;

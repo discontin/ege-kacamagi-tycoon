@@ -15,7 +15,7 @@ export const ASSET_CATALOG = {
   guestF: ['mini-characters', 'character-female-b'],
   guestG: ['mini-characters', 'character-female-c'],
   guestH: ['mini-characters', 'character-female-d'],
-  guestI: ['mini-characters', 'character-female-e'],
+  guestI: ['mini-characters', 'character-male-c'],
   guestJ: ['mini-characters', 'character-female-f'],
   machine: ['factory-kit', 'machine-window-bar'],
   processor: ['factory-kit', 'machine'],

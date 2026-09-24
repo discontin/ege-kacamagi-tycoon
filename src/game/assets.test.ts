@@ -59,6 +59,12 @@ describe('shipped CC0 assets', () => {
       expect(json.animations?.map(a => a.name), key).toEqual(expect.arrayContaining(['idle', 'walk', 'interact-right', 'holding-both', 'skate', 'skate-stand']));
     }
   });
+  it('keeps the room-cleaner character distinct from every customer character', () => {
+    const guests = ['guestA', 'guestB', 'guestC', 'guestD', 'guestE', 'guestF', 'guestG', 'guestH', 'guestI', 'guestJ'] as AssetKey[];
+    const guestPaths = guests.map(assetPath);
+    expect(new Set(guestPaths).size).toBe(guests.length);
+    expect(guestPaths).not.toContain(assetPath('roomStaff'));
+  });
   it('ships a washer with real door-open and door-close clips', () => {
     const json = metadata('washer');
     expect(json.animations?.map(a => a.name)).toEqual(expect.arrayContaining(['door-open', 'door-close']));

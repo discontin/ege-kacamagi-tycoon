@@ -3,7 +3,7 @@ import { guestTip } from './GuestMood';
 import { atOffice, carryingCapacity, OFFICE, towelLimit, workerMoveSpeed } from './Office';
 import { guestPreferences } from './GuestPreferences';
 import { staffHireCost, staffRequiredLevel, staffRole, staffRoleLimit } from './StaffHiring';
-import { areasFor, CLEAN_TAKE, DIRTY_DROP, EXIT, HEIGHT, incomeFactor, initialResort, LAUNDRY_FRONT_EDGE, LAUNDRY_RIGHT_EDGE, LEVELS, machineCapacityForLevel, MAP_MAX_X, MAP_MIN_X, poolSeatCount, POOL_GATE, POOL_UNLOCK_LEVEL, REWARD_SPOTS, receptionQueuePoint, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, taskDuration, upgradeCost, WIDTH } from './data';
+import { areasFor, CLEAN_TAKE, DIRTY_DROP, EXIT, HEIGHT, incomeFactor, initialResort, LAUNDRY_FRONT_EDGE, LAUNDRY_RIGHT_EDGE, LEVELS, machineCapacityForLevel, MAP_MAX_X, MAP_MIN_X, poolSeatCount, POOL_GATE, POOL_UNLOCK_LEVEL, REWARD_SPOTS, receptionQueuePoint, roomUpgradeRowUnlocked, ROOM_DEFS, ROOM_DOOR, ROOM_WORK, SEAT_DEFS, taskDuration, upgradeCost, WIDTH } from './data';
 import type { Actor, Area, GuestState, PlayerState, Point, ResortGameState, Role, TaskKind, TaskState, WorkerState } from './types';
 import { serviceGuestReady } from './CustomerService';
 import { workAreaContains } from './WorkAreas';
@@ -253,6 +253,9 @@ export class ResortSimulation {
       const count = this.state.workers.length; this.hire(staffRole(a.target)!, true); return this.state.workers.length > count;
     }
     if (a.target === 'bar' && (!this.facility('pool').open || this.state.bar!.open)) return false;
+    if (a.mode === 'upgrade' && a.target.startsWith('room') && !roomUpgradeRowUnlocked(this.state, a.target)) {
+      this.notify('Önce havuzu aç ve önceki sıradaki odaları yükselt.'); return false;
+    }
     if (!this.testMode && a.mode === 'upgrade' && a.target.startsWith('room') && this.state.facilities.filter(f => f.kind === 'room' && f.open).length < 2) {
       this.notify('Oda yükseltmesi için önce ikinci odayı aç.'); return false;
     }
