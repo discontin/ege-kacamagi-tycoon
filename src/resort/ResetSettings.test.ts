@@ -4,8 +4,8 @@ import { initialResort } from './data';
 import { ResortSaveService, validResort } from './SaveService';
 describe('reset and settings', () => {
   it('resets live state so later autosaves cannot restore the old village', () => {
-    const s = new ResortSimulation(); s.state.money = 1000; s.hire(); s.state.settings.paused = true; s.state.settings.volume = .3;
-    s.reset(); expect(s.state.workers).toHaveLength(0); expect(s.state.money).toBe(10_000); expect(s.state.settings.paused).toBe(false); expect(s.state.settings.volume).toBe(.3);
+    const s = new ResortSimulation(); s.state.money = 1000; s.hire(); s.state.settings.paused = true; s.state.settings.volume = .3; s.state.settings.musicVolume = .18;
+    s.reset(); expect(s.state.workers).toHaveLength(0); expect(s.state.money).toBe(10_000); expect(s.state.settings.paused).toBe(false); expect(s.state.settings.volume).toBe(.3); expect(s.state.settings.musicVolume).toBe(.18);
     let raw = ''; const save = new ResortSaveService({ getItem: () => raw, setItem: (_, v) => { raw = v; } });
     save.save(s.state); expect(save.load().state.money).toBe(10_000); expect(save.load().state.workers).toHaveLength(0);
   });
@@ -18,6 +18,10 @@ describe('reset and settings', () => {
     const s = initialResort(); expect(validResort(s)).toBe(true);
     for (const volume of [0, .5, 1]) { s.settings.volume = volume; expect(validResort(s)).toBe(true); }
     for (const volume of [-1, 2, NaN]) { s.settings.volume = volume; expect(validResort(s)).toBe(false); }
+    s.settings.volume = .5;
+    for (const volume of [0, .22, 1]) { s.settings.musicVolume = volume; expect(validResort(s)).toBe(true); }
+    for (const volume of [-1, 2, NaN]) { s.settings.musicVolume = volume; expect(validResort(s)).toBe(false); }
+    delete s.settings.musicVolume; expect(validResort(s)).toBe(true);
   });
   it('migrates former level-three rooms to level two without losing the save', () => {
     const old = initialResort(); old.facilities.find(f => f.id === 'room1')!.level = 3;

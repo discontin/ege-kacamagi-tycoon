@@ -1,0 +1,191 @@
+/* Stitch-inspired menu skin. Game data and interactions still come from ResortUI. */
+#pause-dialog {
+  width: min(830px, calc(100vw - 28px));
+  max-height: 94dvh;
+  color: #25241e;
+}
+#pause-dialog::backdrop { background: #092f36b8; backdrop-filter: blur(4px); }
+#pause-dialog .game-menu-frame {
+  display: flex;
+  flex-direction: column;
+  max-height: 94dvh;
+  overflow: hidden;
+  border: 0;
+  border-radius: 28px;
+  background: #fef9ee;
+  box-shadow: 0 8px 0 #073c40, 0 30px 90px #042c3c88;
+}
+#pause-dialog .game-menu-frame::before,
+#pause-dialog .game-menu-frame::after { display: none; }
+#pause-dialog .game-menu-ribbon {
+  min-height: 53px;
+  padding: 10px 22px;
+  border: 0;
+  background: #00696d;
+  box-shadow: none;
+  color: #fff;
+  font-size: 13px;
+  letter-spacing: .04em;
+}
+#pause-dialog .menu-status { margin-left: auto; border: 0; background: #ffffff28; color: #fff; font-size: 10px; }
+#pause-dialog .pause-close {
+  display: grid; place-items: center; width: 32px; height: 32px; padding: 0;
+  border-radius: 50%; background: #ffffff34; color: #fff; font-size: 23px;
+}
+#pause-dialog .game-menu-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 25px 30px 30px;
+  background: #fef9ee;
+}
+#pause-dialog .pause-heading {
+  display: flex; align-items: center; gap: 14px;
+  margin: 0 0 17px; padding: 14px 17px;
+  border-radius: 16px; background: #f1ede3;
+}
+#pause-dialog .pause-emblem {
+  flex: 0 0 46px; width: 46px; height: 46px;
+  border: 0; border-radius: 50%; background: #f59e0b;
+  box-shadow: 0 3px 0 #bb7202; color: #523400; font-size: 21px;
+}
+#pause-dialog .pause-heading>div>small { color: #855300; font-size: 10px; letter-spacing: .09em; }
+#pause-dialog .pause-heading h2 { margin: 1px 0 2px; color: #322b20; font-size: clamp(18px, 3vw, 23px); }
+#pause-dialog .pause-heading p { color: #6b5f4f; font-size: 11px; }
+#pause-dialog .pause-resume {
+  width: 100%; min-height: 60px; margin: 0 0 16px; padding: 10px 23px;
+  border: 0; border-radius: 16px; background: #f59e0b;
+  box-shadow: 0 5px 0 #a86200; color: #4a2e00;
+  font-size: 22px; font-weight: 900;
+}
+#pause-dialog .pause-resume kbd { border: 0; background: #fff1ca; color: #67470d; font-size: 10px; }
+#pause-dialog .pause-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+#pause-dialog .pause-column { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+#pause-dialog .sound-card,
+#pause-dialog .music-card,
+#pause-dialog .reward-ad-section,
+#pause-dialog .pause-save,
+#pause-dialog .language-toggle {
+  margin: 0; border: 1px solid #e8dfcf; border-radius: 15px;
+  background: #f8f3e8; box-shadow: none;
+}
+#pause-dialog .sound-card { padding: 15px 16px; }
+#pause-dialog .menu-section-heading b { color: #704805; font-size: 13px; letter-spacing: 0; }
+#pause-dialog .menu-section-heading>span { border: 0; background: #fff; color: #00696d; }
+#pause-dialog .menu-section-heading output { background: #fff; color: #855300; font-size: 12px; }
+#pause-dialog .volume-row { margin-top: 13px; }
+#pause-dialog input[type="range"] { accent-color: #00696d; min-height: 25px; }
+#pause-dialog .music-card { align-items: flex-start; padding: 15px 16px; background: #f8f3e8; }
+#pause-dialog .music-cover { flex-basis: 43px; width: 43px; height: 43px; border: 0; border-radius: 50%; background: #9de4df; color: #00696d; }
+#pause-dialog .music-title-row b { color: #704805; font-size: 13px; }
+#pause-dialog .music-title-row small { color: #534434; font-size: 11px; }
+#pause-dialog .music-title-row>span { border: 0; border-radius: 999px; background: #fff; color: #00696d; font-size: 10px; }
+#pause-dialog .music-timeline { height: 7px; margin: 15px 0 9px; background: #ddd7c9; }
+#pause-dialog .music-timeline i { background: #00696d; }
+#pause-dialog .music-controls>small { color: #685f52; font-size: 10px; }
+#pause-dialog .music-controls button { width: 32px; height: 32px; border: 0; border-radius: 50%; background: #fff; color: #005c60; font-size: 11px; }
+#pause-dialog .music-controls button.music-play { width: 38px; height: 38px; background: #00696d; color: #fff; font-size: 16px; }
+#pause-dialog .music-volume-row { grid-template-columns: auto minmax(45px, 1fr) auto; margin-top: 11px; color: #534434; }
+#pause-dialog .music-volume-row small,
+#pause-dialog .music-volume-row output { font-size: 10px; }
+#pause-dialog .language-toggle { justify-content: flex-start; flex-wrap: wrap; padding: 11px 13px; color: #534434; }
+#pause-dialog .language-toggle>span { margin-right: auto; font-size: 12px; font-weight: 800; }
+#pause-dialog .language-toggle button { border: 0; background: #fff; color: #534434; font-size: 11px; }
+#pause-dialog .language-toggle button[aria-pressed="true"] { background: #00696d; color: #fff; }
+#pause-dialog .reward-ad-section { flex: 1; padding: 15px; }
+#pause-dialog .reward-ad-heading { color: #704805; }
+#pause-dialog .reward-ad-heading>span { border: 0; border-radius: 50%; background: #f59e0b; color: #fff; }
+#pause-dialog .reward-ad-heading b { font-size: 14px; }
+#pause-dialog .reward-ad-heading small { color: #6c5b49; font-size: 10px; }
+#pause-dialog .reward-ad-row { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 9px; margin-top: 10px; padding: 10px; border: 0; border-radius: 12px; background: #fff; }
+#pause-dialog .reward-ad-icon { width: 37px; height: 37px; border: 0; background: #f9c479; box-shadow: none; color: #774900; }
+#pause-dialog .reward-ad-icon.money { background: #9de4df; box-shadow: none; color: #00696d; }
+#pause-dialog .reward-ad-icon img { filter: brightness(0) saturate(100%) sepia(40%); }
+#pause-dialog .reward-ad-row b { color: #24231e; font-size: 12px; }
+#pause-dialog .reward-ad-row small { color: #5c5347; font-size: 10px; }
+#pause-dialog .reward-ad-row strong { color: #00696d; font-size: 10px; white-space: nowrap; }
+#pause-dialog .reward-provider-status { margin: 12px 0 0; color: #685d4d; font-size: 10px; }
+#pause-dialog .pause-save { display: grid; gap: 3px; padding: 12px 15px; }
+#pause-dialog .pause-save b { color: #00696d; font-size: 12px; }
+#pause-dialog .pause-save small { color: #665b4c; font-size: 10px; }
+#pause-dialog .menu-newgame { min-height: 40px; border: 1px solid #dfd2c2; border-radius: 11px; background: #f1ebe0; box-shadow: none; color: #a63a1d; font-size: 12px; font-weight: 850; }
+
+.resort-drawer.office-window {
+  width: min(840px, calc(100vw - 28px)); max-height: 90dvh;
+  border: 0; border-radius: 25px; background: #fef9ee;
+  box-shadow: 0 8px 0 #073c40, 0 25px 75px #092f36a1;
+}
+.office-window #drawer-body { padding: 0 25px 22px; background: #fef9ee; }
+.office-window .drawer-close { position: sticky; top: 9px; margin: 9px 10px -44px 0; border: 0; background: #ffffff36; box-shadow: none; color: #fff; }
+.office-banner {
+  min-height: 77px; margin: 0 -25px 20px; padding: 16px 62px 15px 24px;
+  border: 0; border-radius: 0; background: #00696d;
+  box-shadow: none; color: #fff;
+}
+.office-banner::before { display: none; }
+.office-banner>div { padding: 0; }
+.office-banner>div>small { color: #a3e8e2; font-size: 10px; }
+.office-banner h2 { color: #fff !important; font-size: 24px !important; text-shadow: none; }
+.office-banner p { color: #d4eeee !important; font-size: 11px !important; }
+.office-team-count { border: 0; border-radius: 999px; background: #ffffff2a; color: #fff; }
+.office-team-count b, .office-team-count small { color: #fff; }
+.office-tabs { display: flex; gap: 5px; max-width: 550px; margin: 0 0 20px; padding: 5px; border-radius: 999px; background: #f0ebe1; }
+.office-tabs button { flex: 1; min-height: 37px; padding: 7px 14px; border-radius: 999px; background: transparent; color: #534434; font-size: 12px; font-weight: 800; }
+.office-tabs button[aria-current="page"] { background: #00696d; box-shadow: 0 3px 0 #005154; color: #fff; }
+.office-section[hidden] { display: none; }
+.office-roster { margin: 0 2px 12px; padding: 0 0 7px; border-color: #e8dfcf; }
+.office-roster>span { color: #855300; font-size: 10px; }
+.office-worker-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; gap: 11px; }
+.office-window .office-worker { min-width: 0; margin: 0 !important; border: 1px solid #e5dccc !important; border-radius: 20px !important; background: #fff !important; box-shadow: 0 3px 0 #c9beae55 !important; }
+.office-worker-grid .office-worker { display: flex; flex-direction: column; }
+.office-worker-head { min-width: 0; padding: 12px; border: 0; background: #fff; }
+.office-avatar { flex: 0 0 38px; border: 0; border-radius: 50%; background: #b8eae8; box-shadow: none; color: #00696d; }
+.office-worker-name { min-width: 0; }
+.office-worker-name b { overflow: hidden; color: #26251f; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.office-worker-name small { color: #00696d; font-size: 10px; line-height: 1.25; }
+.office-rank { flex: 0 0 auto; border: 0; background: #f2ede2; color: #674d31; }
+.office-worker-grid .office-skills { flex: 1; }
+.office-skills { gap: 9px; padding: 11px; }
+.office-skill { display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; padding: 11px; border: 0; border-radius: 14px; background: #f8f3e8; box-shadow: none; }
+.office-skill-info { grid-template-columns: 29px minmax(0, 1fr) auto; gap: 7px; }
+.office-skill-info b { color: #25241e; font-size: 11px; }
+.office-skill-info small { color: #685c4b; font-size: 10px; }
+.office-skill-info strong { color: #00696d; font-size: 10px; white-space: nowrap; }
+.office-skill-icon { width: 29px; height: 29px; border: 0; background: #e9e3d4; color: #855300; }
+.office-meter i { height: 7px; border: 0; background: #e0d8c9; }
+.office-meter i.lit { border: 0; background: #00696d; }
+.office-window .office-skill button {
+  min-height: 37px; border: 0; border-radius: 999px;
+  background: #f59e0b; box-shadow: 0 3px 0 #b56c00;
+  color: #533300; font-size: 11px;
+}
+.office-window .office-skill button span { background: #fff3d8; color: #674500; font-size: 10px; }
+.office-window .office-skill button:disabled { background: #e7e2d7; box-shadow: none; color: #675d4f; opacity: 1; }
+.office-department { max-width: 590px; }
+.office-footer { margin-top: 17px; border-color: #e2d7c4; color: #6d6353; font-size: 10px; }
+
+@media (max-width: 680px) {
+  #pause-dialog { width: calc(100vw - 20px); }
+  #pause-dialog .game-menu-frame { max-height: 94dvh; border-radius: 22px; }
+  #pause-dialog .game-menu-content { padding: 18px 16px 23px; }
+  #pause-dialog .game-menu-ribbon { min-height: 46px; padding: 8px 15px; }
+  #pause-dialog .pause-heading { padding: 11px 12px; }
+  #pause-dialog .pause-heading h2 { font-size: 17px; }
+  #pause-dialog .pause-resume { min-height: 52px; font-size: 18px; }
+  #pause-dialog .pause-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  #pause-dialog .music-card { gap: 9px; }
+  #pause-dialog .reward-ad-section { padding: 12px; }
+  .resort-drawer.office-window { width: calc(100vw - 18px); max-height: 92dvh; border-radius: 20px; }
+  .office-window #drawer-body { padding: 0 14px 17px; }
+  .office-banner { margin: 0 -14px 15px; padding: 12px 49px 12px 16px; }
+  .office-banner h2 { font-size: 20px !important; }
+  .office-banner p { font-size: 10px !important; }
+  .office-tabs { max-width: none; margin-bottom: 14px; }
+  .office-tabs button { padding: 7px 6px; font-size: 11px; }
+  .office-worker-grid { grid-template-columns: minmax(0, 1fr); gap: 11px; }
+  .office-worker-grid .office-skills { flex: none; }
+  .office-skill { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .office-skill-info, .office-meter, .office-window .office-skill button { grid-column: auto; grid-row: auto; }
+  .office-window .office-skill button { flex-direction: row; justify-content: center; min-height: 38px; font-size: 11px; }
+  .office-department { max-width: none; }
+}

@@ -19,6 +19,7 @@ import { linenCount } from './Linen';
 import { OFFICE } from './Office';
 import { LAUNDRY_WALLS, laundryMachines } from './LaundryLayout';
 import './hire-marker.css';
+import { translate, type GameLanguage } from './i18n';
 
 interface Character { root: T.Group; load: T.Group; broom: T.Group; tray: T.Group; net: T.Group; skateboard: T.Group; mixer?: T.AnimationMixer; actions: Map<string, T.AnimationAction>; mode: string; previous: T.Vector3; bagKey: string }
 // Keep these interaction zones available to the simulation, but remove their
@@ -88,7 +89,7 @@ export class ResortWorld {
   private origin?: Point;
   private pinch = 0;
   private wave!: T.Mesh;
-  constructor(private sim: ResortSimulation, private assets: AssetLibrary, private inspect: (id: string) => void) {
+  constructor(private sim: ResortSimulation, private assets: AssetLibrary, private inspect: (id: string) => void, private requestReward: (kind: 'boost' | 'money') => void, private language: () => GameLanguage = () => 'tr') {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7)); this.renderer.setClearColor(0xd4edec);
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = T.PCFSoftShadowMap;
     this.renderer.outputColorSpace = T.SRGBColorSpace; this.renderer.toneMapping = T.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.15;
@@ -107,10 +108,10 @@ export class ResortWorld {
     this.poolTileTexture.colorSpace = T.SRGBColorSpace;
     this.poolTileMaterial = new T.MeshStandardMaterial({ map: this.poolTileTexture, normalMap: this.poolTileNormal, roughness: .72 });
     this.poolWaterMaterial = new T.MeshStandardMaterial({ color: 0x48cbd5, transparent: true, opacity: .58, roughness: .12, metalness: .05 });
-    this.renderer.domElement.tabIndex = 0; this.renderer.domElement.setAttribute('aria-label', 'Ege Kaçamağı 3D tatil köyü'); this.host.append(this.renderer.domElement);
+    this.renderer.domElement.tabIndex = 0; this.renderer.domElement.setAttribute('aria-label', 'Olive Coast: Resort Tycoon 3D resort'); this.host.append(this.renderer.domElement);
     this.labels.className = 'resort-world-labels'; this.host.append(this.labels);
     this.beachMarker.className = 'beach-coming-soon'; this.beachMarker.setAttribute('aria-hidden', 'true');
-    this.beachMarker.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 17a12 12 0 0 1 24 0H4Z"/><path d="M16 5v21m-4 0h8M5 21c2 0 2 2 5 2s3-2 5-2 3 2 5 2 3-2 5-2"/></svg><span>COMING SOON</span>';
+    this.beachMarker.innerHTML = translate('<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 17a12 12 0 0 1 24 0H4Z"/><path d="M16 5v21m-4 0h8M5 21c2 0 2 2 5 2s3-2 5-2 3 2 5 2 3-2 5-2"/></svg><span>COMING SOON</span>', this.language());
     this.labels.append(this.beachMarker);
     this.scene.background = new T.Color(0xd4edec); this.scene.fog = new T.Fog(0xd4edec, 95, 160);
     this.scene.add(new T.HemisphereLight(0xffffff, 0x96ae82, 2));
@@ -504,7 +505,7 @@ export class ResortWorld {
         this.rewardPads.set(a.id, { glow, ring });
       }
       const outline = new T.Mesh(geometry, new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: a.mode === 'upgrade', opacity: a.mode === 'upgrade' ? .42 : 1 })); outline.rotation.x = -Math.PI / 2; outline.position.y = .17; root.add(outline);
-      const label = document.createElement('button'); label.className = `floor-label ${a.mode}${a.id === 'office' ? ' office-marker' : ''}`; label.setAttribute('aria-label', a.id === 'office' ? 'Personel geliştirme ofisine git' : `${a.label} alanına yürü`); if (a.id === 'office') label.title = 'Personel geliştirme ofisi'; label.addEventListener('click', () => { this.sim.goToArea(a.id); this.follow = true; }, { signal: this.abort.signal }); this.labels.append(label); this.pads.set(a.id, { root, outline, fill, label, area: a });
+      const label = document.createElement('button'); label.className = `floor-label ${a.mode}${a.id === 'office' ? ' office-marker' : ''}`; label.setAttribute('aria-label', translate(a.id === 'office' ? 'Personel geliştirme ofisine git' : `${a.label} alanına yürü`, this.language())); if (a.id === 'office') label.title = translate('Personel geliştirme ofisi', this.language()); label.addEventListener('click', () => { this.sim.goToArea(a.id); this.follow = true; }, { signal: this.abort.signal }); this.labels.append(label); this.pads.set(a.id, { root, outline, fill, label, area: a });
       if (a.mode === 'cash') { const pile = new T.Group(); for (let i = 0; i < 4; i++) this.box(pile, i % 2 ? 0x9ad364 : 0x60a957, 0, .25 + i * .12, 0, .8, .1, .4); root.add(pile); this.moneyModels.set(a.target, pile); }
       if (freeformPoolCleaning) { fill.visible = false; outline.visible = false; label.style.display = 'none'; }
       if (HIDDEN_AREA_MARKERS.has(a.id)) { fill.visible = false; outline.visible = false; label.style.display = 'none'; }
@@ -595,11 +596,17 @@ export class ResortWorld {
         const button = document.createElement('button'); button.className = 'task-indicator'; button.dataset.taskIcon = notice.icon;
         button.innerHTML = taskIconSvg(notice.icon); const progress = document.createElement('span'); progress.className = 'task-indicator-progress'; progress.setAttribute('aria-hidden', 'true'); button.append(progress);
         marker = { button, progress, notice }; this.taskMarkers.set(notice.id, marker); this.labels.append(button);
-        button.addEventListener('click', () => { const current = this.taskMarkers.get(notice.id); if (current) { this.sim.goToArea(current.notice.areaId); this.follow = true; } }, { signal: this.abort.signal });
+        button.addEventListener('click', () => {
+          const current = this.taskMarkers.get(notice.id); if (!current) return;
+          if (current.notice.icon === 'boost') this.requestReward('boost');
+          else if (current.notice.icon === 'adMoney') this.requestReward('money');
+          else { this.sim.goToArea(current.notice.areaId); this.follow = true; }
+        }, { signal: this.abort.signal });
       }
       marker.notice = notice;
       const status = notice.state === 'working' ? notice.icon === 'wash' ? 'Yıkanıyor' : 'Çalışılıyor' : notice.state === 'waiting' ? 'Görev bekliyor' : 'Yapılacak iş';
-      marker.button.setAttribute('aria-label', `${notice.label} · ${status} · alanına yürü`); marker.button.title = `${notice.label} · ${status}`;
+      const reward = notice.icon === 'boost' || notice.icon === 'adMoney';
+      marker.button.setAttribute('aria-label', translate(reward ? `${notice.label} · ödüllü reklamı aç` : `${notice.label} · ${status} · alanına yürü`, this.language())); marker.button.title = translate(reward ? `${notice.label} · izlemek için dokun` : `${notice.label} · ${status}`, this.language());
       marker.button.classList.toggle('working', notice.state === 'working'); marker.button.classList.toggle('waiting', notice.state === 'waiting');
       marker.progress.hidden = notice.progress === undefined; marker.progress.style.setProperty('--task-progress', `${Math.round((notice.progress ?? 0) * 100)}%`);
       const p = world(notice); p.y = notice.height; this.project(marker.button, p);
@@ -701,7 +708,7 @@ export class ResortWorld {
       const progress = task ? 1 - task.remaining / task.total : near ? .3 : 0;
       const poolGateLocked = a.mode === 'buy' && a.target === 'pool' && !this.sim.facility('pool').open && (!this.sim.poolRoomsUnlocked() || this.sim.level < this.sim.requiredLevel(a));
       const buyLocked = !this.sim.testMode && a.mode === 'buy' && (poolGateLocked || this.sim.level < this.sim.requiredLevel(a));
-      const unaffordable = !this.sim.testMode && (a.mode === 'buy' || a.mode === 'upgrade') && s.money < this.sim.cost(a);
+      const unaffordable = !this.sim.unlimitedMoney && (a.mode === 'buy' || a.mode === 'upgrade') && s.money < this.sim.cost(a);
       (p.outline.material as T.MeshBasicMaterial).color.set(near ? a.mode === 'upgrade' ? 0xd8d0b5 : 0xb7ef8d : a.mode === 'buy' ? buyLocked ? 0xb3b7a0 : 0x92e6a3 : a.mode === 'upgrade' ? 0xc8bb99 : 0xffffff);
       (p.outline.material as T.MeshBasicMaterial).opacity = a.mode === 'upgrade' ? near ? .58 : .42 : 1;
       (p.fill.material as T.MeshBasicMaterial).opacity = a.mode === 'work' ? .1 + progress * .4 : a.mode === 'upgrade' ? .18 : .55;
@@ -713,7 +720,7 @@ export class ResortWorld {
       const poolPurchase = a.mode === 'buy' && a.target === 'pool';
       const barPurchase = a.mode === 'buy' && a.target === 'bar';
       p.label.classList.toggle('purchase-marker', roomPurchase || poolPurchase || barPurchase);
-      if (!!staffRole(a.target)) p.label.title = `${a.label} · ${this.sim.testMode ? 'Ücretsiz test' : this.sim.cost(a) + ' ₺'}`;
+      if (!!staffRole(a.target)) p.label.title = translate(`${a.label} · ${this.sim.testMode ? 'Ücretsiz test' : this.sim.cost(a) + ' ₺'}`, this.language());
       const purchasePrice = this.sim.testMode ? '∞' : roomPurchase || poolPurchase || barPurchase ? `${this.sim.cost(a).toLocaleString('tr-TR')} ₺` : '';
       const purchaseText = poolPurchase && poolGateLocked
         ? purchaseIconSvg('lock')
@@ -723,9 +730,10 @@ export class ResortWorld {
       const text = a.id === 'office' ? `${officeDevelopmentIconSvg()}<span class="office-caption">Personel<br>geliştir</span>` : !!staffRole(a.target) ? `${staffIconSvg(staffRole(a.target)!)}<span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : roomPurchase || poolPurchase || barPurchase ? purchaseText : a.mode === 'buy' ? `${this.sim.level < this.sim.requiredLevel(a) && !this.sim.testMode ? '🔒' : '＋'} ${a.label}<small>Sv. ${this.sim.requiredLevel(a)} · ${this.sim.testMode ? 'ÜCRETSİZ' : this.sim.cost(a) + ' ₺'}</small>` : a.mode === 'upgrade' ? `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27V7m-7 8 7-8 7 8M7 27h18"/></svg><span class="hire-price">${this.sim.testMode ? '∞' : this.sim.cost(a) + ' ₺'}</span>` : a.mode === 'cash' ? '💵' : `${a.taskKind === 'cleanTake' ? '☀' : a.taskKind === 'dirtyDrop' ? '♺' : '▢'} ${a.label}${task ? '<small>' + Math.round(progress * 100) + '%</small>' : ''}`;
       const purchaseProgress = this.sim.purchaseProgress(a);
       const labelText = text + (purchaseProgress === undefined ? '' : '<span class="purchase-progress" aria-hidden="true"></span>');
-      if (p.label.innerHTML !== labelText) p.label.innerHTML = labelText;
+      const localizedLabel = translate(labelText, this.language());
+      if (p.label.innerHTML !== localizedLabel) p.label.innerHTML = localizedLabel;
       p.label.style.setProperty('--purchase-progress', `${Math.round((purchaseProgress ?? 0) * 100)}%`);
-      if (a.mode === 'buy') p.label.setAttribute('aria-label', poolPurchase && poolGateLocked ? `Havuz kilitli · İlk 6 oda ve Seviye ${this.sim.requiredLevel(a)} gerekli` : `${a.label} · ${this.sim.cost(a)} ₺${purchaseProgress === undefined ? '' : ' · %' + Math.round(purchaseProgress * 100)}`);
+      if (a.mode === 'buy') p.label.setAttribute('aria-label', translate(poolPurchase && poolGateLocked ? `Havuz kilitli · İlk 6 oda ve Seviye ${this.sim.requiredLevel(a)} gerekli` : `${a.label} · ${this.sim.cost(a)} ₺${purchaseProgress === undefined ? '' : ' · %' + Math.round(purchaseProgress * 100)}`, this.language()));
       this.project(p.label, p.root.position.clone().add(new T.Vector3(0, .38, !!staffRole(a.target) ? 0 : .5)));
       const featuredTestUpgrade = this.sim.testMode && a.mode === 'upgrade' && (a.target.startsWith('room') || a.target === 'pool');
       if (a.id !== 'office' && (a.mode === 'work' && !near && distance(s.player, a) > 6 || a.mode === 'upgrade' && !featuredTestUpgrade && distance(s.player, a) > 6 || !this.follow && a.mode === 'work')) p.label.style.display = 'none';
@@ -739,7 +747,7 @@ export class ResortWorld {
       const f = this.sim.facility(id), r = ROOM_DEFS.find(r => r.id === id), pos = r ? world({ x: r.x + 4.5, y: r.y + 1 }) : world(id === 'reception' ? { x: RECEPTION_VISUAL_X, y: 43 } : id === 'laundry' ? { x: 8, y: 44 } : { x: 28, y: 2 });
       const g = s.guests.find(g => g.id === f.guest), title = r?.name ?? (id === 'reception' ? 'Resepsiyon' : id === 'laundry' ? 'Çamaşırhane' : 'Havuz');
       const description = !f.open ? 'YENİ ALAN' : f.kind === 'room' ? g ? g.phase === 'staying' ? `Konaklıyor · ${Math.ceil(g.remaining)} sn` : 'Misafir geliyor' : f.dirty ? 'YATAĞI TOPLA' : f.floorDirty ? 'ZEMİNİ SÜPÜR' : f.bathroomDirty ? 'BANYOYU TEMİZLE' : f.needsSheet ? 'TEMİZ ÇARŞAF GEREKLİ' : f.towels ? 'MİSAFİRE HAZIR' : 'TEMİZ HAVLU GEREKLİ' : id === 'laundry' ? `${this.sim.testMode ? '∞' : s.laundry.clean} temiz · ${s.laundry.dirty} kirli${s.laundry.remaining !== null ? ' · ' + Math.ceil(s.laundry.remaining) + ' sn' : ''}` : id === 'reception' ? `${s.guests.filter(g => g.phase === 'queue').length} misafir sırada` : `${s.seats.filter(s => s.open && !s.guest && !s.dirty).length} boş şezlong`;
-      const text = `<b>${title}</b><small>${description}${f.open ? ' · Sv. ' + f.level : ''}</small>${r && f.open ? `<small class="room-class">${['Standart oda · 40 ₺', 'Konfor oda · 50 ₺'][f.level - 1]}</small>` : ''}`; if (l.innerHTML !== text) l.innerHTML = text; l.classList.toggle('dirty', f.dirty); pos.y = r ? 3.5 : 4; this.project(l, pos); if (!this.follow || !f.open) l.style.display = 'none';
+      const text = translate(`<b>${title}</b><small>${description}${f.open ? ' · Sv. ' + f.level : ''}</small>${r && f.open ? `<small class="room-class">${['Standart oda · 40 ₺', 'Konfor oda · 50 ₺'][f.level - 1]}</small>` : ''}`, this.language()); if (l.innerHTML !== text) l.innerHTML = text; l.classList.toggle('dirty', f.dirty); pos.y = r ? 3.5 : 4; this.project(l, pos); if (!this.follow || !f.open) l.style.display = 'none';
     }
     for (const [id, pad] of this.rewardPads) {
       const pulse = .5 + Math.sin(now / 420 + (id === 'rewardedMoney' ? 1.5 : 0)) * .5;
@@ -761,7 +769,7 @@ export class ResortWorld {
     canvas.addEventListener('wheel', e => { e.preventDefault(); this.setZoom(e.deltaY < 0 ? 1.08 : .92); }, { ...opts, passive: false });
     canvas.addEventListener('pointerdown', e => { this.origin = { x: e.clientX, y: e.clientY }; this.dragged = false; this.pointers.set(e.pointerId, this.origin); canvas.setPointerCapture(e.pointerId); }, opts);
     canvas.addEventListener('pointermove', e => { const prev = this.pointers.get(e.pointerId); if (!prev) return; const p = { x: e.clientX, y: e.clientY }; this.pointers.set(e.pointerId, p); if (this.pointers.size === 2) { const [a, b] = [...this.pointers.values()], d = distance(a, b); if (this.pinch) this.setZoom(d / this.pinch); this.pinch = d; this.dragged = true; return; } if (this.origin && distance(p, this.origin) > 7) this.dragged = true; if (this.dragged) { this.follow = false; this.target.x -= (p.x - prev.x) * .04 / this.zoom; this.target.z -= (p.y - prev.y) * .05 / this.zoom; this.target.x = T.MathUtils.clamp(this.target.x, MAP_MIN_X - 19, MAP_MAX_X - 19); this.target.z = T.MathUtils.clamp(this.target.z, -26, 25); } }, opts);
-    canvas.addEventListener('pointerup', e => { if (!this.dragged && this.pointers.size === 1) { const p = this.ground({ x: e.clientX, y: e.clientY }); if (p) { const a = this.sim.areas.find(a => distance(a, p) < 1); this.sim.goTo(a ?? p); this.follow = true; } } this.pointers.delete(e.pointerId); this.pinch = 0; }, opts);
+    canvas.addEventListener('pointerup', e => { if (!this.dragged && this.pointers.size === 1) { const p = this.ground({ x: e.clientX, y: e.clientY }); if (p) { const a = this.sim.areas.find(a => distance(a, p) < 1); if (a?.id === 'rewardedBoost') this.requestReward('boost'); else if (a?.id === 'rewardedMoney') this.requestReward('money'); else { this.sim.goTo(a ?? p); this.follow = true; } } } this.pointers.delete(e.pointerId); this.pinch = 0; }, opts);
     canvas.addEventListener('pointercancel', e => this.pointers.delete(e.pointerId), opts);
     const joystick = document.querySelector<HTMLElement>('#joystick')!, knob = document.querySelector<HTMLElement>('#joystick-knob')!;
     const move = (e: PointerEvent) => { const r = joystick.getBoundingClientRect(), x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2, l = Math.max(30, Math.hypot(x, y)); this.touch = { x: x / l, y: y / l }; knob.style.transform = `translate(${this.touch.x * 23}px, ${this.touch.y * 23}px)`; };

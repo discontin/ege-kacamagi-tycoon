@@ -65,8 +65,8 @@ export function taskIndicators(s: ResortGameState): TaskIndicator[] {
   }
   const rewardedBoost = areasFor(s).find(a => a.id === 'rewardedBoost');
   const rewardedMoney = areasFor(s).find(a => a.id === 'rewardedMoney');
-  if (rewardedBoost) add('rewardedBoost', 'rewardedBoost', 'boost', 'Ödüllü reklam · Paten boost', rewardedBoost.x, rewardedBoost.y, 2.4, 'rewardedBoost', 'watchBoost');
-  if (rewardedMoney) add('rewardedMoney', 'rewardedMoney', 'adMoney', 'Ödüllü reklam · +100 para', rewardedMoney.x, rewardedMoney.y, 2.2, 'rewardedMoney', 'watchMoney');
+  if (rewardedBoost) out.push({ id: 'rewardedBoost', areaId: rewardedBoost.id, icon: 'boost', label: 'Ödüllü reklam · Kaykay boostu', x: rewardedBoost.x, y: rewardedBoost.y, height: 2.4, state: 'todo' });
+  if (rewardedMoney) out.push({ id: 'rewardedMoney', areaId: rewardedMoney.id, icon: 'adMoney', label: 'Ödüllü reklam · +100 para', x: rewardedMoney.x, y: rewardedMoney.y, height: 2.2, state: 'todo' });
   return out;
 }
 export function taskIconSvg(icon: TaskIcon): string {

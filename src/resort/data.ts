@@ -10,7 +10,7 @@ export const LEVELS = [0, 15, 45, 90, 150, 225, 315, 420, 540, 675];
 export const POOL_UNLOCK_LEVEL = 7;
 // Keep a little breathing room on both sides of the resort while making the
 // central promenade wide enough for the reception traffic.
-export const ROOM_DEFS = Array.from({ length: 6 }, (_, i) => ({ id: `room${i + 1}`, name: `Bungalov ${String(i + 1).padStart(2, '0')}`, x: i % 2 ? 24 : 2, y: 34 - Math.floor(i / 2) * 10, width: 10, height: 8, unlockLevel: i + 1, cost: [0, 100, 180, 260, 380, 520][i], color: [0x68baa6, 0xf4bd81, 0x87bad0, 0xeaa19c, 0x9bbc82, 0xc0a1d4][i] }));
+export const ROOM_DEFS = Array.from({ length: 6 }, (_, i) => ({ id: `room${i + 1}`, name: `Oda ${String(i + 1).padStart(2, '0')}`, x: i % 2 ? 24 : 2, y: 34 - Math.floor(i / 2) * 10, width: 10, height: 8, unlockLevel: i + 1, cost: [0, 100, 180, 260, 380, 520][i], color: [0x68baa6, 0xf4bd81, 0x87bad0, 0xeaa19c, 0x9bbc82, 0xc0a1d4][i] }));
 export const ROOM_DOOR = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x < 15 ? r.x + 9 : r.x, y: r.y + 5 });
 export const ROOM_APPROACH = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x < 15 ? r.x + 10 : r.x - 1, y: r.y + 5 });
 export const ROOM_WORK = (r: typeof ROOM_DEFS[number]): Point => ({ x: r.x + 5, y: r.y + 5 });
@@ -50,7 +50,7 @@ export function initialResort(test = false): ResortGameState {
     player: { id: 'player', x: 19, y: 48, path: [], bag: { clean: 0, dirty: 0 } }, guests: [], workers: [], tasks: [], bar: { open: test, cash: 0 },
     rewardedAds: { boost: rewardSpawn(REWARDED_BOOST, 25, 43), money: rewardSpawn(REWARDED_MONEY, 25, 43), seed: test ? 3 : 0 },
     facilities: [{ id: 'reception', kind: 'reception', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, { id: 'laundry', kind: 'laundry', open: true, level: 1, dirty: false, towels: 0, cash: 0 }, ...ROOM_DEFS.map((r, i) => ({ id: r.id, kind: 'room' as const, open: test || !i, level: 1, dirty: false, towels: 1, cash: 0 })), { id: 'pool', kind: 'pool', open: test, level: 1, dirty: false, towels: test ? 999 : 0, cash: 0 }],
-    seats: SEAT_DEFS.map((r, i) => ({ id: r.id, open: test && i < 4, dirty: false, towel: test && i < 4 })), laundry: { clean: test ? 999 : 8, dirty: 0, remaining: null }, boost: { remaining: 0, multiplier: 1.5 }, settings: { paused: false, speed: 1 }, stats: { welcomed: 0, stays: 0, cleaned: 0, washed: 0, poolVisits: 0, earned: 0 } };
+    seats: SEAT_DEFS.map((r, i) => ({ id: r.id, open: test && i < 4, dirty: false, towel: test && i < 4 })), laundry: { clean: test ? 999 : 8, dirty: 0, remaining: null }, boost: { remaining: 0, multiplier: 1.5 }, settings: { paused: false, speed: 1, musicVolume: .3 }, stats: { welcomed: 0, stays: 0, cleaned: 0, washed: 0, poolVisits: 0, earned: 0 } };
 }
 const rewardVisible = (s: ResortGameState, kind: 'boost' | 'money') => {
   const ad = s.rewardedAds?.[kind], target = kind === 'boost' ? 'rewardedBoost' : 'rewardedMoney';
@@ -71,7 +71,7 @@ export function areasFor(s: ResortGameState): Area[] {
     { id: 'dirtyDrop', label: 'Kirli çamaşırı sepete bırak', mode: 'work', target: 'laundry', taskKind: 'dirtyDrop', ...DIRTY_DROP },
     { id: 'cleanTake', label: 'Temiz havlu al', mode: 'work', target: 'laundry', taskKind: 'cleanTake', ...CLEAN_TAKE },
   ];
-  if (rewardVisible(s, 'boost')) areas.push({ id: 'rewardedBoost', label: 'Reklam izle · Paten boost kazan', mode: 'work', target: 'rewardedBoost', taskKind: 'watchBoost', ...(s.rewardedAds?.boost ?? REWARDED_BOOST) });
+  if (rewardVisible(s, 'boost')) areas.push({ id: 'rewardedBoost', label: 'Reklam izle · Kaykay boostu kazan', mode: 'work', target: 'rewardedBoost', taskKind: 'watchBoost', ...(s.rewardedAds?.boost ?? REWARDED_BOOST) });
   if (rewardVisible(s, 'money')) areas.push({ id: 'rewardedMoney', label: 'Reklam izle · Kasaya +100 kazan', mode: 'work', target: 'rewardedMoney', taskKind: 'watchMoney', ...(s.rewardedAds?.money ?? REWARDED_MONEY) });
   const openRoomCount = s.facilities.filter(f => f.kind === 'room' && f.open).length;
   const poolOpen = s.facilities.find(f => f.kind === 'pool')!.open;

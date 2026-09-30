@@ -1,10 +1,10 @@
-# Ege Kaçamağı — Tatil Köyü Tycoon
+# Olive Coast: Resort Tycoon
 
-Three.js + TypeScript + Vite ile masaüstü/mobil tarayıcıda çalışan, low-poly 3D Ege tatil köyü prototipi. Gerçek müşteri kuyruğu, bungalov konaklaması, temizlik, fiziksel havlu taşıma, çamaşırhane, havuz ve görevli çalışanlar içerir.
+Three.js + TypeScript + Vite ile masaüstü/mobil tarayıcıda çalışan, low-poly 3D Ege tatil köyü prototipi. Gerçek müşteri kuyruğu, oda konaklaması, temizlik, fiziksel havlu taşıma, çamaşırhane, havuz ve görevli çalışanlar içerir.
 
 ## Tarayıcıda oyna
 
-[Ege Kaçamağı'nı aç](https://discontin.github.io/ege-kacamagi-tycoon/)
+[Olive Coast: Resort Tycoon'u aç](https://discontin.github.io/ege-kacamagi-tycoon/)
 
 ## Çalıştırma
 
@@ -19,19 +19,19 @@ pnpm build
 
 ## Oynanış
 
-- Başlangıç: 0 para, girişe yakın bir hazır bungalov, resepsiyon, çamaşırhane ve rafta sekiz temiz havlu. Tüm bölüm personel simgeleri baştan görünür; işe alım için para ve planlanan seviye koşulları geçerlidir.
+- Başlangıç: test amacıyla 10.000 para, girişe yakın hazır bir oda, resepsiyon, çamaşırhane ve rafta sekiz temiz havlu. Tüm bölüm personel simgeleri baştan görünür; işe alım için para ve planlanan seviye koşulları geçerlidir.
 - Beyaz karede durarak otomatik çalışın. Gölgeliksiz resepsiyon bankosunun arkasındaki kare üç saniyede müşteri karşılar; müşteriler bankonun önünde tek sıra bekler. Müşteri odaya yürür; ilk üç konaklama 12/18/24 saniye, sonrakiler 40 saniyedir. İlk misafir iki saniyede gelir.
 - Konaklama resepsiyon kasasına 40 para bırakır. Para yığınına yürüyerek alın. Oda kirlenir, havlu yenilenene kadar müşteri alamaz.
 - Odanın içinde altı saniye temizlik yapın; kirli havlu çantaya alınır. Kirliyi çamaşırhaneye bırakın. Makine dört saniyede yıkar.
 - Yapılacak işler nesnelerin üzerinde mavi, beyaz çerçeveli yuvarlak simgelerle gösterilir: temizlik, havlu, misafir ve para. Çalışırken simge yeşile döner ve ilerleme halkası gösterir; iş tamamlanınca değişir veya kaybolur. Simgeye dokunmak ilgili çalışma karesine yürütür, ayrıca etkileşim tuşu gerekmez.
 - Temiz havlu alma karesinden en fazla dört temiz havlu alın; sekiz kapasiteli çantada kirli havlu için yer kalır. Odada bekleyerek bir temiz havlu bırakın.
-- Yeşil alan: yeni bungalov/havuz/şezlong. Sarı alan: üç seviyeli görsel yükseltme. 1,3 saniye bekleyin; ikinci satın alma için ayrılıp dönün.
+- Yeşil alan: yeni oda/havuz/şezlong. Sarı alan: görsel tesis yükseltmesi. 1,3 saniye bekleyin; ikinci satın alma için ayrılıp dönün.
 - Havuz seviye 4 ve 350 parayla açılır; iki şezlong ve dört havlu dahildir. Diğer şezlonglar 100’er paradır.
 - Konaklamasını bitiren müşteri uygun yer varsa havuza gider. Girişte karşılayın, rafta havlu bulundurun. Kullanım 25 saniye ve 20 paradır; şezlongu dört saniyede temizleyin.
 - Personel işe alımı 200 para ile başlar ve her işe alımda 100 artar; normal sınır beştir. İlk oda temizlikçisi Seviye 2’de, ikinci oda temizlikçisi Seviye 4’te açılır. Resepsiyon, oda, havuz veya taşıma rolünü seçin; aynı işi iki kişi alamaz.
 - Çalışan iş verimliliği seviyelerde %65/%80/%100; eğitim 120 ve 240 para. Fiziksel olarak havlu alıp taşırlar.
-- Tesis iş süreleri seviyelerde %100/%80/%65; bungalov/havuz gelirleri %100/%125/%150. Resepsiyon yükseltmesi kabul süresini, çamaşırhane yükseltmesi yıkama süresini ve raf kapasitesini geliştirir.
-- Konaklama +10 XP, oda temizliği +5, havuz ziyareti +5. Eşikler 0/15/50/100/180/280 XP; ek bungalov fiyatları 100/180/260/380/520.
+- Tesis iş süreleri seviyelerde %100/%80/%65; oda/havuz gelirleri %100/%125/%150. Resepsiyon yükseltmesi kabul süresini, çamaşırhane yükseltmesi yıkama süresini ve raf kapasitesini geliştirir.
+- Konaklama +10 XP, oda temizliği +5, havuz ziyareti +5. Eşikler 0/15/50/100/180/280 XP; ek oda fiyatları 100/180/260/380/520.
 - WASD/oklar, yere dokunarak yürüme veya mobil joystick. Etkileşim tuşu yok. Boşluk duraklatır; 1×/2× zamanı hızlandırır. Sürükleme kamerayı gezdirir, tekerlek/iki parmak yakınlaştırır, ◎ karaktere döner.
 - Yarım kalan saha işi aynı kareye dönünce sürer. İptal düğmesi rezervasyonu serbest bırakır.
 
@@ -54,7 +54,7 @@ Deneme hız bonusu 120 simülasyon saniyesi %50 iş/üretim hızıdır, birikmez
 ## Teknik yapı ve doğrulama
 
 - `src/resort/Simulation.ts`: hareket/yol bulma, müşteriler, görev rezervasyonu, havlu döngüsü, çalışanlar ve ekonomi.
-- `src/resort/World.ts`: sahil haritası, kesit bungalovlar, havuz, karakter animasyonları ve kareler.
+- `src/resort/World.ts`: sahil haritası, oda içleri, havuz, karakter animasyonları ve kareler.
 - `src/resort/TaskIndicators.ts`: mevcut durumdan türetilen nesne üstü görev simgeleri; ayrı görev veya kayıt oluşturmaz.
 - `src/resort/UI.ts`: hedefler, köy/ekip/rehber panelleri ve dokunmatik arayüz.
 - `src/resort/types.ts`, `data.ts`, `SaveService.ts`: veri modelleri, yerleşim/denge ve izole kayıt.

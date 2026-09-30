@@ -15,17 +15,16 @@ describe('rewarded map stations', () => {
 
   it('gives the player skates and a timed speed boost after the boost ad', () => {
     const s = new ResortSimulation(); standAt(s, 'rewardedBoost');
-    expect(s.startTask(s.area('rewardedBoost')!)).toBe(true);
-    advance(s, 4.1);
+    // The ad provider grants the reward only after its earned/completed callback.
+    expect(s.grantRewardedAd('boost')).toBe(true);
     expect(s.state.boost).toEqual({ multiplier: 1.5, remaining: expect.any(Number) });
-    expect(s.state.boost.remaining).toBeGreaterThan(119);
+    expect(s.state.boost.remaining).toBeGreaterThan(89);
     expect(s.boost).toBe(1.5);
   });
 
   it('adds a cash reward after the money ad', () => {
     const s = new ResortSimulation(), startingMoney = s.state.money; standAt(s, 'rewardedMoney');
-    expect(s.startTask(s.area('rewardedMoney')!)).toBe(true);
-    advance(s, 3.1);
+    expect(s.grantRewardedAd('money')).toBe(true);
     expect(s.state.money).toBe(startingMoney + 100);
     expect(s.state.stats.earned).toBe(100);
   });

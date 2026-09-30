@@ -2,7 +2,7 @@ import { BAG_CAPACITY, BUILDINGS, CHAPTERS, RESOURCE_IDS, RESOURCES } from './ga
 import { count, has, Simulation, initialState } from './game/Simulation';
 import type { BuildingKind, Inventory, Resource } from './game/types';
 import { SaveService } from './game/SaveService';
-import { SimulatedRewardedBoostService } from './game/RewardedBoostService';
+import { SimulatedRewardedBoostService, SKATEBOARD_BOOST_SECONDS } from './game/RewardedBoostService';
 import type { World3D as WorldScene } from './game/World3D';
 import { ROOMS, roomForKind, roomAt, LEVEL_XP } from './game/facility';
 
@@ -132,7 +132,7 @@ export class UI {
       case 'boost':
         if (this.boostBusy || this.sim.state.boost.remaining > 0) break;
         this.boostBusy = true;
-        try { const boost = await this.reward.requestReward(); if (boost) { this.sim.state.boost = boost; this.sim.notify('Paten boost hazır! 2 dakika boyunca %50 daha hızlı çalışıyorsunuz.'); } } catch { this.sim.notify('Ödül alınamadı. Tekrar deneyebilirsin.'); } finally { this.boostBusy = false; }
+        try { const boost = await this.reward.requestReward(); if (boost) { this.sim.state.boost = boost; this.sim.notify(`Paten boost hazır! ${SKATEBOARD_BOOST_SECONDS} saniye boyunca %50 daha hızlı çalışıyorsunuz.`); } } catch { this.sim.notify('Ödül alınamadı. Tekrar deneyebilirsin.'); } finally { this.boostBusy = false; }
         break;
       case 'zoom-in': if (this.scene) this.scene.setZoom(this.scene.cameras.main.zoom * 1.15); break;
       case 'zoom-out': if (this.scene) this.scene.setZoom(this.scene.cameras.main.zoom / 1.15); break;

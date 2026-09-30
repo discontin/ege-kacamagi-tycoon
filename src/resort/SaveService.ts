@@ -2,6 +2,7 @@ import { initialResort, machineCapacityForLevel, ROOM_DEFS, SEAT_DEFS } from './
 import type { ResortGameState } from './types';
 import { linenCount } from './Linen';
 export const RESORT_SAVE_KEY = 'ege-kacamagi-save-v1';
+export const RESORT_RECOVERY_BACKUP_KEY = `${RESORT_SAVE_KEY}-recovery-backup`;
 type Store = Pick<Storage, 'getItem' | 'setItem'>;
 const roles = ['reception', 'rooms', 'pool', 'hauling', 'bartender'];
 const phases = ['queue', 'toRoom', 'staying', 'toPool', 'poolQueue', 'toSeat', 'swimming', 'leaving'];
@@ -16,7 +17,7 @@ export function validResort(v: any): v is ResortGameState {
   if (!v || v.version !== 1 || v.concept !== 'ege-resort' || !['money', 'xp', 'elapsed', 'spawnTimer', 'nextId'].every(k => num(v[k]))) return false;
   if (v.bar !== undefined && (!v.bar || typeof v.bar.open !== 'boolean' || !num(v.bar.cash) || !Number.isInteger(v.bar.cash))) return false;
   if (!actor(v.player) || v.player.id !== 'player' || !bag(v.player.bag) || linenCount(v.player.bag) > 8) return false;
-  if (!v.settings || typeof v.settings.paused !== 'boolean' || (v.settings.volume !== undefined && (!num(v.settings.volume) || v.settings.volume > 1)) || ![1, 2].includes(v.settings.speed) || !v.boost || !num(v.boost.remaining) || v.boost.remaining > 120 || v.boost.multiplier !== 1.5) return false;
+  if (!v.settings || typeof v.settings.paused !== 'boolean' || (v.settings.volume !== undefined && (!num(v.settings.volume) || v.settings.volume > 1)) || (v.settings.musicVolume !== undefined && (!num(v.settings.musicVolume) || v.settings.musicVolume > 1)) || ![1, 2].includes(v.settings.speed) || !v.boost || !num(v.boost.remaining) || v.boost.remaining > 120 || v.boost.multiplier !== 1.5) return false;
   if (!v.stats || !['welcomed', 'stays', 'cleaned', 'washed', 'poolVisits', 'earned'].every(k => num(v.stats[k]))) return false;
   const expected = new Map(initialResort().facilities.map(f => [f.id, f.kind]));
   if (!Array.isArray(v.facilities) || v.facilities.length !== 9 || new Set(v.facilities.map((f: any) => f.id)).size !== 9 || !v.facilities.every((f: any) => expected.get(f.id) === f.kind && level(f.level) && (f.kind === 'room' || f.kind === 'pool' ? f.level <= 2 : true) && typeof f.open === 'boolean' && typeof f.dirty === 'boolean' && (f.bathroomDirty === undefined || typeof f.bathroomDirty === 'boolean') && (f.floorDirty === undefined || typeof f.floorDirty === 'boolean') && (f.needsSheet === undefined || typeof f.needsSheet === 'boolean') && num(f.towels) && num(f.cash) && optionalCount(f.tips) && optionalCount(f.dirt) && optionalCount(f.dirtyTowels) && (f.dirtyTowels === undefined || f.kind === 'pool' && f.dirtyTowels <= 48) && (f.dirt === undefined || f.kind === 'pool' && f.dirt <= 4))) return false;
@@ -42,14 +43,47 @@ export function validResort(v: any): v is ResortGameState {
 }
 export class ResortSaveService {
   lastSaved = '';
-  constructor(private storage: Store = localStorage, readonly temporary = false) {}
+  recoveryRequired = false;
+  recoveryBackupAvailable = false;
+  constructor(private storage: Store = localStorage, readonly temporary = false, private temporaryAllOpen = temporary) {}
+  private protectUnreadableSave(raw: string | null) {
+    this.recoveryRequired = true;
+    if (raw === null) return;
+    try {
+      if (this.storage.getItem(RESORT_RECOVERY_BACKUP_KEY) === null) this.storage.setItem(RESORT_RECOVERY_BACKUP_KEY, raw);
+      this.recoveryBackupAvailable = this.storage.getItem(RESORT_RECOVERY_BACKUP_KEY) !== null;
+    } catch { /* The original save remains untouched; saving stays locked below. */ }
+  }
   load() {
-    if (this.temporary) return { state: initialResort(true), recovered: false, existing: false };
-    try { const raw = this.storage.getItem(RESORT_SAVE_KEY); if (!raw) return { state: initialResort(), recovered: false, existing: false }; const v: any = JSON.parse(raw); if (Array.isArray(v?.seats) && v.seats.length === 4) for (const d of SEAT_DEFS.slice(4)) v.seats.push({ id: d.id, open: false, dirty: false, towel: false }); if (Array.isArray(v?.facilities)) for (const f of v.facilities) if ((f?.kind === 'room' || f?.kind === 'pool') && f.level === 3) f.level = 2; for (const a of [v?.player, ...(Array.isArray(v?.workers) ? v.workers : []), ...(Array.isArray(v?.guests) ? v.guests : [])]) if (a?.heldProduct === 'icecream') a.heldProduct = 'lemonade'; if (Array.isArray(v?.guests)) for (const g of v.guests) if (g?.orderProduct === 'icecream') g.orderProduct = 'lemonade'; if (!validResort(v)) throw new Error('Invalid save'); return { state: v, recovered: false, existing: true }; }
-    catch { return { state: initialResort(), recovered: true, existing: false }; }
+    if (this.temporary) return { state: initialResort(this.temporaryAllOpen), recovered: false, existing: false };
+    let raw: string | null = null;
+    try {
+      raw = this.storage.getItem(RESORT_SAVE_KEY);
+      if (raw === null) return { state: initialResort(), recovered: false, existing: false };
+      const v: any = JSON.parse(raw);
+      if (Array.isArray(v?.seats) && v.seats.length === 4) for (const d of SEAT_DEFS.slice(4)) v.seats.push({ id: d.id, open: false, dirty: false, towel: false });
+      if (Array.isArray(v?.facilities)) for (const f of v.facilities) if ((f?.kind === 'room' || f?.kind === 'pool') && f.level === 3) f.level = 2;
+      for (const a of [v?.player, ...(Array.isArray(v?.workers) ? v.workers : []), ...(Array.isArray(v?.guests) ? v.guests : [])]) if (a?.heldProduct === 'icecream') a.heldProduct = 'lemonade';
+      if (Array.isArray(v?.guests)) for (const g of v.guests) if (g?.orderProduct === 'icecream') g.orderProduct = 'lemonade';
+      if (!validResort(v)) throw new Error('Invalid save');
+      return { state: v, recovered: false, existing: true };
+    } catch {
+      this.protectUnreadableSave(raw);
+      return { state: initialResort(), recovered: true, existing: false };
+    }
   }
   save(state: ResortGameState) {
     if (this.temporary) { this.lastSaved = 'Test modu · kayıt yok'; return true; }
+    if (this.recoveryRequired) return false;
+    return this.write(state);
+  }
+  replaceWithNewGame(state: ResortGameState) {
+    if (this.temporary) return true;
+    if (!this.write(state)) return false;
+    this.recoveryRequired = false;
+    return true;
+  }
+  private write(state: ResortGameState) {
     try { this.storage.setItem(RESORT_SAVE_KEY, JSON.stringify(state)); this.lastSaved = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }); return true; } catch { return false; }
   }
 }

@@ -2,13 +2,18 @@ import { initialResort, LEVELS, POOL_UNLOCK_LEVEL, ROOM_DEFS, upgradeCost } from
 import { atOffice } from './Office';
 import './office-window.css';
 import './game-menus.css';
+import './stitch-menus.css';
 import './quick-controls.css';
+import './gameplay-stitch.css';
 import { resortGoal } from './Guidance';
 import { linenCount } from './Linen';
 import { ResortSaveService } from './SaveService';
 import { ResortSimulation } from './Simulation';
+import { requestRewardedAd, type RewardKind } from './RewardedAdService';
 import type { Role } from './types';
 import type { ResortWorld } from './World';
+import { currentLanguage, LANGUAGE_KEY, translate, type GameLanguage } from './i18n';
+import { ResortMusic } from './GameMusic';
 
 const roles: Record<Role, string> = { reception: 'Resepsiyon', rooms: 'Oda temizliği + havlu', pool: 'Havuz + limonata + bakım', hauling: 'Çamaşırhane + havuz havluları', bartender: 'Havuz hizmeti' };
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -18,14 +23,26 @@ export class ResortUI {
   private lastPanel = '';
   private lastMessage = -1;
   private lastXp = -1;
+  private lastLevel = -1;
+  private adBusy = false;
+  private adMuted = false;
+  private music: ResortMusic;
+  language: GameLanguage = currentLanguage();
   private interval: number;
-  private html(selector: string, value: string) { const el = document.querySelector(selector)!; if (el.innerHTML !== value) el.innerHTML = value; }
+  private html(selector: string, value: string) { const localized = translate(value, this.language); const el = document.querySelector(selector)!; if (el.innerHTML !== localized) el.innerHTML = localized; }
   constructor(private sim: ResortSimulation, private save: ResortSaveService) {
-    document.querySelector('#app')!.innerHTML = `
+    this.music = new ResortMusic(() => this.renderMusic(), () => this.sim.state.settings.paused);
+    document.documentElement.lang = this.language;
+    const modeControls = sim.testMode
+      ? '<span>∞ TEST MODU · KAYIT YOK</span><button data-action="normal-mode">Normal oyuna dön</button>'
+      : sim.moneyOnlyMode
+        ? '<span>∞ PARA MODU · KAYIT YOK</span><button data-action="normal-mode">Normal oyuna dön</button>'
+        : '<button data-action="test">∞ Sınırsız test modu</button><button data-action="cash-test">∞ Sınırsız para modu</button>';
+    document.querySelector('#app')!.innerHTML = translate(`
       <main id="game" aria-label="Tatil köyü haritası"></main>
       <div id="level-card" class="level-card"></div><div id="xp-feedback" class="xp-feedback" aria-live="polite"></div><div id="wallet" class="wallet"></div>
-      <div class="mode-controls">${sim.testMode ? '<span>∞ TEST MODU · KAYIT YOK</span><button data-action="test">Normal oyuna dön</button>' : '<button data-action="test">∞ Sınırsız test modu</button>'}</div>
-      <div class="quick-controls" aria-label="Oyun kontrolleri"><button id="speed-button" data-action="speed" aria-label="2 kat hız" aria-pressed="false">2× Hız</button><button data-action="reset" aria-label="Oyunu sıfırla">↻ Sıfırla</button></div>
+      <div class="mode-controls">${modeControls}</div>
+      <div class="quick-controls" aria-label="Oyun kontrolleri"><button data-action="pause" aria-label="Mola menüsünü aç">Ⅱ Mola</button><button id="speed-button" data-action="speed" aria-label="2 kat hız" aria-pressed="false">2× Hız</button><button data-action="reset" aria-label="Oyunu sıfırla">↻ Sıfırla</button></div>
       <div id="reward-timers" class="reward-timers" aria-label="Ödül zamanlayıcıları"></div>
       <div class="resort-toast" id="toast" role="status"></div>
       <div id="joystick" aria-label="Hareket çubuğu"><div id="joystick-knob"></div></div>
@@ -34,69 +51,122 @@ export class ResortUI {
       <aside id="drawer" class="resort-drawer"><button data-action="close" class="drawer-close" aria-label="Paneli kapat">×</button><div id="drawer-body"></div></aside>
       <dialog id="pause-dialog" class="game-menu">
         <div class="game-menu-frame">
-          <header class="game-menu-ribbon"><span>☀ EGE KAÇAMAĞI</span><span class="menu-status">MOLA ZAMANI</span></header>
+          <header class="game-menu-ribbon"><span>☀ OLIVE COAST</span><span class="menu-status">MOLA ZAMANI</span><button class="pause-close" data-action="resume" aria-label="Oyuna dön">×</button></header>
           <div class="game-menu-content">
-            <div class="pause-heading"><span class="pause-emblem">Ⅱ</span><div><small>KÜÇÜK BİR NEFES</small><h2>Mola ver, kaptan!</h2><p>Köyün seni bekliyor. Hazır olduğunda kaldığın yerden sürdür.</p></div></div>
-            <section class="sound-card" aria-label="Ses ayarı"><div class="menu-section-heading"><span>♫</span><b>ORTAM SESİ</b><output id="volume-value">%100</output></div><label class="volume-row"><span aria-hidden="true">🔈</span><input id="sound-volume" aria-label="Ses seviyesi" type="range" min="0" max="100" step="1"></label></section>
-            <section class="music-card" aria-label="Müzik çalar, yakında eklenecek">
-              <span class="music-cover" aria-hidden="true">♫</span>
-              <div class="music-player">
-                <div class="music-title-row"><div><b>Fon müziği</b><small>İlerleyen aşamada eklenecek</small></div><span>YAKINDA</span></div>
-                <div class="music-timeline" aria-hidden="true"><i></i></div>
-                <div class="music-controls"><small>--:--</small><div><button disabled aria-label="Önceki parça">◀</button><button class="music-play" disabled aria-label="Müzik yakında eklenecek">▶</button><button disabled aria-label="Sonraki parça">▶▶</button></div><small>--:--</small></div>
+            <div class="pause-heading"><span class="pause-emblem">Ⅱ</span><div><small>OYUN DURAKLATILDI</small><h2>Olive Coast: Resort Tycoon</h2><p>Köyün seni bekliyor. Hazır olduğunda kaldığın yerden sürdür.</p></div></div>
+            <button data-action="resume" class="menu-continue pause-resume"><span>▶ &nbsp; Oyuna dön</span><kbd>ESC</kbd></button>
+            <div class="pause-grid">
+              <div class="pause-column">
+                <section class="sound-card" aria-label="Ses ayarı"><div class="menu-section-heading"><span>♫</span><b>SES EFEKTLERİ</b><output id="volume-value">%100</output></div><label class="volume-row"><span aria-hidden="true">🔈</span><input id="sound-volume" aria-label="Ses efekti seviyesi" type="range" min="0" max="100" step="1"></label></section>
+                <section class="music-card" aria-label="Fon müziği">
+                  <span class="music-cover" aria-hidden="true">♫</span>
+                  <div class="music-player">
+                    <div class="music-title-row"><div><b>Fon müziği</b><small id="music-track-name">Akdeniz Esintisi</small></div><span id="music-track-number">1/2</span></div>
+                    <div class="music-timeline" role="progressbar" aria-label="Müzik ilerlemesi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="music-progress"></i></div>
+                    <div class="music-controls"><small id="music-current">0:00</small><div><button data-action="music-previous" aria-label="Önceki parça">◀</button><button class="music-play" data-action="music-toggle" aria-label="Müziği çal">▶</button><button data-action="music-next" aria-label="Sonraki parça">▶▶</button></div><small id="music-duration">0:00</small></div>
+                    <label class="music-volume-row"><span>♫ <small>Fon müziği seviyesi</small></span><input id="music-volume" aria-label="Fon müziği seviyesi" type="range" min="0" max="100" step="1"><output id="music-volume-value">%22</output></label>
+                  </div>
+                </section>
+                <div class="language-toggle" aria-label="Dil / Language"><span>🌐 Dil / Language</span><button data-action="language" data-language="tr">Türkçe</button><button data-action="language" data-language="en">English</button></div>
               </div>
-            </section>
-            <div class="menu-actions"><button data-action="resume" class="menu-continue"><span>Oyuna dön</span><kbd>ESC ↵</kbd></button><button data-action="reset" class="menu-newgame">Yeni köy kur</button></div>
+              <div class="pause-column">
+                <section class="reward-ad-section" aria-label="İsteğe bağlı ödüllü reklamlar"><div class="reward-ad-heading"><span>✦</span><div><b>İsteğe bağlı ödüller</b><small>Ödül simgeleri oyun içinde belirir.</small></div></div><div id="reward-ad-options"></div></section>
+                <div class="pause-save"><b>▣ &nbsp;Yerel kayıt</b><small id="pause-save-status">İlerleme bu cihazda otomatik kaydedilir.</small></div>
+                <button data-action="reset" class="menu-newgame">↻ &nbsp;Yeni köy kur</button>
+              </div>
+            </div>
           </div>
-          <footer class="game-menu-footer"><span>☼</span> Her şey yolunda, tatil devam ediyor.</footer>
+          <div id="ad-request-blocker" class="ad-request-blocker" aria-live="polite" hidden><span class="ad-request-spinner">✦</span><b>Reklam hazırlanıyor…</b><small>Bu sırada oyun duraklatıldı.</small></div>
         </div>
       </dialog>
       <dialog id="restart-dialog" class="game-menu restart-menu">
         <div class="game-menu-frame">
-          <header class="game-menu-ribbon"><span>☀ EGE KAÇAMAĞI</span><span class="menu-status">YENİ SAYFA</span></header>
-          <div class="game-menu-content restart-content"><span class="restart-emblem">↻</span><small>KÖYÜ YENİDEN KUR</small><h2>Yeni bir başlangıç?</h2><p>${sim.testMode ? 'Test köyü baştan başlar. Normal oyun kaydın değişmez.' : 'Mevcut ilerlemen sıfırlanır. Bu karar geri alınamaz.'}</p><div class="menu-actions"><button data-action="cancel-reset" class="menu-continue">Biraz daha kal</button><button data-action="confirm-reset" class="menu-newgame">Sıfırla</button></div></div>
+          <header class="game-menu-ribbon"><span>☀ OLIVE COAST</span><span class="menu-status">YENİ SAYFA</span></header>
+          <div class="game-menu-content restart-content"><span class="restart-emblem">↻</span><small>KÖYÜ YENİDEN KUR</small><h2>Yeni bir başlangıç?</h2><p>${save.recoveryRequired ? `Eski kayıt okunamadığı için otomatik kayıt durduruldu. Sıfırlarsan yeni oyun kaydedilir.${save.recoveryBackupAvailable ? ' Eski kayıt ayrıca yedeklendi.' : ' Eski kayıt şu an yerinde duruyor; ayrıca yedeklenemedi.'}` : save.temporary ? 'Bu deneme baştan başlar. Normal oyun kaydın değişmez.' : 'Mevcut ilerlemen sıfırlanır. Bu karar geri alınamaz.'}</p><div class="menu-actions"><button data-action="cancel-reset" class="menu-continue">Biraz daha kal</button><button data-action="confirm-reset" class="menu-newgame">Sıfırla</button></div></div>
         </div>
-      </dialog>`;
+      </dialog>`, this.language);
     document.querySelector('#app')!.addEventListener('click', e => { const t = (e.target as HTMLElement).closest<HTMLElement>('[data-action]'); if (t) this.action(t); });
 
     this.interval = window.setInterval(() => this.render(), 150); this.render();
     const pause = document.querySelector<HTMLDialogElement>('#pause-dialog')!;
-    pause.addEventListener('cancel', e => { e.preventDefault(); this.sim.state.settings.paused = false; pause.close(); });
+    pause.addEventListener('cancel', e => { e.preventDefault(); if (this.adBusy) return; this.sim.state.settings.paused = false; pause.close(); });
     window.addEventListener('keydown', e => {
       if (e.key !== 'Escape' || e.repeat || document.querySelector('#restart-dialog[open]')) return;
-      e.preventDefault(); this.sim.state.settings.paused = !this.sim.state.settings.paused; this.render();
+      if (this.adBusy) { e.preventDefault(); return; }
+      e.preventDefault();
+      const openingPause = !this.sim.state.settings.paused;
+      this.sim.state.settings.paused = openingPause;
+      if (openingPause) this.music.playForPauseMenu();
+      this.render();
     });
     document.querySelector<HTMLInputElement>('#sound-volume')!.addEventListener('input', e => {
       this.sim.state.settings.volume = Number((e.target as HTMLInputElement).value) / 100; this.render();
     });
+    document.querySelector<HTMLInputElement>('#music-volume')!.addEventListener('input', e => {
+      this.sim.state.settings.musicVolume = Number((e.target as HTMLInputElement).value) / 100 * .3; this.render();
+    });
   }
   inspect(id: string) { this.panel = 'village'; this.lastPanel = ''; this.render(); document.querySelector('#drawer')!.classList.add('open'); const row = document.querySelector(`[data-facility="${id}"]`); row?.scrollIntoView({ block: 'nearest' }); }
   private action(t: HTMLElement) {
+    if (this.adBusy) return;
     switch (t.dataset.action) {
-      case 'resume': this.sim.state.settings.paused = false; break;
+      case 'resume': if (!this.adBusy) this.sim.state.settings.paused = false; break;
+      case 'music-toggle': this.music.toggle(); break;
+      case 'music-previous': this.music.previous(); break;
+      case 'music-next': this.music.next(); break;
+      case 'language': {
+        const language = t.dataset.language === 'en' ? 'en' : 'tr';
+        if (language !== this.language) { localStorage.setItem(LANGUAGE_KEY, language); location.reload(); }
+        break;
+      }
+      case 'reward-ad': void this.watchRewardedAd(t.dataset.rewardKind as RewardKind); break;
       case 'staff-speed': this.sim.upgradeWorker(t.dataset.worker!); break;
       case 'staff-move': this.sim.upgradeMove(t.dataset.worker!); break;
       case 'staff-carry': this.sim.upgradeCarry(t.dataset.worker!); break;
       case 'laundry-upgrade': this.sim.upgradeLaundry(); break;
       case 'laundry-buy-towels': this.sim.buyLaundryTowels(); break;
+      case 'office-tab': this.officeTab = t.dataset.officeTab === 'laundry' ? 'laundry' : 'staff'; this.lastPanel = ''; break;
       case 'panel': this.panel = t.dataset.panel!; this.lastPanel = ''; document.querySelector('#drawer')!.classList.add('open'); break;
       case 'close': document.querySelector('#drawer')!.classList.remove('open'); break;
       case 'goto': this.sim.goToArea(t.dataset.area!); this.world?.centerPlayer(); document.querySelector('#drawer')!.classList.remove('open'); break;
 
 
       case 'cancel-job': if (this.sim.state.player.task) this.sim.cancelTask(this.sim.state.player.task); break;
-      case 'pause': this.sim.state.settings.paused = !this.sim.state.settings.paused; break;
+      case 'pause': if (!this.adBusy) { const openingPause = !this.sim.state.settings.paused; this.sim.state.settings.paused = openingPause; if (openingPause) this.music.playForPauseMenu(); } break;
       case 'speed': this.sim.state.settings.speed = this.sim.state.settings.speed === 1 ? 2 : 1; break;
       case 'boost': this.sim.activateBoost(); break;
-      case 'test': { const url = new URL(location.href); if (this.sim.testMode) url.searchParams.delete('test'); else url.searchParams.set('test', '1'); location.href = url.href; break; }
-      case 'save': this.sim.notify(this.save.save(this.sim.state) ? this.sim.testMode ? 'Test modu normal kaydını değiştirmez.' : 'Tatil köyün kaydedildi.' : 'Kayıt yapılamadı. Tarayıcı depolamasını kontrol et.'); break;
+      case 'test': case 'cash-test': case 'normal-mode': {
+        const url = new URL(location.href);
+        url.searchParams.delete('test'); url.searchParams.delete('cashTest');
+        if (t.dataset.action === 'test') url.searchParams.set('test', '1');
+        if (t.dataset.action === 'cash-test') url.searchParams.set('cashTest', '1');
+        location.href = url.href; break;
+      }
+      case 'save': this.sim.notify(this.save.recoveryRequired ? 'Kayıt okunamadı. Eski kayıt korunuyor; yeni oyun seçmeden üzerine yazılmayacak.' : this.save.save(this.sim.state) ? this.save.temporary ? 'Deneme modu normal kaydını değiştirmez.' : 'Tatil köyün kaydedildi.' : 'Kayıt yapılamadı. Tarayıcı depolamasını kontrol et.'); break;
       case 'reset': document.querySelector<HTMLDialogElement>('#restart-dialog')!.showModal(); break;
       case 'cancel-reset': document.querySelector<HTMLDialogElement>('#restart-dialog')!.close(); break;
-      case 'confirm-reset': { const fresh = new ResortSimulation(initialResort(this.sim.testMode), this.sim.testMode).state; fresh.settings.volume = this.sim.state.settings.volume; if (this.sim.testMode || this.save.save(fresh)) { this.sim.reset(); document.querySelector<HTMLDialogElement>('#restart-dialog')!.close(); document.querySelector<HTMLDialogElement>('#pause-dialog')!.close(); document.querySelector('#drawer')!.classList.remove('open'); this.officeVisited = false; this.world?.centerPlayer(); } else this.sim.notify('Kayıt yapılamadı; mevcut köyün korunuyor.'); break; }
+      case 'confirm-reset': { const fresh = new ResortSimulation(initialResort(this.sim.testMode), this.sim.testMode, this.sim.moneyOnlyMode).state; fresh.settings.volume = this.sim.state.settings.volume; fresh.settings.musicVolume = this.sim.state.settings.musicVolume ?? .3; if (this.save.replaceWithNewGame(fresh)) { this.sim.reset(); document.querySelector<HTMLDialogElement>('#restart-dialog')!.close(); document.querySelector<HTMLDialogElement>('#pause-dialog')!.close(); document.querySelector('#drawer')!.classList.remove('open'); this.officeVisited = false; this.world?.centerPlayer(); } else this.sim.notify('Kayıt yapılamadı; mevcut köyün korunuyor.'); break; }
     }
     this.render();
   }
   private goal() { return resortGoal(this.sim.state, this.sim.testMode); }
+  private renderMusic() {
+    const track = document.querySelector<HTMLElement>('#music-track-name');
+    if (!track) return;
+    track.textContent = translate(this.music.track.title, this.language);
+    document.querySelector<HTMLElement>('#music-track-number')!.textContent = this.music.trackNumber;
+    const play = document.querySelector<HTMLButtonElement>('[data-action="music-toggle"]')!;
+    play.textContent = this.music.playing ? 'Ⅱ' : '▶';
+    play.setAttribute('aria-label', translate(this.music.playing ? 'Müziği duraklat' : 'Müziği çal', this.language));
+    document.querySelector<HTMLElement>('#music-current')!.textContent = this.timeLabel(this.music.currentTime);
+    document.querySelector<HTMLElement>('#music-duration')!.textContent = this.timeLabel(this.music.duration);
+    const progress = this.music.duration ? Math.min(100, this.music.currentTime / this.music.duration * 100) : 0;
+    document.querySelector<HTMLElement>('#music-progress')!.style.width = `${progress}%`;
+    const timeline = document.querySelector<HTMLElement>('.music-timeline')!;
+    timeline.setAttribute('aria-valuenow', String(Math.round(progress)));
+    document.querySelector<HTMLElement>('#music-track-number')!.setAttribute('aria-label', this.music.failed ? translate('Müzik yüklenemedi', this.language) : this.music.playing ? translate('Çalıyor', this.language) : translate('Duraklatıldı', this.language));
+  }
+  private timeLabel(seconds: number) { return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`; }
   private village() {
     const s = this.sim.state;
     return `<span class="eyebrow">KÜÇÜK BİR EGE HİKÂYESİ</span><h2>Senin tatil köyün<span>.</span></h2><p class="intro">Misafirlerin rahat etsin, sen köyünü büyüt. İşleri beyaz karelerde durarak yap.</p><div class="panel-metrics"><b>${s.stats.stays}<small>Konaklama</small></b><b>${s.stats.poolVisits}<small>Havuz ziyareti</small></b><b>${s.stats.earned}<small>Toplanan para</small></b></div>${s.facilities.map(f => {
@@ -104,21 +174,48 @@ export class ResortUI {
       const a = this.sim.areas.find(a => a.target === f.id && a.mode === (f.open ? 'work' : 'buy'));
       const description = !f.open ? `Seviye ${a ? this.sim.requiredLevel(a) : 1} · ${a ? this.sim.cost(a) : 0} para` : f.kind === 'room' ? f.guest ? 'Misafir ağırlanıyor' : f.dirty ? 'Yatağı toparla' : f.floorDirty ? 'Zemini süpür' : f.bathroomDirty ? 'Banyoyu temizle' : f.needsSheet ? 'Temiz çarşaf ve havlu getir' : f.towels ? 'Misafire hazır' : 'Temiz havlu gerekiyor' : f.kind === 'laundry' ? 'Kirliyi bırak → yıka → temizini taşı' : f.cash ? `${f.cash} para kasada` : 'Hizmete hazır';
       return `<article class="facility-row" data-facility="${f.id}"><span class="row-icon">${f.kind === 'room' ? '⌂' : f.kind === 'pool' ? '≈' : f.kind === 'laundry' ? '▣' : '☀'}</span><div><b>${name}</b><small>${description}${f.open ? ' · Sv. ' + f.level : ''}</small></div>${a ? `<button data-action="goto" data-area="${a.id}">${f.open ? 'Git' : 'Alanı bul'}</button>` : ''}</article>`;
-    }).join('')}${this.sim.facility('pool').open ? `<article class="facility-row"><span class="row-icon">🍋</span><div><b>Havuz barı</b><small>${s.bar?.open ? 'Limonata servisi · ' + s.bar.cash + ' ₺ kasada' : '200 ₺ karşılığında aç'}</small></div><button data-action="goto" data-area="${s.bar?.open ? 'barPrepare' : 'barBuy'}">Git</button></article>` : ''}<div class="bonus-card"><b>☀ Biraz hız kazanalım</b><p>120 saniye çalışma ve üretim %50 hızlı. Gerçek reklam değil, test bonusu.</p><button data-action="boost" ${s.boost.remaining > 0 ? 'disabled' : ''}>${s.boost.remaining > 0 ? Math.ceil(s.boost.remaining) + ' sn kaldı' : 'Bonusu etkinleştir'}</button></div><div class="coming-soon"><b>İleride köye katılacaklar</b><p>Restoran · Spa · Plaj hizmetleri · Otopark</p><small>Bu sürümde kapalı; henüz satın alınamaz.</small></div>`;
+    }).join('')}${this.sim.facility('pool').open ? `<article class="facility-row"><span class="row-icon">🍋</span><div><b>Havuz barı</b><small>${s.bar?.open ? 'Limonata servisi · ' + s.bar.cash + ' ₺ kasada' : '200 ₺ karşılığında aç'}</small></div><button data-action="goto" data-area="${s.bar?.open ? 'barPrepare' : 'barBuy'}">Git</button></article>` : ''}<div class="coming-soon"><b>İleride köye katılacaklar</b><p>Restoran · Spa · Plaj hizmetleri · Otopark</p><small>Bu sürümde kapalı; henüz satın alınamaz.</small></div>`;
+  }
+  private async watchRewardedAd(kind: RewardKind) {
+    if (this.adBusy || !this.sim.state.settings.paused) return;
+    this.adBusy = true; this.render();
+    const result = await requestRewardedAd(kind, () => { this.adMuted = true; this.world?.setVolume(0); });
+    this.adMuted = false; this.adBusy = false;
+    if (result === 'completed') {
+      if (!this.sim.grantRewardedAd(kind)) this.sim.notify('Ödülün süresi dolmuş veya bu bonus şu an kullanılamıyor.');
+    } else if (result === 'unavailable') this.sim.notify('Bu sürümde reklam sağlayıcısı bağlı değil. CrazyGames sürümünde veya Google Play uygulamasında deneyebilirsin.');
+    else this.sim.notify('Reklam tamamlanamadı; ödül verilmedi. Biraz sonra tekrar deneyebilirsin.');
+    this.render();
+  }
+  requestRewardFromMap(kind: RewardKind) {
+    if (this.adBusy) return;
+    this.sim.state.settings.paused = true;
+    this.render();
+    void this.watchRewardedAd(kind);
+  }
+  private rewardAdOptions() {
+    const s = this.sim.state;
+    const rows = ([['boost', '▱', 'Kaykay boostu', '90 sn boyunca %50 hız'], ['money', '$', 'Kasa bonusu', '$100 oyun parası']] as const).map(([kind, glyph, title, subtitle]) => {
+      const active = kind === 'boost' && s.boost.remaining > 0;
+      return `<article class="reward-ad-row"><span class="reward-ad-icon ${kind}">${kind === 'boost' ? '<img src="/assets/icons/skateboard-outline-generated.png" alt="">' : glyph}</span><div><b>${title}</b><small>${subtitle}</small></div>${active ? `<strong>${Math.ceil(s.boost.remaining)} sn aktif</strong>` : ''}</article>`;
+    }).join('');
+    return `${rows}<p class="reward-provider-status">Reklamlar yalnızca haritadaki simgelerden açılır.</p>`;
   }
   private workers() {
     const s = this.sim.state;
     return `<span class="eyebrow">EKİBİN</span><h2>Herkes kendi işinde<span>.</span></h2><p class="intro">İlgili bölümün yanındaki yeşil personel simgesinde durarak işe al. Çalışan kendi bölümünde otomatik çalışır.</p>${s.workers.map(w => `<article class="worker-card"><div class="worker-header"><b>♙ ${esc(w.name)}</b><small>${roles[w.role]}</small></div><p>${esc(w.status)}</p></article>`).join('')}${!s.workers.length ? '<p class="empty">Resepsiyon, odalar, çamaşırhane ve havuz yakınındaki personel simgelerini kullan.</p>' : ''}`;
   }
   private journey() {
-    const s = this.sim.state, goals = [['İlk misafiri karşıla', s.stats.welcomed > 0], ['İlk konaklamayı tamamla', s.stats.stays > 0], ['İlk odayı temizle', s.stats.cleaned > 0], ['Kirli havluyu yıka', s.stats.washed > 0], ['İkinci bungalovu aç', this.sim.facility('room2').open], ['İlk çalışanı al', s.workers.length > 0], ['Havuzu aç', this.sim.facility('pool').open], ['İlk havuz hizmetini tamamla', s.stats.poolVisits > 0], ['Altı bungalovu aç', ROOM_DEFS.every(r => this.sim.facility(r.id).open)]];
-    const levelReward = (i: number) => i === 0 ? 'Başlangıç' : i <= 5 ? `Bungalov ${i + 1}${i === 1 ? ' + çalışanlar' : ''}` : i + 1 === POOL_UNLOCK_LEVEL ? 'Havuz erişimi' : 'Oyuncu hız ve iş verimi';
+    const s = this.sim.state, goals = [['İlk misafiri karşıla', s.stats.welcomed > 0], ['İlk konaklamayı tamamla', s.stats.stays > 0], ['İlk odayı temizle', s.stats.cleaned > 0], ['Kirli havluyu yıka', s.stats.washed > 0], ['İkinci odayı aç', this.sim.facility('room2').open], ['İlk çalışanı al', s.workers.length > 0], ['Havuzu aç', this.sim.facility('pool').open], ['İlk havuz hizmetini tamamla', s.stats.poolVisits > 0], ['Altı odayı aç', ROOM_DEFS.every(r => this.sim.facility(r.id).open)]];
+    const levelReward = (i: number) => i === 0 ? 'Başlangıç' : i <= 5 ? `Oda ${i + 1}${i === 1 ? ' + çalışanlar' : ''}` : i + 1 === POOL_UNLOCK_LEVEL ? 'Havuz erişimi' : 'Oyuncu hız ve iş verimi';
     return `<span class="eyebrow">BÜYÜK BİR KAÇAMAĞA DOĞRU</span><h2>Küçük adımlar<span>.</span></h2><p class="intro">Müşteri kabulü +10, oda temizliği +5, havuz hizmeti +5 XP.</p>${goals.map(([title, done]) => `<div class="goal-row ${done ? 'done' : ''}"><span>${done ? '✓' : '○'}</span>${title}</div>`).join('')}<h3>Seviye açılışları</h3>${LEVELS.map((xp, i) => `<p class="unlock-line">⭐ ${i + 1}. seviye · ${xp} XP · ${levelReward(i)}</p>`).join('')}`;
   }
   private help() {
-    return `<span class="eyebrow">NASIL OYNANIR?</span><h2>Acele yok, tatildesin<span>.</span></h2><ol class="help-list"><li>Beyaz resepsiyon karesinde dur. Misafir varsa hazır bir odaya yerleşir.</li><li>Misafir karşılanınca para toplama noktasında ücret birikir. Yanına yürüyerek topla.</li><li>Yatak simgesine yürü: yatağın herhangi bir kenarında durarak çarşafları topla. Kirli havlu ve çarşaf çantana alınır; ikisi de sepete taşınıp makinede yıkanır. Temiz çarşafı raftan alıp yatağa geri getir. Süpürge simgesinin alanında zemini ayrıca temizle.</li><li>Kirli havlu sepetine yaklaş; havlular otomatik bırakılır. Makine kendisi yıkar.</li><li>Temiz havlu rafına yaklaşarak havlu al; odanın karesinde durarak bırak. Bir oda için gereken temiz çarşaf alınır; toplam çanta kapasitesi sekiz parçadır.</li><li>Makine kapasitesini yükseltmek veya temiz havlu satın almak için işletme ofisini kullan.</li><li>Yeşil alan yeni tesis açar, sarı alan mevcut tesisi yükseltir. 1,3 saniye bekle; yeniden satın almak için ayrılıp dön.</li><li>Havuzu açınca konaklayan misafirler yer varsa havuza gider. Girişte karşıla, rafta havlu bulundur ve şezlongları temizle.</li></ol><p>Havuz barını 200 ₺’ye aç. Bardak simgesindeki misafire limonata hazırlayıp tepsiyle götür; teslim başına 15 ₺ bar kasasına gelir. Dört havuz ziyareti sonrası yeni girişler bakım için durur; kepçe simgesine veya havuzun kenarına yaklaşarak temizle. Bar yanında barmen alabilirsin.</p><h3>Kontroller</h3><p>WASD / oklar veya mobil hareket çubuğu. Yere ve kare etiketine dokunarak yürü. Etkileşim tuşu yok.</p><p>Boşluk: duraklat. Tekerlek / iki parmak: yakınlaştır. Sürükle: kamerayı gezdir.</p><p>Bir işi yarıda bırakınca aynı kareye dönerek devam edebilirsin. Rehberdeki görevi bırak düğmesi görev rezervasyonunu serbest bırakır.</p>${this.sim.state.player.task ? '<button data-action="cancel-job">Geçerli görevi bırak</button>' : ''}<button class="primary" data-action="save">Şimdi kaydet</button><p class="muted">15 saniyede otomatik kayıt · ${this.save.lastSaved || 'Henüz kayıt yok'}. Çevrimdışı gelir yok. Eski oyun kaydı korunur.</p><button class="danger" data-action="reset">Yeni tatil köyü kur</button>`;
+    const saveStatus = this.save.recoveryRequired ? `Kayıt okunamadı. Eski kayıt korunuyor; otomatik kayıt duraklatıldı.${this.save.recoveryBackupAvailable ? ' Kurtarma kopyası oluşturuldu.' : ''}` : this.save.temporary ? 'Deneme modu ilerlemesi kaydedilmez; normal oyun kaydın korunur.' : `15 saniyede otomatik kayıt · ${this.save.lastSaved || 'Henüz kayıt yok'}. Çevrimdışı gelir yok.`;
+    return `<span class="eyebrow">NASIL OYNANIR?</span><h2>Acele yok, tatildesin<span>.</span></h2><ol class="help-list"><li>Beyaz resepsiyon karesinde dur. Misafir varsa hazır bir odaya yerleşir.</li><li>Misafir karşılanınca para toplama noktasında ücret birikir. Yanına yürüyerek topla.</li><li>Yatak simgesine yürü: yatağın herhangi bir kenarında durarak çarşafları topla. Kirli havlu ve çarşaf çantana alınır; ikisi de sepete taşınıp makinede yıkanır. Temiz çarşafı raftan alıp yatağa geri getir. Süpürge simgesinin alanında zemini ayrıca temizle.</li><li>Kirli havlu sepetine yaklaş; havlular otomatik bırakılır. Makine kendisi yıkar.</li><li>Temiz havlu rafına yaklaşarak havlu al; odanın karesinde durarak bırak. Bir oda için gereken temiz çarşaf alınır; toplam çanta kapasitesi sekiz parçadır.</li><li>Makine kapasitesini yükseltmek veya temiz havlu satın almak için işletme ofisini kullan.</li><li>Yeşil alan yeni tesis açar, sarı alan mevcut tesisi yükseltir. 1,3 saniye bekle; yeniden satın almak için ayrılıp dön.</li><li>Havuzu açınca konaklayan misafirler yer varsa havuza gider. Girişte karşıla, rafta havlu bulundur ve şezlongları temizle.</li></ol><p>Havuz barını 200 ₺’ye aç. Bardak simgesindeki misafire limonata hazırlayıp tepsiyle götür; teslim başına 15 ₺ bar kasasına gelir. Dört havuz ziyareti sonrası yeni girişler bakım için durur; kepçe simgesine veya havuzun kenarına yaklaşarak temizle. Bar yanında barmen alabilirsin.</p><h3>Kontroller</h3><p>WASD / oklar veya mobil hareket çubuğu. Yere ve kare etiketine dokunarak yürü. Etkileşim tuşu yok.</p><p>Boşluk: duraklat. Tekerlek / iki parmak: yakınlaştır. Sürükle: kamerayı gezdir.</p><p>Bir işi yarıda bırakınca aynı kareye dönerek devam edebilirsin. Rehberdeki görevi bırak düğmesi görev rezervasyonunu serbest bırakır.</p>${this.sim.state.player.task ? '<button data-action="cancel-job">Geçerli görevi bırak</button>' : ''}<button class="primary" data-action="save">Şimdi kaydet</button><p class="muted">${saveStatus}</p><button class="danger" data-action="reset">Yeni tatil köyü kur</button>`;
   }
   private officeVisited = false;
+  private officeTab: 'staff' | 'laundry' = 'staff';
   private office() {
     const workers = this.sim.state.workers, laundry = this.sim.facility('laundry');
     const skill = (name: string, stat: string, action: string, id: string, level: number, cost: number, glyph: string) => `
@@ -128,7 +225,9 @@ export class ResortUI {
         <button data-action="${action}" data-worker="${id}" ${level >= 3 ? 'disabled' : ''}>${level >= 3 ? 'EN İYİ SEVİYE' : `Geliştir <span>${this.sim.testMode ? 'Ücretsiz' : cost + ' ₺'}</span>`}</button>
       </div>`;
       return `
-        <header class="office-banner"><div><small>PERSONEL · EĞİTİM</small><h2>İşletme ofisi</h2><p>Ekibinin gelişimini buradan yönet.</p></div><span class="office-team-count"><b>${workers.length}</b><small>ÇALIŞAN</small></span></header>
+        <header class="office-banner"><div><small>☀ OLIVE COAST</small><h2>İşletme ofisi</h2><p>Ekibinin gelişimini ve çamaşırhaneyi buradan yönet.</p></div><span class="office-team-count"><b>${workers.length}</b><small>ÇALIŞAN</small></span></header>
+        <nav class="office-tabs" aria-label="Ofis bölümleri"><button data-action="office-tab" data-office-tab="staff" aria-current="${this.officeTab === 'staff' ? 'page' : 'false'}">♙ &nbsp;Ekip yükseltmeleri</button><button data-action="office-tab" data-office-tab="laundry" aria-current="${this.officeTab === 'laundry' ? 'page' : 'false'}">▣ &nbsp;Çamaşırhane</button></nav>
+        <div class="office-section" ${this.officeTab !== 'laundry' ? 'hidden' : ''}>
         <article class="office-worker office-department">
           <header class="office-worker-head"><span class="office-avatar">▣</span><span class="office-worker-name"><b>Çamaşırhane</b><small>Makine ve temiz havlu tedariki</small></span><span class="office-rank">SV. ${laundry.level}</span></header>
           <div class="office-skills">
@@ -144,7 +243,10 @@ export class ResortUI {
             </div>
           </div>
         </article>
+        </div>
+        <div class="office-section" ${this.officeTab !== 'staff' ? 'hidden' : ''}>
         <div class="office-roster"><span>EKİP LİSTESİ</span><small>Gelişim hemen etkili olur</small></div>
+        <div class="office-worker-grid">
       ${workers.map(w => `
         <article class="office-worker">
           <header class="office-worker-head"><span class="office-avatar">${esc(w.name[0].toUpperCase())}</span><span class="office-worker-name"><b>${esc(w.name)}</b><small>${roles[w.role]}</small></span><span class="office-rank">SV. ${w.level}</span></header>
@@ -153,6 +255,7 @@ export class ResortUI {
             ${w.role !== 'reception' ? skill('Yürüyüş', 'Daha hızlı hareket', 'staff-move', w.id, w.moveLevel ?? 1, 100 * (w.moveLevel ?? 1), '➜') + skill('Taşıma', (w.carryLevel ?? 1) + ' havlu kapasitesi', 'staff-carry', w.id, w.carryLevel ?? 1, 100 * (w.carryLevel ?? 1), '▱') : ''}
           </div>
         </article>`).join('') || '<div class="office-empty"><span>♙</span><b>Ekip henüz kurulmadı</b><p>Önce köydeki yeşil personel simgelerinden bir çalışan al.</p></div>'}
+        </div></div>
       <footer class="office-footer"><span>✦</span> Her yükseltme iş başında hemen etkisini gösterir.</footer>`;
   }
   render() {
@@ -160,9 +263,23 @@ export class ResortUI {
     if (this.sim.state.settings.paused && !pause.open && !document.querySelector('#restart-dialog[open]')) pause.showModal();
     if (!this.sim.state.settings.paused && pause.open) pause.close();
     const volume = this.sim.state.settings.volume ?? 1;
-    this.world?.setVolume(volume);
+    const musicVolume = Math.max(0, Math.min(.3, this.sim.state.settings.musicVolume ?? .3));
+    this.music.setVolume(this.adMuted ? 0 : musicVolume);
+    this.music.setGamePaused(this.sim.state.settings.paused);
+    this.renderMusic();
+    this.world?.setVolume(this.adMuted ? 0 : volume);
     document.querySelector<HTMLInputElement>('#sound-volume')!.value = String(Math.round(volume * 100));
     document.querySelector('#volume-value')!.textContent = '%' + Math.round(volume * 100);
+    const musicVolumePercent = Math.round(musicVolume / .3 * 100);
+    document.querySelector<HTMLInputElement>('#music-volume')!.value = String(musicVolumePercent);
+    document.querySelector('#music-volume-value')!.textContent = '%' + musicVolumePercent;
+    document.querySelector<HTMLElement>('#pause-save-status')!.textContent = translate(
+      this.save.recoveryRequired ? 'Kayıt okunamadı; eski kayıt korunuyor.' : this.save.temporary ? 'Deneme modunda kayıt yapılmaz.' : 'İlerleme bu cihazda otomatik kaydedilir.',
+      this.language,
+    );
+    document.querySelectorAll<HTMLButtonElement>('.language-toggle [data-language]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.language === this.language));
+    });
     const speedButton = document.querySelector<HTMLButtonElement>('#speed-button');
     if (speedButton) {
       const fast = this.sim.state.settings.speed === 2;
@@ -176,7 +293,16 @@ export class ResortUI {
     if (!nearbyOffice && this.panel === 'office') document.querySelector('#drawer')!.classList.remove('open');
     this.officeVisited = nearbyOffice;
     const s = this.sim.state, level = this.sim.level, base = LEVELS[level - 1], end = LEVELS[level];
-    this.html('#wallet', `<div class="wallet-copy"><small>KASA</small><b>$${this.sim.testMode ? '∞' : Math.floor(s.money).toLocaleString('tr-TR')}</b></div>`);
+    const levelCard = document.querySelector<HTMLElement>('#level-card')!;
+    levelCard.classList.toggle('is-max', !end);
+    if (this.lastLevel > 0 && level > this.lastLevel) {
+      levelCard.classList.remove('level-up');
+      void levelCard.offsetWidth;
+      levelCard.classList.add('level-up');
+      window.setTimeout(() => levelCard.classList.remove('level-up'), 1200);
+    }
+    this.lastLevel = level;
+    this.html('#wallet', `<div class="wallet-copy"><small>KASA</small><b>$${this.sim.unlimitedMoney ? '∞' : Math.floor(s.money).toLocaleString(this.language === 'en' ? 'en-US' : 'tr-TR')}</b></div>`);
     const levelProgress = end ? Math.min(100, (s.xp - base) / (end - base) * 100) : 100;
     const xpLabel = end ? `${s.xp - base}/${end - base} XP` : 'MAX';
     this.html('#level-card', `<span class="level-star" aria-label="Seviye ${level}"><i>★</i><b>${level}</b></span><div class="xp-track" aria-label="${xpLabel}"><i style="width:${levelProgress}%"></i><b>${xpLabel}</b></div>`);
@@ -197,9 +323,11 @@ export class ResortUI {
     this.html('#bag-stat', `<span>☀ ${s.player.bag.clean} <small>temiz</small></span><span>♺ ${s.player.bag.dirty} <small>kirli</small></span><span>▱ ${s.player.bag.cleanSheets ?? 0}/${s.player.bag.dirtySheets ?? 0} <small>temiz/kirli çarşaf</small></span><small>${s.player.drink ? '<span>🍋 <small>limonata</small></span>' : ''}ÇANTA ${linenCount(s.player.bag)}/${this.sim.bagCapacity}</small>`);
     this.html('#laundry-stat', `<span>▣ ${this.sim.testMode ? '∞' : s.laundry.clean}<small>temiz raf</small></span><span>${s.laundry.dirty}<small>havlu yıkanacak</small></span><span>▱ ${s.laundry.cleanSheets ?? 0}/${s.laundry.dirtySheets ?? 0}<small>temiz/kirli çarşaf</small></span>`);
     this.html('#time-controls', `<button data-action="pause" aria-label="${s.settings.paused ? 'Devam et' : 'Duraklat'}">${s.settings.paused ? '▶' : 'Ⅱ'}</button><button data-action="speed" aria-label="Oyun hızı">${s.settings.speed}×</button>`);
+    this.html('#reward-ad-options', this.rewardAdOptions());
+    document.querySelector<HTMLElement>('#ad-request-blocker')!.hidden = !this.adBusy;
     const html = this.panel === 'office' ? this.office() : this.panel === 'workers' ? this.workers() : this.panel === 'journey' ? this.journey() : this.panel === 'help' ? this.help() : this.village();
     if (html !== this.lastPanel && document.activeElement?.tagName !== 'SELECT') { document.querySelector('#drawer-body')!.innerHTML = html; this.lastPanel = html; }
-    if (this.lastMessage !== this.sim.messageId) { const id = this.sim.messageId; this.lastMessage = id; const t = document.querySelector('#toast')!; t.textContent = this.sim.message; t.classList.add('show'); window.setTimeout(() => { if (id === this.sim.messageId) t.classList.remove('show'); }, 4500); }
+    if (this.lastMessage !== this.sim.messageId) { const id = this.sim.messageId; this.lastMessage = id; const t = document.querySelector('#toast')!; t.textContent = translate(this.sim.message, this.language); t.classList.add('show'); window.setTimeout(() => { if (id === this.sim.messageId) t.classList.remove('show'); }, 4500); }
   }
-  dispose() { clearInterval(this.interval); }
+  dispose() { clearInterval(this.interval); this.music.dispose(); }
 }

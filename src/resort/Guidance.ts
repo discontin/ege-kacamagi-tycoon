@@ -27,7 +27,7 @@ export function resortGoal(s: ResortGameState, testMode = false): ResortGoal {
   }
   if (rooms.length < 2) {
     const level = LEVELS.filter(x => s.xp >= x).length;
-    return level < 2 ? goal('Bir misafir daha ağırlayalım', 'Konaklama ve temizlikle ikinci bungalovu aç.', 'checkin') : goal('İkinci bungalovun hazır', '100 para yatır: aynı anda iki misafir, daha çok gelir.', 'room2Buy');
+    return level < 2 ? goal('Bir misafir daha ağırlayalım', 'Konaklama ve temizlikle ikinci odayı aç.', 'checkin') : goal('İkinci oda hazır', '100 para yatır: aynı anda iki misafir, daha çok gelir.', 'room2Buy');
   }
   if (!s.workers.length) return goal('Temizliği yardımcına devret', 'Ekipten bir temizlikçi al. Sen yeni tesislere odaklan.', '');
   const pool = s.facilities.find(f => f.id === 'pool')!;
@@ -36,7 +36,7 @@ export function resortGoal(s: ResortGameState, testMode = false): ResortGoal {
       const nextRoom = ROOM_DEFS.find(r => !rooms.some(open => open.id === r.id));
       const level = LEVELS.filter(x => s.xp >= x).length;
       const nextRoomArea = nextRoom && areasFor(s).find(a => a.id === `${nextRoom.id}Buy`);
-      if (nextRoom && nextRoomArea && level >= nextRoom.unlockLevel) return goal('Önce altı odayı aç', `Havuzdan önce tüm bungalovları aç; sıradaki ${nextRoom.name}.`, nextRoomArea.id);
+      if (nextRoom && nextRoomArea && level >= nextRoom.unlockLevel) return goal('Önce altı odayı aç', `Havuzdan önce tüm odaları aç; sıradaki ${nextRoom.name}.`, nextRoomArea.id);
       return goal('Önce altı odayı aç', `Havuzu açmak için ${ROOM_DEFS.length - rooms.length} oda daha açmalısın. Misafir ağırlayıp Seviye ${nextRoom?.unlockLevel ?? 6} ve gerekli parayı kazan.`, 'checkin');
     }
     const level = LEVELS.filter(x => s.xp >= x).length;

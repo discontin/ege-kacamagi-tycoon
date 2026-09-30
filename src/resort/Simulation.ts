@@ -9,6 +9,7 @@ import { serviceGuestReady } from './CustomerService';
 import { workAreaContains } from './WorkAreas';
 import { dirtyLinenCount, linenCount } from './Linen';
 import { inFootprint, laundryObstacles } from './LaundryLayout';
+import { SKATEBOARD_BOOST_SECONDS } from '../game/RewardedBoostService';
 
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const bagCount = (a: PlayerState | WorkerState) => linenCount(a.bag);
@@ -35,12 +36,12 @@ export class ResortSimulation {
   /** Transient presentation events; never persisted or replayed after loading. */
   feedback: { kind: 'cash' | 'clean' | 'towel' | 'build' | 'level' | 'welcome' | 'wash'; x: number; y: number; text: string }[] = [];
   private celebrate(kind: ResortSimulation['feedback'][number]['kind'], at: Point, text: string) { this.feedback.push({ kind, ...at, text }); if (this.feedback.length > 64) this.feedback.shift(); }
-  message = 'Ege Kaçamağı’na hoş geldin! Beyaz resepsiyon karesinde dur ve ilk misafirini karşıla.';
+  message = 'Olive Coast’a hoş geldin! Beyaz resepsiyon karesinde dur ve ilk misafirini karşıla.';
   messageId = 0;
   status = 'Beyaz karede dur · otomatik çalış';
   private purchase = { id: '', hold: 0, latched: false };
   private blockedNotice = '';
-  constructor(public state = initialResort(), readonly testMode = false) {
+  constructor(public state = initialResort(), readonly testMode = false, readonly moneyOnlyMode = false) {
     // Rooms now end at level two. Preserve older saves by folding former level-three
     // suites back into the fully featured level-two room instead of rejecting them.
     for (const facility of state.facilities.filter(f => f.kind === 'room')) facility.level = Math.min(facility.level, 2);
@@ -61,6 +62,9 @@ export class ResortSimulation {
     // Upgrade existing open-pool saves to the current minimum lounger count.
     if (pool.open) state.seats.slice(0, poolSeatCount(pool.level)).forEach(seat => { if (!seat.open) { seat.open = true; seat.dirty = false; seat.towel = true; } });
     state.laundry.dirtySheets ??= 0;
+    // Older saves may contain the former simulated ad jobs. Cancel them on
+    // load so an unfinished timer can never grant an unverified ad reward.
+    for (const task of [...state.tasks].filter(t => t.kind === 'watchBoost' || t.kind === 'watchMoney')) this.cancelTask(task.id);
     if (state.laundry.remaining !== null) { state.laundry.washingTowels ??= state.laundry.washingKind === 'sheet' ? 0 : 1; state.laundry.washingSheets ??= state.laundry.washingKind === 'sheet' ? 1 : 0; }
     for (const w of state.workers) w.moveLevel ??= w.role === 'reception' ? 1 : w.level;
 
@@ -100,12 +104,15 @@ export class ResortSimulation {
   notify(text: string) { this.message = text; this.messageId++; }
   reset() {
     const volume = this.state.settings.volume;
-    this.state = new ResortSimulation(initialResort(this.testMode), this.testMode).state;
+    const musicVolume = this.state.settings.musicVolume ?? .3;
+    this.state = new ResortSimulation(initialResort(this.testMode), this.testMode, this.moneyOnlyMode).state;
     this.state.settings.volume = volume;
+    this.state.settings.musicVolume = musicVolume;
     this.purchase = { id: '', hold: 0, latched: false }; this.blockedNotice = ''; this.feedback = []; this.status = '';
     this.notify('Tatil köyü sıfırlandı!');
   }
   get level() { return LEVELS.filter(n => this.state.xp >= n).length; }
+  get unlimitedMoney() { return this.testMode || this.moneyOnlyMode; }
   get boost() { return this.state.boost.remaining > 0 ? this.state.boost.multiplier : 1; }
   /** Gentle automatic player growth tied to the star level in the HUD. */
   get bagCapacity() { return Math.min(8, 2 + this.level); }
@@ -119,8 +126,8 @@ export class ResortSimulation {
     const laundry = this.facility('laundry');
     if (!atOffice(this.state.player) || this.state.settings.paused || laundry.level >= 3) return false;
     const cost = upgradeCost('laundry', laundry.level);
-    if (!this.testMode && this.state.money < cost) { this.notify('Makine kapasitesi yükseltmesi için para yetersiz.'); return false; }
-    if (!this.testMode) this.state.money -= cost;
+    if (!this.unlimitedMoney && this.state.money < cost) { this.notify('Makine kapasitesi yükseltmesi için para yetersiz.'); return false; }
+    if (!this.unlimitedMoney) this.state.money -= cost;
     laundry.level++;
     this.celebrate('build', OFFICE, 'MAKİNE YÜKSELDİ!');
     this.notify(`Çamaşır makinesi kapasitesi ${this.machineCapacity} parçaya yükseldi.`);
@@ -130,8 +137,9 @@ export class ResortSimulation {
     if (!atOffice(this.state.player) || this.state.settings.paused) return false;
     const count = this.laundryTowelPackSize, cost = this.laundryTowelPackCost;
     if (!count) { this.notify('Temiz havlu rafı dolu.'); return false; }
-    if (!this.testMode && this.state.money < cost) { this.notify('Temiz havlu satın almak için para yetersiz.'); return false; }
-    if (!this.testMode) { this.state.money -= cost; this.state.laundry.clean += count; }
+    if (!this.unlimitedMoney && this.state.money < cost) { this.notify('Temiz havlu satın almak için para yetersiz.'); return false; }
+    if (!this.unlimitedMoney) this.state.money -= cost;
+    if (!this.testMode) this.state.laundry.clean += count;
     this.notify(`${count} temiz havlu çamaşırhane rafına eklendi.`);
     return true;
   }
@@ -139,14 +147,14 @@ export class ResortSimulation {
     const w = this.state.workers.find(w => w.id === id);
     if (!w || w.role === 'reception' || !atOffice(this.state.player) || this.state.settings.paused || (w.moveLevel ?? 1) >= 3) return;
     const cost = 100 * (w.moveLevel ?? 1);
-    if (!this.testMode && this.state.money < cost) { this.notify('Yürüyüş yükseltmesi için para yetersiz.'); return; }
-    if (!this.testMode) this.state.money -= cost;
+    if (!this.unlimitedMoney && this.state.money < cost) { this.notify('Yürüyüş yükseltmesi için para yetersiz.'); return; }
+    if (!this.unlimitedMoney) this.state.money -= cost;
     w.moveLevel = (w.moveLevel ?? 1) + 1;
   }
   upgradeCarry(id: string) {
     const w = this.state.workers.find(w => w.id === id); if (!w || w.role === 'reception' || !atOffice(this.state.player) || this.state.settings.paused || (w.carryLevel ?? 1) >= 3) return;
-    const cost = 100 * (w.carryLevel ?? 1); if (!this.testMode && this.state.money < cost) { this.notify('Taşıma yükseltmesi için para yetersiz.'); return; }
-    if (!this.testMode) this.state.money -= cost; w.carryLevel = (w.carryLevel ?? 1) + 1;
+    const cost = 100 * (w.carryLevel ?? 1); if (!this.unlimitedMoney && this.state.money < cost) { this.notify('Taşıma yükseltmesi için para yetersiz.'); return; }
+    if (!this.unlimitedMoney) this.state.money -= cost; w.carryLevel = (w.carryLevel ?? 1) + 1;
   }
   get shelfCapacity() { return [24, 36, 48][this.facility('laundry').level - 1]; }
   get machineCapacity() { return machineCapacityForLevel(this.facility('laundry').level); }
@@ -238,7 +246,7 @@ export class ResortSimulation {
   purchaseProgress(a: Area): number | undefined {
     if ((a.mode !== 'buy' && a.mode !== 'upgrade') || this.purchase.id !== a.id || this.purchase.latched || !this.inside(this.state.player, a) || this.state.player.path.length) return undefined;
     if (a.mode === 'buy' && a.target === 'pool' && !this.facility('pool').open && !this.poolRoomsUnlocked()) return undefined;
-    if (!this.testMode && (this.level < this.requiredLevel(a) || this.state.money < this.cost(a))) return undefined;
+    if ((!this.testMode && this.level < this.requiredLevel(a)) || (!this.unlimitedMoney && this.state.money < this.cost(a))) return undefined;
     return Math.min(1, this.purchase.hold / 1.3);
   }
   purchaseArea(a: Area) {
@@ -261,13 +269,13 @@ export class ResortSimulation {
     }
     if (!this.testMode && this.level < this.requiredLevel(a)) { this.notify(`Seviye ${this.requiredLevel(a)} gerekli. Misafir ağırlayarak XP kazan.`); return false; }
     const cost = this.cost(a);
-    if (!this.testMode && this.state.money < cost) { this.notify('Yeterli para yok. Kasadaki para yığınlarını topla.'); return false; }
+    if (!this.unlimitedMoney && this.state.money < cost) { this.notify('Yeterli para yok. Kasadaki para yığınlarını topla.'); return false; }
     if (a.target === 'bar') this.state.bar!.open = true;
     else if (a.mode === 'upgrade') {
       const f = this.facility(a.target); if (f.level >= (f.kind === 'room' || f.kind === 'pool' ? 2 : 3)) return false; f.level++; if (f.kind === 'pool') this.state.seats.slice(0, poolSeatCount(f.level)).forEach(s => { s.open = true; s.dirty = false; s.towel = true; });
     } else if (a.target.startsWith('seat')) { const seat = this.state.seats.find(s => s.id === a.target)!; if (seat.open) return false; seat.open = true; seat.dirty = false; seat.towel = true; }
     else { const f = this.facility(a.target); if (f.open) return false; f.open = true; if (f.kind === 'pool') { f.towels = 2; this.state.seats.slice(0, poolSeatCount(f.level)).forEach(s => { s.open = true; s.dirty = false; s.towel = true; }); } }
-    if (!this.testMode) this.state.money -= cost;
+    if (!this.unlimitedMoney) this.state.money -= cost;
     this.celebrate('build', a, a.mode === 'upgrade' ? 'YÜKSELTİLDİ!' : 'YENİ TESİS!');
     this.notify(a.mode === 'upgrade' ? `${a.label} yükseltildi! Görünüm ve verimlilik gelişti.` : `${a.label} açıldı!`); return true;
   }
@@ -275,21 +283,33 @@ export class ResortSimulation {
     if (role === 'bartender') role = 'pool'; // Compatibility with older department commands.
     if (role === 'pool' && this.state.workers.some(w => w.role === 'pool')) return;
     if (!this.testMode && this.state.workers.length >= 5) { this.notify('En fazla beş çalışan alınabilir.'); return; }
-    const cost = staffHireCost(this.state.workers.length); if (charge && !this.testMode && this.state.money < cost) { this.notify('İşe almak için para yetersiz.'); return; }
-    if (charge && !this.testMode) this.state.money -= cost;
+    const cost = staffHireCost(this.state.workers.length); if (charge && !this.unlimitedMoney && this.state.money < cost) { this.notify('İşe almak için para yetersiz.'); return; }
+    if (charge && !this.unlimitedMoney) this.state.money -= cost;
     const i = this.state.workers.length;
     this.state.workers.push({ id: `worker${this.state.nextId++}`, name: ['Deniz', 'Ece', 'Mert', 'Ada', 'Can'][i % 5] + (i >= 5 ? ` ${i + 1}` : ''), x: 18, y: 49, path: [], role, level: 1, moveLevel: 1, bag: { clean: 0, dirty: 0 }, status: 'İş arıyor' });
     this.notify('Yeni çalışan geldi ve kendi bölümünde çalışmaya başladı.');
   }
-  upgradeWorker(id: string) { const w = this.state.workers.find(w => w.id === id); if (!w || !atOffice(this.state.player) || this.state.settings.paused || w.level >= 3) return; const cost = 120 * w.level; if (!this.testMode && this.state.money < cost) { this.notify('Eğitim için para yetersiz.'); return; } if (!this.testMode) this.state.money -= cost; w.level++; }
+  upgradeWorker(id: string) { const w = this.state.workers.find(w => w.id === id); if (!w || !atOffice(this.state.player) || this.state.settings.paused || w.level >= 3) return; const cost = 120 * w.level; if (!this.unlimitedMoney && this.state.money < cost) { this.notify('Eğitim için para yetersiz.'); return; } if (!this.unlimitedMoney) this.state.money -= cost; w.level++; }
   assign(id: string, role: Role) { const w = this.state.workers.find(w => w.id === id); if (!w) return; if (w.task) this.cancelTask(w.task); w.role = role; w.path = []; }
-  activateBoost() { if (this.state.boost.remaining > 0) { this.notify('Bonus zaten aktif; üst üste birikmez.'); return; } this.state.boost.remaining = 120; this.notify('120 saniye boyunca çalışma ve üretim %50 hızlı!'); }
+  activateBoost() { if (this.state.boost.remaining > 0) { this.notify('Bonus zaten aktif; üst üste birikmez.'); return; } this.state.boost.remaining = SKATEBOARD_BOOST_SECONDS; this.notify(`${SKATEBOARD_BOOST_SECONDS} saniye boyunca çalışma ve üretim %50 hızlı!`); }
+  grantRewardedAd(kind: 'boost' | 'money') {
+    const ad = this.state.rewardedAds?.[kind];
+    if (!ad || ad.activeUntil <= this.state.elapsed || this.state.elapsed >= ad.nextAt) return false;
+    if (kind === 'boost') {
+      if (this.state.boost.remaining > 0) return false;
+      this.state.boost = { multiplier: 1.5, remaining: SKATEBOARD_BOOST_SECONDS };
+      this.notify(`Reklam tamamlandı: ${SKATEBOARD_BOOST_SECONDS} saniyelik kaykay boostu etkin!`);
+    } else {
+      this.state.money += 100; this.state.stats.earned += 100;
+      this.notify('Reklam tamamlandı: kasana $100 eklendi!');
+    }
+    this.consumeReward(kind);
+    return true;
+  }
   private updateRewardAds() {
     const rewards = this.state.rewardedAds!;
     for (const kind of ['boost', 'money'] as const) {
-      const ad = rewards[kind], target = kind === 'boost' ? 'rewardedBoost' : 'rewardedMoney';
-      const activeTask = this.state.tasks.some(t => t.target === target);
-      if (activeTask) continue;
+      const ad = rewards[kind];
       if (ad.activeUntil > 0 && ad.activeUntil <= this.state.elapsed) { ad.activeUntil = 0; ad.nextAt = this.state.elapsed + REWARD_RESPAWN_COOLDOWN_SECONDS; }
       if (ad.activeUntil > this.state.elapsed) continue;
       if (this.state.elapsed < ad.nextAt) continue;
@@ -351,8 +371,7 @@ export class ResortSimulation {
       }
       case 'laundryCleanDrop': return !actor.carryingWashed ? 'Makineden temiz çamaşır al' : !this.testMode && (actor.bag.clean && this.state.laundry.clean >= this.shelfCapacity || (actor.bag.cleanSheets ?? 0) && (this.state.laundry.cleanSheets ?? 0) >= this.shelfCapacity) ? 'Temiz raf dolu' : null;
       case 'discardItem': return actor.id !== 'player' && (!('role' in actor) || actor.role !== 'rooms') ? 'Bu kutuyu yalnızca sen veya temizlikçi kullanabilir' : !bagCount(actor) && !actor.drink ? 'Elinde atılacak bir şey yok' : null;
-      case 'watchBoost': return this.state.boost.remaining > 0 ? 'Paten boost zaten aktif' : null;
-      case 'watchMoney': return null;
+      case 'watchBoost': case 'watchMoney': return 'Ödül videosu yalnızca mola menüsünden açılabilir';
     }
   }
   startTask(a: Area, owner = 'player'): boolean {
@@ -363,8 +382,7 @@ export class ResortSimulation {
     }
     if (this.reason(a, actor)) return false;
     const seconds: Record<TaskKind, number> = { checkin: 3, cleanRoom: 6, cleanFloor: 4, cleanBathroom: 5, restockRoom: .6, dirtyDrop: .6, cleanTake: 5, poolCheckin: 3, cleanSeat: 4, poolStock: .6, cleanPool: 8, prepareDrink: 3, deliverDrink: 1, poolDirtyDrop: .6, poolDirtyTake: .6, poolCleanTake: .6, restockSeat: 1, laundryDirtyTake: 1.2, machineLoad: .6, machineUnload: .6, laundryCleanDrop: .6, discardItem: 1, watchBoost: 4, watchMoney: 3 };
-    const rewardStation = a.taskKind === 'watchBoost' || a.taskKind === 'watchMoney';
-    const f = this.facility(rewardStation ? 'reception' : a.target.startsWith('seat') || a.target.startsWith('drink:') || a.target === 'bar' || a.target === 'poolDirty' || a.target === 'poolClean' ? 'pool' : a.target);
+    const f = this.facility(a.target.startsWith('seat') || a.target.startsWith('drink:') || a.target === 'bar' || a.target === 'poolDirty' || a.target === 'poolClean' ? 'pool' : a.target);
     const makingBed = a.taskKind === 'restockRoom' && f.needsSheet && (actor.bag.cleanSheets ?? 0) > 0;
     const duration = (makingBed ? SHEET_MAKING_SECONDS : seconds[a.taskKind]) * taskDuration(f.level);
     const task: TaskState = { id: `task${this.state.nextId++}`, kind: a.taskKind, target: a.target, owner, remaining: duration, total: duration };
@@ -373,7 +391,6 @@ export class ResortSimulation {
     if (a.taskKind === 'prepareDrink') task.guest = this.state.guests.find(g => wantsDrink(g) && !this.state.tasks.some(t => t.guest === g.id && (t.kind === 'prepareDrink' || t.kind === 'deliverDrink')))!.id;
     if (a.taskKind === 'deliverDrink') task.guest = a.target.slice(6);
     this.state.tasks.push(task); actor.task = task.id;
-    if (owner === 'player' && rewardStation) this.notify('Ödüllü reklam izleniyor...');
     if (owner !== 'player') {
       const worker = actor as WorkerState;
       actor.path = worker.role === 'hauling' && (a.taskKind === 'poolDirtyTake' || a.taskKind === 'dirtyDrop') ? this.haulingPath(worker, a) : this.path(actor, a);
@@ -473,27 +490,14 @@ export class ResortSimulation {
         if (actor.carryingWashed && !actor.bag.clean && !(actor.bag.cleanSheets ?? 0)) actor.carryingWashed = false;
         this.notify('Elindeki bir parça çöpe atıldı.'); break;
       }
-      case 'watchBoost': {
-        if (this.state.boost.remaining > 0) { this.cancelTask(t.id); return; }
-        this.state.boost = { multiplier: 1.5, remaining: 120 };
-        this.consumeReward('boost');
-        this.notify('Reklam ödülü: patenler hazır! 120 saniye boyunca %50 daha hızlısın.');
-        break;
-      }
-      case 'watchMoney': {
-        const reward = 100; this.state.money += reward; this.state.stats.earned += reward;
-        this.consumeReward('money');
-        this.notify(`Reklam ödülü: kasaya +${reward} para eklendi!`);
-        break;
-      }
       case 'poolCheckin': { const seat = this.state.seats.find(s => s.id === t.destination)!; if (!g || !seat.towel && this.facility('pool').towels <= 0 || (this.facility('pool').dirt ?? 0) >= 4) { this.cancelTask(t.id); return; } if (!seat.towel) this.facility('pool').towels--; seat.towel = false; g.seat = t.destination; g.phase = 'toSeat'; g.queueWait = 0; g.path = this.path(g, SEAT_DEFS.find(s => s.id === t.destination)!); break; }
       case 'cleanSeat': { if (actor.bag.clean + actor.bag.dirty >= this.actorTowelLimit(actor) || bagCount(actor) >= this.actorCapacity(actor)) return; const s = this.state.seats.find(s => s.id === t.target)!; s.dirty = false; actor.bag.dirty++; break; }
     }
     const area = this.taskArea(t);
     if (area) {
       const cleaning = ['cleanRoom', 'cleanFloor', 'cleanBathroom', 'cleanSeat'].includes(t.kind);
-      const feedbackKind = t.kind === 'checkin' || t.kind === 'poolCheckin' ? 'welcome' : cleaning ? 'clean' : t.kind === 'watchMoney' ? 'cash' : t.kind === 'watchBoost' ? 'build' : 'towel';
-      const feedbackText = cleaning ? t.kind === 'cleanRoom' ? 'TERTEMİZ! +5 XP' : 'TERTEMİZ!' : t.kind === 'restockRoom' ? 'ODA HAZIR!' : t.kind === 'checkin' ? 'HOŞ GELDİN!' : t.kind === 'watchMoney' ? '+100 PARA' : t.kind === 'watchBoost' ? 'PATENLER HAZIR!' : '✓';
+      const feedbackKind = t.kind === 'checkin' || t.kind === 'poolCheckin' ? 'welcome' : cleaning ? 'clean' : 'towel';
+      const feedbackText = cleaning ? t.kind === 'cleanRoom' ? 'TERTEMİZ! +5 XP' : 'TERTEMİZ!' : t.kind === 'restockRoom' ? 'ODA HAZIR!' : t.kind === 'checkin' ? 'HOŞ GELDİN!' : '✓';
       this.celebrate(feedbackKind, area, feedbackText);
     }
     actor.task = undefined; this.state.tasks = this.state.tasks.filter(x => x.id !== t.id);
@@ -659,7 +663,7 @@ export class ResortSimulation {
       }
     }
     const p = this.state.player;
-    const nearby = this.areas.filter(a => a.mode !== 'cash' && this.inside(p, a));
+    const nearby = this.areas.filter(a => a.mode !== 'cash' && !a.id.startsWith('rewarded') && this.inside(p, a));
     const delivery = p.drink ? this.areas.find(a => a.taskKind === 'deliverDrink' && this.inside(p, a) && !this.reason(a, p)) : undefined;
     const at = delivery ?? nearby.find(a => a.id === 'poolStock' && p.bag.clean > 0 && !this.reason(a, p)) ?? nearby.find(a => a.mode === 'work' && !this.reason(a, p)) ?? nearby[0];
     if (at && !p.path.length) {
@@ -675,7 +679,7 @@ export class ResortSimulation {
           if (this.purchase.hold >= 1.3 && !this.purchase.latched) {
             this.purchase.latched = true; this.purchaseArea(at);
           }
-          if (!!staffRole(at.target) && !this.state.workers.some(w => w.role === staffRole(at.target)) && this.state.workers.length < 5 && (this.testMode || this.state.money >= this.cost(at))) this.purchase.latched = false;
+          if (!!staffRole(at.target) && !this.state.workers.some(w => w.role === staffRole(at.target)) && this.state.workers.length < 5 && (this.unlimitedMoney || this.state.money >= this.cost(at))) this.purchase.latched = false;
         }
       } else {
         this.purchase = { id: '', hold: 0, latched: false };

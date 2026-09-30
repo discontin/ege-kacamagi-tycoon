@@ -63,7 +63,7 @@ describe('resort guest and towel cycle', () => {
 describe('pool and expansion', () => {
   it('requires level and money and purchases only once while standing still', () => {
     const s = new ResortSimulation(); s.state.money = 100; stand(s, 'room2Buy'); advance(s, 2); expect(s.facility('room2').open).toBe(false);
-    s.state.player.x++; s.tick(.1); s.state.xp = 20; stand(s, 'room2Buy'); advance(s, 2); expect(s.facility('room2').open).toBe(true); expect(s.state.money).toBe(0); expect(s.facility('room2').towels).toBe(1); advance(s, 3); expect(s.state.money).toBe(0);
+    s.state.player.x++; s.tick(.1); s.state.xp = 20; stand(s, 'room2Buy'); advance(s, 2); expect(s.facility('room2').open).toBe(true); expect(s.state.money).toBe(0); expect(s.facility('room2').towels).toBe(1); expect(s.message).toBe('Oda 02 açıldı!'); advance(s, 3); expect(s.state.money).toBe(0);
   });
   it('keeps the pool and its hire marker locked until all six rooms are open', () => {
     const s = new ResortSimulation(); s.state.xp = 310; s.state.money = 1000;
@@ -129,8 +129,8 @@ describe('workers, reservations and time', () => {
   });
   it('reserves a customer and room exclusively during check-in', () => { const s = new ResortSimulation(); guest(s); stand(s, 'checkin'); s.startTask(s.area('checkin')!); expect(s.facility('room1').guest).toBeDefined(); expect(s.facility('reception').cash).toBe(0); s.cancelTask(s.state.player.task!); expect(s.facility('room1').guest).toBeUndefined(); expect(s.state.guests[0].phase).toBe('queue'); });
   it('pauses all clocks, applies 2x and does not stack boosts', () => {
-    const s = new ResortSimulation(); s.activateBoost(); advance(s, 1); expect(s.state.boost.remaining).toBeCloseTo(119); s.activateBoost(); expect(s.state.boost.remaining).toBeCloseTo(119);
-    s.state.settings.paused = true; const before = JSON.stringify(s.state); advance(s, 3); expect(JSON.stringify(s.state)).toBe(before); s.state.settings.paused = false; s.state.settings.speed = 2; advance(s, 1); expect(s.state.elapsed).toBeCloseTo(3); expect(s.state.boost.remaining).toBeCloseTo(117);
+    const s = new ResortSimulation(); s.activateBoost(); expect(s.state.boost.remaining).toBe(90); advance(s, 1); expect(s.state.boost.remaining).toBeCloseTo(89); s.activateBoost(); expect(s.state.boost.remaining).toBeCloseTo(89);
+    s.state.settings.paused = true; const before = JSON.stringify(s.state); advance(s, 3); expect(JSON.stringify(s.state)).toBe(before); s.state.settings.paused = false; s.state.settings.speed = 2; advance(s, 1); expect(s.state.elapsed).toBeCloseTo(3); expect(s.state.boost.remaining).toBeCloseTo(87);
   });
   it('test mode removes costs and hiring limits but retains physical bag capacity', () => { const s = new ResortSimulation(initialResort(true), true); s.state.money = 0; for (let i = 0; i < 7; i++) s.hire(); expect(s.state.workers).toHaveLength(7); expect(s.state.money).toBe(0); s.tick(.1); expect(s.state.money).toBe(999999); expect(s.bagCapacity).toBe(8); });
   it('grows player capacity, walking and work speed gently with every star level', () => {

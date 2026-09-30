@@ -76,7 +76,7 @@ describe('workers, city and timing', () => {
   });
   it('freezes timers while paused, accelerates at 2x, and clamps a boost to zero', async () => {
     const sim = new Simulation(); sim.state.boost = (await new SimulatedRewardedBoostService().requestReward())!;
-    sim.state.settings.paused = true; advance(sim, 5); expect(sim.state.boost.remaining).toBe(120); expect(sim.state.elapsed).toBe(0);
+    sim.state.settings.paused = true; advance(sim, 5); expect(sim.state.boost.remaining).toBe(90); expect(sim.state.elapsed).toBe(0);
     sim.state.settings.paused = false; sim.state.settings.speed = 2; advance(sim, 61); expect(sim.state.boost.remaining).toBe(0); expect(sim.multiplier).toBe(1);
     expect(sim.state.elapsed).toBeCloseTo(122);
   });
