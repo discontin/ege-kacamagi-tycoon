@@ -5,6 +5,7 @@ import './game-menus.css';
 import './stitch-menus.css';
 import './quick-controls.css';
 import './gameplay-stitch.css';
+import './startup-screens.css';
 import { resortGoal } from './Guidance';
 import { linenCount } from './Linen';
 import { ResortSaveService } from './SaveService';
@@ -17,6 +18,8 @@ import { ResortMusic } from './GameMusic';
 
 const roles: Record<Role, string> = { reception: 'Resepsiyon', rooms: 'Oda temizliği + havlu', pool: 'Havuz + limonata + bakım', hauling: 'Çamaşırhane + havuz havluları', bartender: 'Havuz hizmeti' };
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+const ONBOARDING_SEEN_KEY = 'olive-coast-onboarding-seen-v1';
+type StartupView = 'menu' | 'tutorial';
 export class ResortUI {
   world?: ResortWorld;
   private panel = 'village';
@@ -27,10 +30,18 @@ export class ResortUI {
   private adBusy = false;
   private adMuted = false;
   private music: ResortMusic;
+  private startupActive = false;
+  private startupView: StartupView = 'menu';
+  private startupHasSave = false;
+  private startupRecovered = false;
+  private gameActive = false;
+  private settingsOrigin: 'startup' | 'pause' = 'pause';
   language: GameLanguage = currentLanguage();
   private interval: number;
+  get canAutosave() { return this.gameActive; }
   private html(selector: string, value: string) { const localized = translate(value, this.language); const el = document.querySelector(selector)!; if (el.innerHTML !== localized) el.innerHTML = localized; }
   constructor(private sim: ResortSimulation, private save: ResortSaveService) {
+    this.gameActive = sim.testMode || sim.moneyOnlyMode;
     this.music = new ResortMusic(() => this.renderMusic(), () => this.sim.state.settings.paused);
     document.documentElement.lang = this.language;
     const modeControls = sim.testMode
@@ -49,22 +60,36 @@ export class ResortUI {
       <nav hidden aria-label="Yönetim panelleri"><button data-action="panel" data-panel="village">⌂<small>Köy</small></button><button data-action="panel" data-panel="workers">♙<small>Ekip</small></button><button data-action="panel" data-panel="journey">☆<small>Hedefler</small></button><button data-action="panel" data-panel="help">?<small>Rehber</small></button></nav>
       <div hidden><div id="bag-stat"></div><div id="laundry-stat"></div><div id="time-controls"></div></div>
       <aside id="drawer" class="resort-drawer"><button data-action="close" class="drawer-close" aria-label="Paneli kapat">×</button><div id="drawer-body"></div></aside>
+      <dialog id="startup-dialog" class="resort-screen-dialog" aria-label="Olive Coast ana menü"><div id="startup-content"></div></dialog>
+      <dialog id="settings-dialog" class="resort-screen-dialog" aria-label="Ayarlar">
+        <section class="screen-shell settings-shell">
+          <header class="screen-header"><span class="screen-brand-icon">☀</span><div><small>OLIVE COAST</small><h1>Ayarlar</h1></div><button class="screen-close" data-action="return-settings" aria-label="Kapat">×</button></header>
+          <div class="settings-content">
+            <section class="screen-setting-card"><span class="screen-setting-icon mint">♫</span><div class="screen-setting-copy"><b>Fon müziği</b><small id="settings-track-title">Akdeniz Esintisi</small></div><button class="screen-neutral-button settings-play" data-action="music-toggle" aria-label="Müziği çal">▶</button><label class="screen-range-row"><span>Ses seviyesi</span><input data-setting="music-volume" aria-label="Fon müziği seviyesi" type="range" min="0" max="100" step="1"><output data-volume-output="music">%30</output></label></section>
+            <section class="screen-setting-card"><span class="screen-setting-icon amber">◖</span><div class="screen-setting-copy"><b>Ses efektleri</b><small>Oyun içi seslerin seviyesi</small></div><label class="screen-range-row"><span>Ses seviyesi</span><input data-setting="sound-volume" aria-label="Ses efekti seviyesi" type="range" min="0" max="100" step="1"><output data-volume-output="sound">%100</output></label></section>
+            <section class="screen-setting-card language-setting-card"><span class="screen-setting-icon mint">文</span><div class="screen-setting-copy"><b>Dil / Language</b><small>Arayüz ve görev metinleri</small></div><div class="language-toggle" aria-label="Dil / Language"><button data-action="language" data-language="tr">Türkçe</button><button data-action="language" data-language="en">English</button></div></section>
+            <p class="settings-save-note" id="settings-save-note"></p>
+          </div>
+          <footer class="screen-footer"><span>Değişiklikler bu cihazda saklanır.</span><button class="screen-primary-button" data-action="return-settings">← &nbsp; Geri</button></footer>
+        </section>
+      </dialog>
       <dialog id="pause-dialog" class="game-menu">
         <div class="game-menu-frame">
           <header class="game-menu-ribbon"><span>☀ OLIVE COAST</span><span class="menu-status">MOLA ZAMANI</span><button class="pause-close" data-action="resume" aria-label="Oyuna dön">×</button></header>
           <div class="game-menu-content">
             <div class="pause-heading"><span class="pause-emblem">Ⅱ</span><div><small>OYUN DURAKLATILDI</small><h2>Olive Coast: Resort Tycoon</h2><p>Köyün seni bekliyor. Hazır olduğunda kaldığın yerden sürdür.</p></div></div>
             <button data-action="resume" class="menu-continue pause-resume"><span>▶ &nbsp; Oyuna dön</span><kbd>ESC</kbd></button>
+            <button data-action="open-settings" class="pause-settings-link">⚙ &nbsp; Ayarlar</button>
             <div class="pause-grid">
               <div class="pause-column">
-                <section class="sound-card" aria-label="Ses ayarı"><div class="menu-section-heading"><span>♫</span><b>SES EFEKTLERİ</b><output id="volume-value">%100</output></div><label class="volume-row"><span aria-hidden="true">🔈</span><input id="sound-volume" aria-label="Ses efekti seviyesi" type="range" min="0" max="100" step="1"></label></section>
+                <section class="sound-card" aria-label="Ses ayarı"><div class="menu-section-heading"><span>♫</span><b>SES EFEKTLERİ</b><output id="volume-value">%100</output></div><label class="volume-row"><span aria-hidden="true">🔈</span><input id="sound-volume" data-setting="sound-volume" aria-label="Ses efekti seviyesi" type="range" min="0" max="100" step="1"></label></section>
                 <section class="music-card" aria-label="Fon müziği">
                   <span class="music-cover" aria-hidden="true">♫</span>
                   <div class="music-player">
                     <div class="music-title-row"><div><b>Fon müziği</b><small id="music-track-name">Akdeniz Esintisi</small></div><span id="music-track-number">1/2</span></div>
                     <div class="music-timeline" role="progressbar" aria-label="Müzik ilerlemesi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="music-progress"></i></div>
                     <div class="music-controls"><small id="music-current">0:00</small><div><button data-action="music-previous" aria-label="Önceki parça">◀</button><button class="music-play" data-action="music-toggle" aria-label="Müziği çal">▶</button><button data-action="music-next" aria-label="Sonraki parça">▶▶</button></div><small id="music-duration">0:00</small></div>
-                    <label class="music-volume-row"><span>♫ <small>Fon müziği seviyesi</small></span><input id="music-volume" aria-label="Fon müziği seviyesi" type="range" min="0" max="100" step="1"><output id="music-volume-value">%22</output></label>
+                    <label class="music-volume-row"><span>♫ <small>Fon müziği seviyesi</small></span><input id="music-volume" data-setting="music-volume" aria-label="Fon müziği seviyesi" type="range" min="0" max="100" step="1"><output id="music-volume-value">%22</output></label>
                   </div>
                 </section>
                 <div class="language-toggle" aria-label="Dil / Language"><span>🌐 Dil / Language</span><button data-action="language" data-language="tr">Türkçe</button><button data-action="language" data-language="en">English</button></div>
@@ -86,30 +111,135 @@ export class ResortUI {
         </div>
       </dialog>`, this.language);
     document.querySelector('#app')!.addEventListener('click', e => { const t = (e.target as HTMLElement).closest<HTMLElement>('[data-action]'); if (t) this.action(t); });
+    document.querySelector('#app')!.addEventListener('input', e => {
+      const input = (e.target as HTMLElement).closest<HTMLInputElement>('[data-setting]');
+      if (!input) return;
+      const percent = Number(input.value) / 100;
+      if (input.dataset.setting === 'sound-volume') this.sim.state.settings.volume = percent;
+      if (input.dataset.setting === 'music-volume') this.sim.state.settings.musicVolume = percent * .3;
+      this.render();
+    });
 
     this.interval = window.setInterval(() => this.render(), 150); this.render();
     const pause = document.querySelector<HTMLDialogElement>('#pause-dialog')!;
     pause.addEventListener('cancel', e => { e.preventDefault(); if (this.adBusy) return; this.sim.state.settings.paused = false; pause.close(); });
+    const startup = document.querySelector<HTMLDialogElement>('#startup-dialog')!;
+    startup.addEventListener('cancel', e => {
+      e.preventDefault();
+      if (this.startupView === 'tutorial') { this.startupView = 'menu'; this.tutorialFirstLaunch = false; this.renderStartupView(); }
+    });
+    const settings = document.querySelector<HTMLDialogElement>('#settings-dialog')!;
+    settings.addEventListener('cancel', e => { e.preventDefault(); this.returnFromSettings(); });
     window.addEventListener('keydown', e => {
       if (e.key !== 'Escape' || e.repeat || document.querySelector('#restart-dialog[open]')) return;
       if (this.adBusy) { e.preventDefault(); return; }
+      if (settings.open) { e.preventDefault(); this.returnFromSettings(); return; }
+      if (startup.open) { e.preventDefault(); if (this.startupView === 'tutorial') { this.startupView = 'menu'; this.tutorialFirstLaunch = false; this.renderStartupView(); } return; }
       e.preventDefault();
       const openingPause = !this.sim.state.settings.paused;
       this.sim.state.settings.paused = openingPause;
       if (openingPause) this.music.playForPauseMenu();
       this.render();
     });
-    document.querySelector<HTMLInputElement>('#sound-volume')!.addEventListener('input', e => {
-      this.sim.state.settings.volume = Number((e.target as HTMLInputElement).value) / 100; this.render();
-    });
-    document.querySelector<HTMLInputElement>('#music-volume')!.addEventListener('input', e => {
-      this.sim.state.settings.musicVolume = Number((e.target as HTMLInputElement).value) / 100 * .3; this.render();
-    });
+  }
+  private tutorialFirstLaunch = false;
+  showStartMenu(hasSave: boolean, recovered: boolean) {
+    if (this.sim.testMode || this.sim.moneyOnlyMode) return;
+    this.gameActive = false;
+    this.startupActive = true;
+    this.startupHasSave = hasSave;
+    this.startupRecovered = recovered;
+    this.sim.state.settings.paused = true;
+    let onboardingSeen = false;
+    try { onboardingSeen = localStorage.getItem(ONBOARDING_SEEN_KEY) === '1'; } catch { /* The menu remains usable if storage is blocked. */ }
+    this.tutorialFirstLaunch = !hasSave && !recovered && !onboardingSeen;
+    this.startupView = this.tutorialFirstLaunch ? 'tutorial' : 'menu';
+    if (this.tutorialFirstLaunch) try { localStorage.setItem(ONBOARDING_SEEN_KEY, '1'); } catch { /* Do not block first play. */ }
+    this.renderStartupView();
+    document.querySelector<HTMLDialogElement>('#startup-dialog')!.showModal();
+    this.render();
+  }
+  private renderStartupView() {
+    const host = document.querySelector<HTMLElement>('#startup-content');
+    if (!host) return;
+    const content = this.startupView === 'tutorial' ? this.tutorialScreen() : this.mainMenuScreen();
+    host.innerHTML = translate(content, this.language);
+  }
+  private mainMenuScreen() {
+    const s = this.sim.state;
+    const saveCard = this.startupRecovered
+      ? `<aside class="menu-save-card is-warning"><span class="screen-setting-icon amber">!</span><div><b>Kayıt okunamadı</b><p>Eski kayıt korundu. Yeni oyun başlatmadan önceki ilerlemen otomatik silinmez.</p></div></aside>`
+      : this.startupHasSave
+        ? `<aside class="menu-save-card"><span class="screen-setting-icon mint">▣</span><div><b>Kaldığın yer kayıtlı</b><p>Seviye ${this.sim.level} <span>·</span> Kasa $${Math.floor(s.money).toLocaleString(this.language === 'en' ? 'en-US' : 'tr-TR')}</p><small>İlerleme bu cihazda saklanıyor.</small></div></aside>`
+        : `<aside class="menu-save-card"><span class="screen-setting-icon mint">☀</span><div><b>Yeni bir kaçamak seni bekliyor</b><p>Kendi tatil köyünü kur, misafirlerini ağırla ve tesisini geliştir.</p></div></aside>`;
+    return `<section class="screen-shell start-shell">
+      <header class="screen-header"><span class="screen-brand-icon">☀</span><div><small>OLIVE COAST</small><h1>Resort Tycoon</h1></div><span class="screen-season-badge">Akdeniz'de yeni bir gün</span></header>
+      <div class="start-content"><div class="start-copy"><span class="screen-eyebrow">KÜÇÜK BİR EGE HİKÂYESİ</span><h2>Tatil köyün seni bekliyor<span>.</span></h2><p>Misafirlerini ağırla, hizmetlerini büyüt ve kendi Akdeniz kaçamağını kur.</p>
+        ${saveCard}
+        <div class="start-actions">${this.startupHasSave ? `<button class="screen-primary-button start-continue" data-action="continue-game"><span>▶ &nbsp; Devam Et</span><small>Kaldığın yerden sürdür</small></button>` : ''}<button class="${this.startupHasSave ? 'screen-neutral-button' : 'screen-primary-button'} start-new" data-action="start-new-game">✦ &nbsp; Yeni Oyun</button>
+          <div class="start-secondary-actions"><button class="screen-neutral-button" data-action="open-tutorial">▤ &nbsp; Nasıl Oynanır</button><button class="screen-neutral-button" data-action="open-settings" data-origin="startup">⚙ &nbsp; Ayarlar</button></div>
+        </div><p class="startup-status" id="startup-status" role="status"></p>
+      </div><div class="start-art" aria-hidden="true"><div class="start-sun"></div><div class="start-island"><i></i><i></i><i></i><i></i><span></span></div><div class="start-wave wave-one"></div><div class="start-wave wave-two"></div><span class="start-location">☀ &nbsp; Ege kıyısında, sana ait</span></div></div>
+      <footer class="screen-footer"><span>Yerel kayıt · Bu cihazda otomatik saklanır</span><span>Türkçe / English · Ayarlardan değiştirilebilir</span></footer>
+    </section>`;
+  }
+  private tutorialScreen() {
+    return `<section class="screen-shell tutorial-shell">
+      <header class="screen-header"><span class="screen-brand-icon">☀</span><div><small>OLIVE COAST</small><h1>Nasıl Oynanır</h1></div><button class="screen-close" data-action="tutorial-back" aria-label="Kapat">×</button></header>
+      <div class="tutorial-content"><div class="tutorial-intro"><span class="screen-eyebrow">REHBER VE BAŞLANGIÇ</span><h2>Acele yok, tatildesin<span>.</span></h2><p>Oyundaki temel işleri sahneler üzerinden öğren. Her işaretin yanına gidip etkileşim simgesine bas.</p></div>
+        <div class="tutorial-steps">
+          <article class="tutorial-step"><span class="tutorial-number">01</span><div class="tutorial-visual" aria-hidden="true"><svg viewBox="0 0 340 128"><path class="scene-wall" d="M0 0h340v70H0z"/><path class="scene-floor" d="M0 70h340v58H0z"/><path class="scene-floor-line" d="M0 97h340M75 70v58m110-58v58m105-58v58"/><path class="scene-bed-shadow" d="m66 96 106-42 118 32-110 43z"/><path class="scene-bed-side" d="m69 70 111-39 106 29-108 41z"/><path class="scene-bed-base" d="m69 70 0 17 109 31 108-41V60l-108 41z"/><path class="scene-mattress" d="m77 69 103-36 97 27-102 37z"/><path class="scene-sheet" d="m110 57 69-24 57 16-67 25z"/><path class="scene-pillow" d="m93 65 23-9 19 6-23 9z"/><path class="scene-head" d="M35 58c0-9 7-16 16-16s16 7 16 16v8H35z"/><path class="scene-body" d="M29 69q22-12 43 0l7 24-25 9-27-9z"/><path class="scene-leg" d="m39 96-4 16 10 2 9-15m10-1 8 14 10-5-7-15"/><circle class="scene-interact" cx="239" cy="28" r="17"/><text class="scene-interact-text" x="239" y="33">E</text><path class="scene-arrow" d="m77 43 31 5m-10-10 11 10-13 5"/><path class="scene-spark" d="m177 17 4 9 9 4-9 4-4 9-4-9-9-4 9-4z"/></svg></div><div class="tutorial-step-heading"><span class="tutorial-icon mint">✦</span><h3>Yatağı temizle</h3></div><p>Yatağın hemen yanına yürü ve çıkan etkileşim simgesine bas. Kirli havlu çantana gelir; temiz havlun varsa yatağa serilir.</p></article>
+          <article class="tutorial-step"><span class="tutorial-number">02</span><div class="tutorial-visual" aria-hidden="true"><svg viewBox="0 0 340 128"><path class="scene-wall" d="M0 0h340v70H0z"/><path class="scene-floor" d="M0 70h340v58H0z"/><path class="scene-floor-line" d="M0 98h340M80 70v58m110-58v58m105-58v58"/><path class="scene-washer-shadow" d="m151 100 67-25 44 13-67 27z"/><path class="scene-washer-side" d="m163 32 56-20 44 14v62l-56 21-44-18z"/><path class="scene-washer-front" d="m163 32 56-20v62l-56 21z"/><path class="scene-washer-panel" d="m171 38 40-14v9l-40 14z"/><circle class="scene-drum" cx="193" cy="66" r="19"/><circle class="scene-drum-inner" cx="193" cy="66" r="12"/><path class="scene-basket" d="m33 77 48-17 37 12v34l-40 15-45-15z"/><path class="scene-basket-rim" d="m33 77 48-17 37 12-42 17z"/><path class="scene-linen" d="m44 75 20-12 21 7-18 12zm24 10 20-12 18 7-20 12z"/><path class="scene-arrow" d="m113 71 29-11m-13-3 14 3-8 12"/><circle class="scene-interact" cx="230" cy="28" r="16"/><text class="scene-interact-text" x="230" y="33">E</text><path class="scene-spark" d="m286 27 4 8 8 3-8 4-4 8-3-8-9-4 9-3z"/></svg></div><div class="tutorial-step-heading"><span class="tutorial-icon amber">♺</span><h3>Kirlileri makinede yıka</h3></div><p>Kirli çamaşırı kirli sepete bırak. Sonra sepetten alıp makineye koy; yıkama bitince makineyi boşalt.</p></article>
+          <article class="tutorial-step"><span class="tutorial-number">03</span><div class="tutorial-visual" aria-hidden="true"><svg viewBox="0 0 340 128"><path class="scene-wall" d="M0 0h340v70H0z"/><path class="scene-floor" d="M0 70h340v58H0z"/><path class="scene-floor-line" d="M0 99h340M85 70v58m112-58v58m100-58v58"/><path class="scene-rack-shadow" d="m76 103 94-34 64 20-97 35z"/><path class="scene-rack-post" d="m92 30 9-3v74l-9 3zm116-40 9-3v74l-9 3z"/><path class="scene-rack-top" d="m92 30 117-42 9 4-117 43z"/><path class="scene-rack-shelf" d="m92 54 117-42 9 4-117 43zm0 24 117-42 9 4-117 43z"/><path class="scene-towel" d="m108 40 17-6v14l-17 6zm26-9 17-6v14l-17 6zm27-9 17-6v14l-17 6zm-51 32 18-6v15l-18 6zm27-10 18-6v15l-18 6zm27-10 18-6v15l-18 6z"/><path class="scene-head" d="M258 60c0-8 6-14 14-14s14 6 14 14v7h-28z"/><path class="scene-body" d="M252 70q20-11 39 0l6 22-24 8-26-8z"/><path class="scene-leg" d="m261 97-5 15 9 2 8-15m9-1 7 14 9-4-6-15"/><circle class="scene-interact" cx="144" cy="19" r="16"/><text class="scene-interact-text" x="144" y="24">E</text><path class="scene-arrow" d="m239 42-27 4m10-9-11 10 12 5"/><path class="scene-spark" d="m64 42 4 8 8 3-8 4-4 8-3-8-9-4 9-3z"/></svg></div><div class="tutorial-step-heading"><span class="tutorial-icon mint">▤</span><h3>Temiz havlu al</h3></div><p>Makineden çıkan temizler rafa eklenir. Temiz rafının yanına gidip havlu al, yatağa taşı ve yatağın yanında etkileşime geç.</p></article>
+        </div>
+        <section class="tutorial-controls"><div><span class="screen-setting-icon mint">⌘</span><div><b>Kontroller</b><small>Klavyede WASD / ok tuşları · mobilde hareket çubuğu</small></div></div><div><kbd>ESC</kbd><span>Mola menüsü</span><kbd>Fare / dokunma</kbd><span>Yürü ve kamerayı gezdir</span></div></section>
+      </div><p class="startup-status tutorial-status" id="startup-status" role="status"></p><footer class="screen-footer"><span>İlerleme bu cihazda otomatik kaydedilir.</span><div>${this.tutorialFirstLaunch ? `<button class="tutorial-skip" data-action="skip-tutorial">Atla</button><button class="screen-primary-button" data-action="tutorial-start">Başlayalım &nbsp; <kbd>ENTER</kbd></button>` : `<button class="screen-primary-button" data-action="tutorial-back">← &nbsp; Geri</button>`}</div></footer>
+    </section>`;
+  }
+  private openSettings(origin: 'startup' | 'pause') {
+    this.settingsOrigin = origin;
+    if (origin === 'startup') document.querySelector<HTMLDialogElement>('#startup-dialog')!.close();
+    document.querySelector<HTMLDialogElement>('#settings-dialog')!.showModal();
+    this.render();
+  }
+  private returnFromSettings() {
+    document.querySelector<HTMLDialogElement>('#settings-dialog')!.close();
+    if (this.settingsOrigin === 'startup' && this.startupActive) document.querySelector<HTMLDialogElement>('#startup-dialog')!.showModal();
+    this.render();
+  }
+  private enterGame(continueExisting: boolean) {
+    if (!continueExisting) {
+      const fresh = new ResortSimulation(initialResort(), false, false).state;
+      fresh.settings.volume = this.sim.state.settings.volume;
+      fresh.settings.musicVolume = this.sim.state.settings.musicVolume ?? .3;
+      if (!this.save.replaceWithNewGame(fresh)) {
+        const status = document.querySelector<HTMLElement>('#startup-status');
+        if (status) status.textContent = translate('Kayıt oluşturulamadı. Tarayıcı depolamasını kontrol edip tekrar dene.', this.language);
+        return;
+      }
+      this.sim.reset();
+    }
+    this.startupActive = false;
+    this.gameActive = true;
+    this.sim.state.settings.paused = false;
+    document.querySelector<HTMLDialogElement>('#startup-dialog')!.close();
+    this.world?.centerPlayer();
+    this.render();
   }
   inspect(id: string) { this.panel = 'village'; this.lastPanel = ''; this.render(); document.querySelector('#drawer')!.classList.add('open'); const row = document.querySelector(`[data-facility="${id}"]`); row?.scrollIntoView({ block: 'nearest' }); }
   private action(t: HTMLElement) {
     if (this.adBusy) return;
     switch (t.dataset.action) {
+      case 'continue-game': this.enterGame(true); break;
+      case 'start-new-game':
+        if (this.startupHasSave || this.startupRecovered) document.querySelector<HTMLDialogElement>('#restart-dialog')!.showModal();
+        else this.enterGame(false);
+        break;
+      case 'open-tutorial': this.startupView = 'tutorial'; this.tutorialFirstLaunch = false; this.renderStartupView(); break;
+      case 'tutorial-start': case 'skip-tutorial': this.enterGame(false); break;
+      case 'tutorial-back': this.startupView = 'menu'; this.tutorialFirstLaunch = false; this.renderStartupView(); break;
+      case 'open-settings': this.openSettings(t.dataset.origin === 'startup' || document.querySelector('#startup-dialog[open]') ? 'startup' : 'pause'); break;
+      case 'return-settings': this.returnFromSettings(); break;
       case 'resume': if (!this.adBusy) this.sim.state.settings.paused = false; break;
       case 'music-toggle': this.music.toggle(); break;
       case 'music-previous': this.music.previous(); break;
@@ -145,19 +275,23 @@ export class ResortUI {
       case 'save': this.sim.notify(this.save.recoveryRequired ? 'Kayıt okunamadı. Eski kayıt korunuyor; yeni oyun seçmeden üzerine yazılmayacak.' : this.save.save(this.sim.state) ? this.save.temporary ? 'Deneme modu normal kaydını değiştirmez.' : 'Tatil köyün kaydedildi.' : 'Kayıt yapılamadı. Tarayıcı depolamasını kontrol et.'); break;
       case 'reset': document.querySelector<HTMLDialogElement>('#restart-dialog')!.showModal(); break;
       case 'cancel-reset': document.querySelector<HTMLDialogElement>('#restart-dialog')!.close(); break;
-      case 'confirm-reset': { const fresh = new ResortSimulation(initialResort(this.sim.testMode), this.sim.testMode, this.sim.moneyOnlyMode).state; fresh.settings.volume = this.sim.state.settings.volume; fresh.settings.musicVolume = this.sim.state.settings.musicVolume ?? .3; if (this.save.replaceWithNewGame(fresh)) { this.sim.reset(); document.querySelector<HTMLDialogElement>('#restart-dialog')!.close(); document.querySelector<HTMLDialogElement>('#pause-dialog')!.close(); document.querySelector('#drawer')!.classList.remove('open'); this.officeVisited = false; this.world?.centerPlayer(); } else this.sim.notify('Kayıt yapılamadı; mevcut köyün korunuyor.'); break; }
+      case 'confirm-reset': { const fresh = new ResortSimulation(initialResort(this.sim.testMode), this.sim.testMode, this.sim.moneyOnlyMode).state; fresh.settings.volume = this.sim.state.settings.volume; fresh.settings.musicVolume = this.sim.state.settings.musicVolume ?? .3; if (this.save.replaceWithNewGame(fresh)) { this.sim.reset(); this.startupActive = false; this.gameActive = true; this.sim.state.settings.paused = false; document.querySelector<HTMLDialogElement>('#restart-dialog')!.close(); document.querySelector<HTMLDialogElement>('#startup-dialog')!.close(); document.querySelector<HTMLDialogElement>('#settings-dialog')!.close(); document.querySelector<HTMLDialogElement>('#pause-dialog')!.close(); document.querySelector('#drawer')!.classList.remove('open'); this.officeVisited = false; this.world?.centerPlayer(); } else { this.sim.notify('Kayıt yapılamadı; mevcut köyün korunuyor.'); if (this.startupActive) { const status = document.querySelector<HTMLElement>('#startup-status'); if (status) status.textContent = translate('Kayıt oluşturulamadı. Tarayıcı depolamasını kontrol edip tekrar dene.', this.language); } } break; }
     }
     this.render();
   }
   private goal() { return resortGoal(this.sim.state, this.sim.testMode); }
   private renderMusic() {
     const track = document.querySelector<HTMLElement>('#music-track-name');
+    if (track) track.textContent = translate(this.music.track.title, this.language);
+    const settingsTrack = document.querySelector<HTMLElement>('#settings-track-title');
+    if (settingsTrack) settingsTrack.textContent = translate(this.music.track.title, this.language);
+    const trackNumber = document.querySelector<HTMLElement>('#music-track-number');
+    if (trackNumber) trackNumber.textContent = this.music.trackNumber;
+    document.querySelectorAll<HTMLButtonElement>('[data-action="music-toggle"]').forEach(play => {
+      play.textContent = this.music.playing ? 'Ⅱ' : '▶';
+      play.setAttribute('aria-label', translate(this.music.playing ? 'Müziği duraklat' : 'Müziği çal', this.language));
+    });
     if (!track) return;
-    track.textContent = translate(this.music.track.title, this.language);
-    document.querySelector<HTMLElement>('#music-track-number')!.textContent = this.music.trackNumber;
-    const play = document.querySelector<HTMLButtonElement>('[data-action="music-toggle"]')!;
-    play.textContent = this.music.playing ? 'Ⅱ' : '▶';
-    play.setAttribute('aria-label', translate(this.music.playing ? 'Müziği duraklat' : 'Müziği çal', this.language));
     document.querySelector<HTMLElement>('#music-current')!.textContent = this.timeLabel(this.music.currentTime);
     document.querySelector<HTMLElement>('#music-duration')!.textContent = this.timeLabel(this.music.duration);
     const progress = this.music.duration ? Math.min(100, this.music.currentTime / this.music.duration * 100) : 0;
@@ -260,7 +394,8 @@ export class ResortUI {
   }
   render() {
     const pause = document.querySelector<HTMLDialogElement>('#pause-dialog')!;
-    if (this.sim.state.settings.paused && !pause.open && !document.querySelector('#restart-dialog[open]')) pause.showModal();
+    const blockingScreenOpen = !!document.querySelector('#startup-dialog[open], #settings-dialog[open]');
+    if (this.gameActive && this.sim.state.settings.paused && !pause.open && !blockingScreenOpen && !document.querySelector('#restart-dialog[open]')) pause.showModal();
     if (!this.sim.state.settings.paused && pause.open) pause.close();
     const volume = this.sim.state.settings.volume ?? 1;
     const musicVolume = Math.max(0, Math.min(.3, this.sim.state.settings.musicVolume ?? .3));
@@ -268,16 +403,20 @@ export class ResortUI {
     this.music.setGamePaused(this.sim.state.settings.paused);
     this.renderMusic();
     this.world?.setVolume(this.adMuted ? 0 : volume);
-    document.querySelector<HTMLInputElement>('#sound-volume')!.value = String(Math.round(volume * 100));
-    document.querySelector('#volume-value')!.textContent = '%' + Math.round(volume * 100);
+    document.querySelectorAll<HTMLInputElement>('[data-setting="sound-volume"]').forEach(input => { input.value = String(Math.round(volume * 100)); });
+    document.querySelectorAll<HTMLElement>('[data-volume-output="sound"]').forEach(output => { output.textContent = '%' + Math.round(volume * 100); });
+    document.querySelector<HTMLElement>('#volume-value')!.textContent = '%' + Math.round(volume * 100);
     const musicVolumePercent = Math.round(musicVolume / .3 * 100);
-    document.querySelector<HTMLInputElement>('#music-volume')!.value = String(musicVolumePercent);
+    document.querySelectorAll<HTMLInputElement>('[data-setting="music-volume"]').forEach(input => { input.value = String(musicVolumePercent); });
+    document.querySelectorAll<HTMLElement>('[data-volume-output="music"]').forEach(output => { output.textContent = '%' + musicVolumePercent; });
     document.querySelector('#music-volume-value')!.textContent = '%' + musicVolumePercent;
+    const settingsNote = document.querySelector<HTMLElement>('#settings-save-note');
+    if (settingsNote) settingsNote.textContent = translate(this.save.temporary ? 'Bu modda ayarlar oyun kaydına yazılmaz.' : 'Ses ve dil tercihleri bu tarayıcıdaki yerel kayda bağlıdır.', this.language);
     document.querySelector<HTMLElement>('#pause-save-status')!.textContent = translate(
       this.save.recoveryRequired ? 'Kayıt okunamadı; eski kayıt korunuyor.' : this.save.temporary ? 'Deneme modunda kayıt yapılmaz.' : 'İlerleme bu cihazda otomatik kaydedilir.',
       this.language,
     );
-    document.querySelectorAll<HTMLButtonElement>('.language-toggle [data-language]').forEach(button => {
+    document.querySelectorAll<HTMLButtonElement>('[data-language]').forEach(button => {
       button.setAttribute('aria-pressed', String(button.dataset.language === this.language));
     });
     const speedButton = document.querySelector<HTMLButtonElement>('#speed-button');
