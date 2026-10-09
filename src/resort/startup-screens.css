@@ -99,9 +99,8 @@
 .start-new { min-height: 48px; }
 .start-secondary-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .startup-status { min-height: 16px; margin: 3px 0 0; color: #a63a1d; font-size: 12px; }
-.start-art { position: relative; min-height: 340px; overflow: hidden; align-self: stretch; border: 1px solid #cfe6df; border-radius: 22px; background: linear-gradient(180deg, #bcebe6 0%, #91dbd6 48%, #47b9b7 49%, #087f82 100%); }
-.start-art::before { position: absolute; inset: 52% -15% -18%; border-radius: 50% 50% 0 0; background: linear-gradient(145deg, #e9d29d, #cfa86a); content: ""; transform: rotate(-7deg); }
-.start-art::after { position: absolute; right: -14%; bottom: 13%; width: 85%; height: 29%; border-radius: 50%; background: #fff9e9a8; content: ""; transform: rotate(-7deg); }
+.start-art { position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden; align-self: center; border: 1px solid #cfe6df; border-radius: 22px; background: #e8f4ef; box-shadow: 0 5px 0 #073c4014; }
+.start-resort-image { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; }
 .start-sun { position: absolute; top: 17%; right: 17%; width: 58px; height: 58px; border: 8px solid #fff5d4; border-radius: 50%; background: #f5b83e; box-shadow: 0 0 0 12px #fff4d533; }
 .start-island { position: absolute; z-index: 1; top: 39%; left: 9%; width: 78%; height: 34%; border: 5px solid #fff8e5; border-bottom: 0; border-radius: 48% 52% 0 0; background: linear-gradient(180deg, #91b87c 0 33%, #e7c989 34% 100%); box-shadow: 0 8px 0 #ad7b48; transform: rotate(-5deg); }
 .start-island::before { position: absolute; left: 29%; bottom: 0; width: 48%; height: 57%; border-radius: 8px 8px 0 0; background: #f7f0df; box-shadow: inset 0 13px #c7774c; content: ""; }
@@ -111,7 +110,7 @@
 .start-island span { position: absolute; z-index: 3; right: 30%; bottom: 16%; width: 8%; height: 17%; border-radius: 50% 50% 0 0; background: #e98f42; }
 .start-wave { position: absolute; z-index: 2; right: -30px; width: 58%; height: 15px; border-top: 3px solid #e7ffff9c; border-radius: 50%; transform: rotate(-8deg); }
 .wave-one { bottom: 23%; }.wave-two { bottom: 15%; right: 12%; width: 48%; }
-.start-location { position: absolute; z-index: 3; bottom: 15px; left: 15px; padding: 8px 11px; border: 1px solid #e8dfcf; border-radius: 999px; color: #4a2e00; background: #fef9eee8; font-size: 10px; font-weight: 800; }
+.start-location { align-self: flex-start; margin: 12px; padding: 8px 11px; border: 1px solid #e8dfcf; border-radius: 999px; color: #4a2e00; background: #fef9ee; font-size: 10px; font-weight: 800; }
 .screen-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 62px; padding: 12px 25px; border-top: 1px solid #e8dfcf; color: #685c4b; background: #f8f3e8; font-size: 11px; }
 .settings-shell { width: min(720px, calc(100vw - 28px)); }
 #settings-dialog { width: min(720px, calc(100vw - 28px)); }
@@ -143,15 +142,6 @@
 .tutorial-number { position: absolute; top: 15px; right: 15px; color: #aa9c84; font-size: 19px; font-weight: 900; }
 .tutorial-visual { height: 112px; margin: -6px -6px 13px; overflow: hidden; border: 1px solid #ded2bb; border-radius: 12px; background: #d5eeeb; }
 .tutorial-visual svg { display: block; width: 100%; height: 100%; }
-.tutorial-visual .scene-wall { fill: #d6ece8; }.tutorial-visual .scene-floor { fill: #dfc994; }.tutorial-visual .scene-floor-line { fill: none; stroke: #c8b17e; stroke-width: 1.2; }
-.tutorial-visual .scene-bed-shadow, .tutorial-visual .scene-washer-shadow, .tutorial-visual .scene-rack-shadow { fill: #78583b44; }
-.tutorial-visual .scene-bed-side { fill: #9e653e; }.tutorial-visual .scene-bed-base { fill: #c58b51; }.tutorial-visual .scene-mattress { fill: #fff8e9; stroke: #c8bda8; stroke-width: 2; }.tutorial-visual .scene-sheet { fill: #9adad7; }.tutorial-visual .scene-pillow { fill: #fff; stroke: #d7cdb9; stroke-width: 1.5; }
-.tutorial-visual .scene-head { fill: #bd6e3c; }.tutorial-visual .scene-body { fill: #e4a24d; stroke: #9d5938; stroke-width: 2; }.tutorial-visual .scene-leg { fill: none; stroke: #473f39; stroke-width: 6; stroke-linecap: round; }
-.tutorial-visual .scene-interact { fill: #1c9c83; stroke: #fff; stroke-width: 3; }.tutorial-visual .scene-interact-text { fill: #fff; font: 900 14px Inter, sans-serif; text-anchor: middle; }
-.tutorial-visual .scene-arrow { fill: none; stroke: #e99b18; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }.tutorial-visual .scene-spark { fill: #f7bf37; stroke: #fff2bd; stroke-width: 1; }
-.tutorial-visual .scene-washer-side { fill: #83aeb0; stroke: #527d80; stroke-width: 2; }.tutorial-visual .scene-washer-front { fill: #a9ceca; stroke: #527d80; stroke-width: 2; }.tutorial-visual .scene-washer-panel { fill: #e4f2e9; }.tutorial-visual .scene-drum { fill: #496f75; stroke: #edf5e8; stroke-width: 4; }.tutorial-visual .scene-drum-inner { fill: #9bd8d5; }
-.tutorial-visual .scene-basket { fill: #ad7650; stroke: #805438; stroke-width: 2; }.tutorial-visual .scene-basket-rim { fill: #c89361; stroke: #805438; stroke-width: 2; }.tutorial-visual .scene-linen { fill: #f6eedc; stroke: #d5c8ad; stroke-width: 1; }
-.tutorial-visual .scene-rack-post { fill: #ad7650; stroke: #805438; stroke-width: 1.5; }.tutorial-visual .scene-rack-top, .tutorial-visual .scene-rack-shelf { fill: #c99560; stroke: #805438; stroke-width: 1.5; }.tutorial-visual .scene-towel { fill: #fff8e7; stroke: #d8ccb5; stroke-width: 1; }
 .tutorial-step-heading { display: flex; align-items: center; gap: 10px; min-height: 43px; margin-bottom: 8px; }
 .tutorial-icon { display: grid; flex: 0 0 auto; place-items: center; width: 38px; height: 38px; margin: 0; border-radius: 50%; color: #00696d; background: #9de4df; font-size: 20px; }
 .tutorial-icon.amber { color: #4a2e00; background: #ffddb8; }
@@ -181,7 +171,7 @@
   .start-copy h2 { font-size: clamp(25px, 8vw, 32px); }
   .start-copy > p { font-size: 13px; }
   .menu-save-card { margin-top: 15px; }
-  .start-art { min-height: 150px; max-height: 175px; }
+  .start-art { width: 100%; }
   .start-sun { top: 11%; width: 43px; height: 43px; border-width: 6px; }
   .start-island { top: 28%; height: 56%; }
   .screen-footer { align-items: flex-start; flex-direction: column; min-height: 0; padding: 12px 16px; font-size: 10px; }

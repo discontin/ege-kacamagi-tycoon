@@ -6,6 +6,7 @@ import './stitch-menus.css';
 import './quick-controls.css';
 import './gameplay-stitch.css';
 import './startup-screens.css';
+import './tutorial.css';
 import { resortGoal } from './Guidance';
 import { linenCount } from './Linen';
 import { ResortSaveService } from './SaveService';
@@ -15,6 +16,7 @@ import type { Role } from './types';
 import type { ResortWorld } from './World';
 import { currentLanguage, LANGUAGE_KEY, translate, type GameLanguage } from './i18n';
 import { ResortMusic } from './GameMusic';
+import { tutorialScreen, type TutorialSection } from './Tutorial';
 
 const roles: Record<Role, string> = { reception: 'Resepsiyon', rooms: 'Oda temizliği + havlu', pool: 'Havuz + limonata + bakım', hauling: 'Çamaşırhane + havuz havluları', bartender: 'Havuz hizmeti' };
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -79,7 +81,6 @@ export class ResortUI {
           <div class="game-menu-content">
             <div class="pause-heading"><span class="pause-emblem">Ⅱ</span><div><small>OYUN DURAKLATILDI</small><h2>Olive Coast: Resort Tycoon</h2><p>Köyün seni bekliyor. Hazır olduğunda kaldığın yerden sürdür.</p></div></div>
             <button data-action="resume" class="menu-continue pause-resume"><span>▶ &nbsp; Oyuna dön</span><kbd>ESC</kbd></button>
-            <button data-action="open-settings" class="pause-settings-link">⚙ &nbsp; Ayarlar</button>
             <div class="pause-grid">
               <div class="pause-column">
                 <section class="sound-card" aria-label="Ses ayarı"><div class="menu-section-heading"><span>♫</span><b>SES EFEKTLERİ</b><output id="volume-value">%100</output></div><label class="volume-row"><span aria-hidden="true">🔈</span><input id="sound-volume" data-setting="sound-volume" aria-label="Ses efekti seviyesi" type="range" min="0" max="100" step="1"></label></section>
@@ -143,6 +144,7 @@ export class ResortUI {
     });
   }
   private tutorialFirstLaunch = false;
+  private tutorialSection: TutorialSection = 'rooms';
   showStartMenu(hasSave: boolean, recovered: boolean) {
     if (this.sim.testMode || this.sim.moneyOnlyMode) return;
     this.gameActive = false;
@@ -179,22 +181,12 @@ export class ResortUI {
         <div class="start-actions">${this.startupHasSave ? `<button class="screen-primary-button start-continue" data-action="continue-game"><span>▶ &nbsp; Devam Et</span><small>Kaldığın yerden sürdür</small></button>` : ''}<button class="${this.startupHasSave ? 'screen-neutral-button' : 'screen-primary-button'} start-new" data-action="start-new-game">✦ &nbsp; Yeni Oyun</button>
           <div class="start-secondary-actions"><button class="screen-neutral-button" data-action="open-tutorial">▤ &nbsp; Nasıl Oynanır</button><button class="screen-neutral-button" data-action="open-settings" data-origin="startup">⚙ &nbsp; Ayarlar</button></div>
         </div><p class="startup-status" id="startup-status" role="status"></p>
-      </div><div class="start-art" aria-hidden="true"><div class="start-sun"></div><div class="start-island"><i></i><i></i><i></i><i></i><span></span></div><div class="start-wave wave-one"></div><div class="start-wave wave-two"></div><span class="start-location">☀ &nbsp; Ege kıyısında, sana ait</span></div></div>
+      </div><div class="start-art" aria-hidden="true"><img class="start-resort-image" src="./assets/menu/olive-coast-cover-v2-player.png" alt="" decoding="async"><span class="start-location">☀ &nbsp; Ege kıyısında, sana ait</span></div></div>
       <footer class="screen-footer"><span>Yerel kayıt · Bu cihazda otomatik saklanır</span><span>Türkçe / English · Ayarlardan değiştirilebilir</span></footer>
     </section>`;
   }
   private tutorialScreen() {
-    return `<section class="screen-shell tutorial-shell">
-      <header class="screen-header"><span class="screen-brand-icon">☀</span><div><small>OLIVE COAST</small><h1>Nasıl Oynanır</h1></div><button class="screen-close" data-action="tutorial-back" aria-label="Kapat">×</button></header>
-      <div class="tutorial-content"><div class="tutorial-intro"><span class="screen-eyebrow">REHBER VE BAŞLANGIÇ</span><h2>Acele yok, tatildesin<span>.</span></h2><p>Oyundaki temel işleri sahneler üzerinden öğren. Her işaretin yanına gidip etkileşim simgesine bas.</p></div>
-        <div class="tutorial-steps">
-          <article class="tutorial-step"><span class="tutorial-number">01</span><div class="tutorial-visual" aria-hidden="true"><svg viewBox="0 0 340 128"><path class="scene-wall" d="M0 0h340v70H0z"/><path class="scene-floor" d="M0 70h340v58H0z"/><path class="scene-floor-line" d="M0 97h340M75 70v58m110-58v58m105-58v58"/><path class="scene-bed-shadow" d="m66 96 106-42 118 32-110 43z"/><path class="scene-bed-side" d="m69 70 111-39 106 29-108 41z"/><path class="scene-bed-base" d="m69 70 0 17 109 31 108-41V60l-108 41z"/><path class="scene-mattress" d="m77 69 103-36 97 27-102 37z"/><path class="scene-sheet" d="m110 57 69-24 57 16-67 25z"/><path class="scene-pillow" d="m93 65 23-9 19 6-23 9z"/><path class="scene-head" d="M35 58c0-9 7-16 16-16s16 7 16 16v8H35z"/><path class="scene-body" d="M29 69q22-12 43 0l7 24-25 9-27-9z"/><path class="scene-leg" d="m39 96-4 16 10 2 9-15m10-1 8 14 10-5-7-15"/><circle class="scene-interact" cx="239" cy="28" r="17"/><text class="scene-interact-text" x="239" y="33">E</text><path class="scene-arrow" d="m77 43 31 5m-10-10 11 10-13 5"/><path class="scene-spark" d="m177 17 4 9 9 4-9 4-4 9-4-9-9-4 9-4z"/></svg></div><div class="tutorial-step-heading"><span class="tutorial-icon mint">✦</span><h3>Yatağı temizle</h3></div><p>Yatağın hemen yanına yürü ve çıkan etkileşim simgesine bas. Kirli havlu çantana gelir; temiz havlun varsa yatağa serilir.</p></article>
-          <article class="tutorial-step"><span class="tutorial-number">02</span><div class="tutorial-visual" aria-hidden="true"><svg viewBox="0 0 340 128"><path class="scene-wall" d="M0 0h340v70H0z"/><path class="scene-floor" d="M0 70h340v58H0z"/><path class="scene-floor-line" d="M0 98h340M80 70v58m110-58v58m105-58v58"/><path class="scene-washer-shadow" d="m151 100 67-25 44 13-67 27z"/><path class="scene-washer-side" d="m163 32 56-20 44 14v62l-56 21-44-18z"/><path class="scene-washer-front" d="m163 32 56-20v62l-56 21z"/><path class="scene-washer-panel" d="m171 38 40-14v9l-40 14z"/><circle class="scene-drum" cx="193" cy="66" r="19"/><circle class="scene-drum-inner" cx="193" cy="66" r="12"/><path class="scene-basket" d="m33 77 48-17 37 12v34l-40 15-45-15z"/><path class="scene-basket-rim" d="m33 77 48-17 37 12-42 17z"/><path class="scene-linen" d="m44 75 20-12 21 7-18 12zm24 10 20-12 18 7-20 12z"/><path class="scene-arrow" d="m113 71 29-11m-13-3 14 3-8 12"/><circle class="scene-interact" cx="230" cy="28" r="16"/><text class="scene-interact-text" x="230" y="33">E</text><path class="scene-spark" d="m286 27 4 8 8 3-8 4-4 8-3-8-9-4 9-3z"/></svg></div><div class="tutorial-step-heading"><span class="tutorial-icon amber">♺</span><h3>Kirlileri makinede yıka</h3></div><p>Kirli çamaşırı kirli sepete bırak. Sonra sepetten alıp makineye koy; yıkama bitince makineyi boşalt.</p></article>
-          <article class="tutorial-step"><span class="tutorial-number">03</span><div class="tutorial-visual" aria-hidden="true"><svg viewBox="0 0 340 128"><path class="scene-wall" d="M0 0h340v70H0z"/><path class="scene-floor" d="M0 70h340v58H0z"/><path class="scene-floor-line" d="M0 99h340M85 70v58m112-58v58m100-58v58"/><path class="scene-rack-shadow" d="m76 103 94-34 64 20-97 35z"/><path class="scene-rack-post" d="m92 30 9-3v74l-9 3zm116-40 9-3v74l-9 3z"/><path class="scene-rack-top" d="m92 30 117-42 9 4-117 43z"/><path class="scene-rack-shelf" d="m92 54 117-42 9 4-117 43zm0 24 117-42 9 4-117 43z"/><path class="scene-towel" d="m108 40 17-6v14l-17 6zm26-9 17-6v14l-17 6zm27-9 17-6v14l-17 6zm-51 32 18-6v15l-18 6zm27-10 18-6v15l-18 6zm27-10 18-6v15l-18 6z"/><path class="scene-head" d="M258 60c0-8 6-14 14-14s14 6 14 14v7h-28z"/><path class="scene-body" d="M252 70q20-11 39 0l6 22-24 8-26-8z"/><path class="scene-leg" d="m261 97-5 15 9 2 8-15m9-1 7 14 9-4-6-15"/><circle class="scene-interact" cx="144" cy="19" r="16"/><text class="scene-interact-text" x="144" y="24">E</text><path class="scene-arrow" d="m239 42-27 4m10-9-11 10 12 5"/><path class="scene-spark" d="m64 42 4 8 8 3-8 4-4 8-3-8-9-4 9-3z"/></svg></div><div class="tutorial-step-heading"><span class="tutorial-icon mint">▤</span><h3>Temiz havlu al</h3></div><p>Makineden çıkan temizler rafa eklenir. Temiz rafının yanına gidip havlu al, yatağa taşı ve yatağın yanında etkileşime geç.</p></article>
-        </div>
-        <section class="tutorial-controls"><div><span class="screen-setting-icon mint">⌘</span><div><b>Kontroller</b><small>Klavyede WASD / ok tuşları · mobilde hareket çubuğu</small></div></div><div><kbd>ESC</kbd><span>Mola menüsü</span><kbd>Fare / dokunma</kbd><span>Yürü ve kamerayı gezdir</span></div></section>
-      </div><p class="startup-status tutorial-status" id="startup-status" role="status"></p><footer class="screen-footer"><span>İlerleme bu cihazda otomatik kaydedilir.</span><div>${this.tutorialFirstLaunch ? `<button class="tutorial-skip" data-action="skip-tutorial">Atla</button><button class="screen-primary-button" data-action="tutorial-start">Başlayalım &nbsp; <kbd>ENTER</kbd></button>` : `<button class="screen-primary-button" data-action="tutorial-back">← &nbsp; Geri</button>`}</div></footer>
-    </section>`;
+    return tutorialScreen(this.tutorialSection, this.tutorialFirstLaunch);
   }
   private openSettings(origin: 'startup' | 'pause') {
     this.settingsOrigin = origin;
@@ -235,7 +227,12 @@ export class ResortUI {
         if (this.startupHasSave || this.startupRecovered) document.querySelector<HTMLDialogElement>('#restart-dialog')!.showModal();
         else this.enterGame(false);
         break;
-      case 'open-tutorial': this.startupView = 'tutorial'; this.tutorialFirstLaunch = false; this.renderStartupView(); break;
+      case 'open-tutorial': this.startupView = 'tutorial'; this.tutorialSection = 'rooms'; this.tutorialFirstLaunch = false; this.renderStartupView(); break;
+      case 'tutorial-section':
+        this.tutorialSection = t.dataset.section === 'laundry' ? 'laundry' : 'rooms';
+        this.renderStartupView();
+        document.querySelector<HTMLButtonElement>(`[data-action="tutorial-section"][data-section="${this.tutorialSection}"]`)?.focus();
+        break;
       case 'tutorial-start': case 'skip-tutorial': this.enterGame(false); break;
       case 'tutorial-back': this.startupView = 'menu'; this.tutorialFirstLaunch = false; this.renderStartupView(); break;
       case 'open-settings': this.openSettings(t.dataset.origin === 'startup' || document.querySelector('#startup-dialog[open]') ? 'startup' : 'pause'); break;
